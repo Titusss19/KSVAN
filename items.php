@@ -23,7 +23,9 @@ $currentUser = $user;
 </head>
 <body class="bg-gray-50">
    <?php include 'components/navbar.php'; ?>
-
+<script id="userData" type="application/json">
+    <?php echo json_encode($user); ?>
+</script>
     <!-- Main Content -->
     <div class="pt-6 px-6 max-w-7xl mx-auto">
         <!-- Header -->
@@ -686,31 +688,129 @@ $currentUser = $user;
                 this.selectedInventory = null;
                 this.currentModalType = 'product';
                 
-                // Mock data
-                this.products = this.getMockProducts();
-                this.inventory = this.getMockInventory();
+                this.products = [];
+                this.inventory = [];
                 
                 this.init();
             }
 
-            init() {
-                this.setupUser();
-                this.bindEvents();
-                this.renderProductsTable();
-                this.updateLowStockCount();
-            }
+async init() {
+    console.log('=== INIT STARTED ===');
+    console.log('User:', this.user);
+    
+    this.setupUser();
+    this.bindEvents();
+    
+    console.log('About to call loadData()...');
+    
+    try {
+        await this.loadData();
+        console.log('loadData() completed');
+        console.log('Products:', this.products.length);
+        console.log('Inventory:', this.inventory.length);
+    } catch (error) {
+        console.error('Error in loadData():', error);
+    }
+    
+    this.renderProductsTable();
+    this.updateLowStockCount();
+    
+    console.log('=== INIT COMPLETED ===');
+}
 
-            getUserFromPHP() {
-                // In a real application, you would get this from PHP session
-                // For now, we'll use a default user
-                return {
-                    id: 1,
-                    name: 'John Doe',
-                    email: 'john@kstreet.com',
-                    role: 'manager',
-                    branch: 'main'
-                };
-            }
+async loadData() {
+    try {
+        this.showLoading(true);
+        
+        // Fetch products from database
+        console.log('Fetching products...');
+        const productsResponse = await fetch('backend/fetch_products.php');
+        const productsText = await productsResponse.text(); // Get raw text first
+        
+        console.log('Products raw response:', productsText); // See what we got
+        
+        let productsData;
+        try {
+            productsData = JSON.parse(productsText);
+        } catch (parseError) {
+            console.error('Failed to parse products JSON:', parseError);
+            console.error('Raw response was:', productsText);
+            throw new Error('Server returned invalid JSON for products');
+        }
+        
+        if (productsData.success) {
+            this.products = productsData.products;
+            console.log('✓ Loaded products:', this.products.length);
+        } else {
+            console.error('Error from server:', productsData.error);
+            alert('Error loading products: ' + productsData.error);
+            this.products = [];
+        }
+        
+        // Fetch inventory from database
+        console.log('Fetching inventory...');
+        const inventoryResponse = await fetch('backend/fetch_inventory.php');
+        const inventoryText = await inventoryResponse.text(); // Get raw text first
+        
+        console.log('Inventory raw response:', inventoryText); // See what we got
+        
+        let inventoryData;
+        try {
+            inventoryData = JSON.parse(inventoryText);
+        } catch (parseError) {
+            console.error('Failed to parse inventory JSON:', parseError);
+            console.error('Raw response was:', inventoryText);
+            throw new Error('Server returned invalid JSON for inventory');
+        }
+        
+        if (inventoryData.success) {
+            // Add display_unit for liters
+            this.inventory = inventoryData.inventory.map(item => ({
+                ...item,
+                display_unit: item.unit === 'liters' ? 'ml' : item.unit,
+                // Convert numeric strings to numbers
+                current_stock: parseFloat(item.current_stock),
+                min_stock: parseFloat(item.min_stock),
+                price: parseFloat(item.price || 0),
+                total_price: parseFloat(item.total_price || 0)
+            }));
+            console.log('✓ Loaded inventory:', this.inventory.length);
+        } else {
+            console.error('Error from server:', inventoryData.error);
+            alert('Error loading inventory: ' + inventoryData.error);
+            this.inventory = [];
+        }
+        
+        this.showLoading(false);
+        
+    } catch (error) {
+        this.showLoading(false);
+        console.error('❌ Error loading data:', error);
+        console.error('Error details:', error.stack);
+        alert('Error loading data from server: ' + error.message + '\n\nCheck browser console for details.');
+    }
+}
+
+getUserFromPHP() {
+    // Get user data from PHP session variable
+    const userDataElement = document.getElementById('userData');
+    if (userDataElement) {
+        try {
+            return JSON.parse(userDataElement.textContent);
+        } catch (error) {
+            console.error('Error parsing user data:', error);
+        }
+    }
+    
+    // Fallback (shouldn't happen if session exists)
+    return {
+        id: 1,
+        name: 'User',
+        email: 'user@kstreet.com',
+        role: 'manager',
+        branch: 'main'
+    };
+}
 
             setupUser() {
                 this.isAdmin = this.user.role === 'admin' || this.user.role === 'owner';
@@ -1476,69 +1576,76 @@ $currentUser = $user;
             }
 
             saveProduct() {
-                // Validation
-                const productCode = document.getElementById('productCode').value.trim();
-                const productName = document.getElementById('productName').value.trim();
-                const productImage = document.getElementById('productImage').value.trim();
-                const productPrice = document.getElementById('productPrice').value;
+    // Validation
+    const productCode = document.getElementById('productCode').value.trim();
+    const productName = document.getElementById('productName').value.trim();
+    const productImage = document.getElementById('productImage').value.trim();
+    const productPrice = document.getElementById('productPrice').value;
 
-                if (!productCode || !productName || !productImage) {
-                    this.showError('Please fill in all required fields!');
-                    return;
-                }
+    if (!productCode || !productName || !productImage) {
+        alert('Please fill in all required fields!');
+        return;
+    }
 
-                const descType = document.getElementById('productDescType').value;
-                if (descType !== 'k-street Flavor' && !productPrice) {
-                    this.showError('Please enter a price for non-flavor items!');
-                    return;
-                }
+    const descType = document.getElementById('productDescType').value;
+    if (descType !== 'k-street Flavor' && !productPrice) {
+        alert('Please enter a price for non-flavor items!');
+        return;
+    }
 
-                // Get branch
-                let branch;
-                if (this.isAdmin) {
-                    branch = document.getElementById('productBranch').value;
-                    if (!branch) {
-                        this.showError('Please select a branch!');
-                        return;
-                    }
-                } else {
-                    branch = this.user.branch;
-                }
+    // Get branch
+    let branch;
+    if (this.isAdmin) {
+        branch = document.getElementById('productBranch').value;
+        if (!branch) {
+            alert('Please select a branch!');
+            return;
+        }
+    } else {
+        branch = this.user.branch;
+    }
 
-                // Create product object
-                const product = {
-                    product_code: productCode.toUpperCase(),
-                    name: productName,
-                    category: document.getElementById('productCategory').value,
-                    description_type: descType,
-                    price: descType === 'k-street Flavor' ? '0' : productPrice,
-                    image: productImage,
-                    branch: branch
-                };
+    // Create FormData
+    const formData = new FormData();
+    formData.append('product_code', productCode);
+    formData.append('name', productName);
+    formData.append('category', document.getElementById('productCategory').value);
+    formData.append('description_type', descType);
+    formData.append('price', descType === 'k-street Flavor' ? '0' : productPrice);
+    formData.append('image', productImage);
+    formData.append('branch', branch);
+    
+    // If editing, add ID
+    if (this.editingItem) {
+        formData.append('id', this.editingItem.id);
+    }
 
-                // Simulate save
-                this.showLoading(true);
-                setTimeout(() => {
-                    if (this.editingItem) {
-                        // Update existing product
-                        Object.assign(this.editingItem, product);
-                        this.showSuccess('Product updated successfully!');
-                    } else {
-                        // Add new product
-                        const newProduct = {
-                            id: this.products.length + 1,
-                            ...product
-                        };
-                        this.products.push(newProduct);
-                        this.showSuccess('Product added successfully!');
-                    }
-
-                    this.showLoading(false);
-                    document.getElementById('productModal').classList.add('hidden');
-                    this.renderProductsTable();
-                    this.editingItem = null;
-                }, 1000);
-            }
+    // Send to server
+    this.showLoading(true);
+    
+    fetch('backend/save_products.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        this.showLoading(false);
+        
+        if (data.success) {
+            this.showSuccess(data.message);
+            document.getElementById('productModal').classList.add('hidden');
+            
+            // Reload page or refresh table
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        this.showLoading(false);
+        alert('Error: ' + error.message);
+    });
+}
 
             saveInventory() {
                 // Validation
@@ -1790,140 +1897,7 @@ $currentUser = $user;
                 document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
             }
 
-            getMockProducts() {
-                return [
-                    {
-                        id: 1,
-                        product_code: 'BGR001',
-                        name: 'Classic Burger',
-                        category: 'Food',
-                        description_type: 'k-street food',
-                        price: 150.00,
-                        image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-                        branch: 'main'
-                    },
-                    {
-                        id: 2,
-                        product_code: 'PZZ001',
-                        name: 'Pepperoni Pizza',
-                        category: 'Food',
-                        description_type: 'k-street food',
-                        price: 450.00,
-                        image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-                        branch: 'main'
-                    },
-                    {
-                        id: 3,
-                        product_code: 'BGR001',
-                        name: 'Spicy Flavor',
-                        category: 'Food',
-                        description_type: 'k-street Flavor',
-                        price: 0,
-                        image: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-                        branch: 'main'
-                    },
-                    {
-                        id: 4,
-                        product_code: 'FRS001',
-                        name: 'French Fries',
-                        category: 'Food',
-                        description_type: 'k-street add sides',
-                        price: 80.00,
-                        image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-                        branch: 'north'
-                    },
-                    {
-                        id: 5,
-                        product_code: 'COK001',
-                        name: 'Coke',
-                        category: 'Beverage',
-                        description_type: 'k-street food',
-                        price: 40.00,
-                        image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-                        branch: 'south'
-                    }
-                ];
-            }
 
-            getMockInventory() {
-                return [
-                    {
-                        id: 1,
-                        product_code: 'BEEF001',
-                        name: 'Beef Patty',
-                        category: 'Meat',
-                        description: 'Fresh beef patties for burgers',
-                        unit: 'pcs',
-                        current_stock: 50,
-                        min_stock: 20,
-                        supplier: 'Meat Suppliers Inc.',
-                        price: 25.00,
-                        total_price: 1250.00,
-                        branch: 'main',
-                        display_unit: 'pcs'
-                    },
-                    {
-                        id: 2,
-                        product_code: 'BUN001',
-                        name: 'Burger Buns',
-                        category: 'Bakery',
-                        description: 'Fresh burger buns',
-                        unit: 'pcs',
-                        current_stock: 100,
-                        min_stock: 50,
-                        supplier: 'Bakery Corner',
-                        price: 8.00,
-                        total_price: 800.00,
-                        branch: 'main',
-                        display_unit: 'pcs'
-                    },
-                    {
-                        id: 3,
-                        product_code: 'COK002',
-                        name: 'Coke Syrup',
-                        category: 'Beverages',
-                        description: 'Coke syrup for drinks',
-                        unit: 'liters',
-                        current_stock: 5,
-                        min_stock: 10,
-                        supplier: 'Beverage Co.',
-                        price: 150.00,
-                        total_price: 750.00,
-                        branch: 'main',
-                        display_unit: 'ml'
-                    },
-                    {
-                        id: 4,
-                        product_code: 'POT001',
-                        name: 'Potatoes',
-                        category: 'Vegetables',
-                        description: 'Fresh potatoes for fries',
-                        unit: 'kg',
-                        current_stock: 15,
-                        min_stock: 20,
-                        supplier: 'Farm Fresh',
-                        price: 60.00,
-                        total_price: 900.00,
-                        branch: 'north',
-                        display_unit: 'kg'
-                    },
-                    {
-                        id: 5,
-                        product_code: 'CHE001',
-                        name: 'Cheese Slice',
-                        category: 'Dairy',
-                        description: 'Cheese slices for burgers',
-                        unit: 'pcs',
-                        current_stock: 5,
-                        min_stock: 30,
-                        supplier: 'Dairy Delight',
-                        price: 5.00,
-                        total_price: 25.00,
-                        branch: 'south',
-                        display_unit: 'pcs'
-                    }
-                ];
-            }
         }
 
         // Initialize the system

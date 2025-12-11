@@ -1,5 +1,5 @@
 <?php
-// Login.php - SIMPLE NA VERSION
+// Login.php - FIXED VERSION WITH BRANCH
 session_start();
 
 // Check if already logged in
@@ -41,22 +41,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$user) {
                 $error = 'User not found';
             } else {
-                // DEBUG: Check what's in the database
-                echo "<!-- DEBUG: ";
-                echo "Email: " . $email . "<br>";
-                echo "Input password: " . $password . "<br>";
-                echo "DB password: " . $user['password'] . "<br>";
-                echo "Password length: " . strlen($user['password']) . "<br>";
-                echo "-->";
-                
                 // CHECK PASSWORD
                 if (password_verify($password, $user['password'])) {
-                    // LOGIN SUCCESS
+                    // LOGIN SUCCESS - INCLUDE BRANCH!
                     $_SESSION['user'] = [
                         'id' => $user['id'],
                         'email' => $user['email'],
                         'username' => $user['username'] ?? $user['email'],
-                        'role' => $user['role']
+                        'role' => $user['role'],
+                        'branch' => $user['branch'] ?? 'main'  // ← ADDED THIS!
                     ];
                     
                     // Remember me

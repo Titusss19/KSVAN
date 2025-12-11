@@ -339,7 +339,7 @@ $currentUser = $user;
     </div>
 
     <!-- Add/Edit Inventory Modal -->
-    <div id="inventoryModal" class="fixed inset-0 modal-overlay hidden items-center justify-center p-4 z-50">
+<div id="inventoryModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center p-4 z-50">
         <div class="modal-content-kstreet max-w-2xl w-full modal-show max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center p-6 border-b">
                 <h3 class="text-xl font-bold text-gray-900" id="inventoryModalTitle">Add New Inventory Item</h3>
@@ -1293,41 +1293,64 @@ getUserFromPHP() {
             }
 
             showInventoryModal(inventory = null) {
-                this.editingInventory = inventory;
-                const modal = document.getElementById('inventoryModal');
-                const title = document.getElementById('inventoryModalTitle');
-                const branchInfo = document.getElementById('inventoryBranchInfo');
+    console.log('🔵 showInventoryModal called', inventory);
+    
+    this.editingInventory = inventory;
+    
+    const modal = document.getElementById('inventoryModal');
+    if (!modal) {
+        console.error('❌ Inventory modal not found');
+        return;
+    }
+    
+    const title = document.getElementById('inventoryModalTitle');
+    if (title) {
+        title.textContent = inventory ? 'Edit Inventory Item' : 'Add New Inventory Item';
+    }
 
-                if (inventory) {
-                    title.textContent = 'Edit Inventory Item';
-                    this.fillInventoryForm(inventory);
-                } else {
-                    title.textContent = 'Add New Inventory Item';
-                    this.resetInventoryForm();
-                }
+    // Try to reset/fill form
+    try {
+        if (inventory) {
+            this.fillInventoryForm(inventory);
+        } else {
+            this.resetInventoryForm();
+        }
+    } catch (error) {
+        console.error('Error setting up inventory form:', error);
+    }
 
-                // Update branch info
-                if (this.isAdmin) {
-                    branchInfo.innerHTML = `
-                        <label class="block text-sm font-medium text-blue-700 mb-2">Select Branch for this Inventory Item *</label>
-                        <select id="inventoryBranch" class="border border-gray-300 p-2 rounded-lg w-full focus:ring-2 focus:ring-red-500 focus:border-transparent">
-                            ${['main', 'north', 'south'].map(branch => `
-                                <option value="${branch}" ${branch === (inventory?.branch || this.user.branch) ? 'selected' : ''}>
-                                    ${branch} ${branch === this.user.branch ? '(Your Branch)' : ''}
-                                </option>
-                            `).join('')}
-                        </select>
-                    `;
-                } else {
-                    branchInfo.innerHTML = `
-                        <p class="text-sm text-blue-700 font-medium">
-                            This inventory item will be added to: <span class="font-bold">${this.user.branch}</span> branch
-                        </p>
-                    `;
-                }
-
-                modal.classList.remove('hidden');
+    // Update branch info
+    const branchInfo = document.getElementById('inventoryBranchInfo');
+    if (branchInfo) {
+        if (this.isAdmin) {
+            branchInfo.innerHTML = `
+                <label class="block text-sm font-medium text-blue-700 mb-2">Select Branch *</label>
+                <select id="inventoryBranch" class="border border-gray-300 p-2 rounded-lg w-full">
+                    <option value="main">Main Branch</option>
+                    <option value="north">North Branch</option>
+                    <option value="south">South Branch</option>
+                </select>
+            `;
+            if (inventory) {
+                const branchSelect = document.getElementById('inventoryBranch');
+                if (branchSelect) branchSelect.value = inventory.branch;
             }
+        } else {
+            branchInfo.innerHTML = `
+                <p class="text-sm text-blue-700 font-medium">
+                    Branch: <span class="font-bold">${this.user.branch}</span>
+                </p>
+            `;
+        }
+    }
+
+    // Show modal
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    modal.style.display = 'flex';
+    
+    console.log('✓ Inventory modal opened');
+}
 
             showStockModal(inventoryId) {
                 const inventory = this.inventory.find(item => item.id === inventoryId);
@@ -1392,32 +1415,59 @@ getUserFromPHP() {
             }
 
             fillInventoryForm(inventory) {
-                // Convert liters to ml for display if needed
-                const displayItem = this.convertToDisplayUnit(inventory);
-                
-                document.getElementById('inventoryProductCode').value = displayItem.product_code;
-                document.getElementById('inventoryName').value = displayItem.name;
-                document.getElementById('inventoryCategory').value = displayItem.category;
-                document.getElementById('inventoryUnit').value = displayItem.unit;
-                document.getElementById('inventoryDescription').value = displayItem.description || '';
-                document.getElementById('inventoryCurrentStock').value = 0; // Reset to 0 when editing
-                document.getElementById('inventoryQuantity').value = 1;
-                document.getElementById('inventoryMinStock').value = displayItem.min_stock;
-                document.getElementById('inventorySupplier').value = displayItem.supplier || '';
-                document.getElementById('inventoryPrice').value = displayItem.price || '';
-                
-                if (this.isAdmin) {
-                    document.getElementById('inventoryBranch').value = displayItem.branch;
-                }
+    console.log('Filling inventory form with:', inventory);
+    
+    const displayItem = this.convertToDisplayUnit(inventory);
+    
+    const fields = {
+        'inventoryProductCode': displayItem.product_code,
+        'inventoryName': displayItem.name,
+        'inventoryCategory': displayItem.category,
+        'inventoryUnit': displayItem.unit,
+        'inventoryDescription': displayItem.description || '',
+        'inventoryCurrentStock': '0',
+        'inventoryQuantity': '1',
+        'inventoryMinStock': displayItem.min_stock,
+        'inventorySupplier': displayItem.supplier || '',
+        'inventoryPrice': displayItem.price || ''
+    };
 
-                // Show existing stock info
-                document.getElementById('existingStockInfo').classList.remove('hidden');
-                document.getElementById('existingStockDisplay').textContent = parseFloat(displayItem.current_stock).toFixed(2);
-                document.getElementById('existingUnitDisplay').textContent = displayItem.display_unit || displayItem.unit;
+    for (const [id, value] of Object.entries(fields)) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.value = value;
+        } else {
+            console.warn(`⚠️ Element ${id} not found`);
+        }
+    }
 
-                this.updateInventoryLabels(displayItem.unit);
-                this.updateInventoryCalculations();
-            }
+    // Set branch if admin
+    if (this.isAdmin) {
+        const inventoryBranch = document.getElementById('inventoryBranch');
+        if (inventoryBranch) inventoryBranch.value = displayItem.branch;
+    }
+
+    // Show existing stock info
+    const existingStockInfo = document.getElementById('existingStockInfo');
+    if (existingStockInfo) {
+        existingStockInfo.classList.remove('hidden');
+        const existingStockDisplay = document.getElementById('existingStockDisplay');
+        const existingUnitDisplay = document.getElementById('existingUnitDisplay');
+        if (existingStockDisplay) {
+            existingStockDisplay.textContent = parseFloat(displayItem.current_stock).toFixed(2);
+        }
+        if (existingUnitDisplay) {
+            existingUnitDisplay.textContent = displayItem.display_unit || displayItem.unit;
+        }
+    }
+
+    try {
+        this.updateInventoryLabels(displayItem.unit);
+        this.updateInventoryCalculations();
+    } catch (error) {
+        console.error('Error updating inventory calculations:', error);
+    }
+}
 
 resetProductForm() {
     console.log('Resetting product form...');
@@ -1455,25 +1505,52 @@ resetProductForm() {
 }
 
             resetInventoryForm() {
-                document.getElementById('inventoryProductCode').value = '';
-                document.getElementById('inventoryName').value = '';
-                document.getElementById('inventoryCategory').value = 'Raw Material';
-                document.getElementById('inventoryUnit').value = 'pcs';
-                document.getElementById('inventoryDescription').value = '';
-                document.getElementById('inventoryCurrentStock').value = '0';
-                document.getElementById('inventoryQuantity').value = '1';
-                document.getElementById('inventoryMinStock').value = '0';
-                document.getElementById('inventorySupplier').value = '';
-                document.getElementById('inventoryPrice').value = '';
-                
-                if (this.isAdmin) {
-                    document.getElementById('inventoryBranch').value = this.user.branch;
-                }
+    console.log('Resetting inventory form...');
+    
+    const fields = {
+        'inventoryProductCode': '',
+        'inventoryName': '',
+        'inventoryCategory': 'Raw Material',
+        'inventoryUnit': 'pcs',
+        'inventoryDescription': '',
+        'inventoryCurrentStock': '0',
+        'inventoryQuantity': '1',
+        'inventoryMinStock': '0',
+        'inventorySupplier': '',
+        'inventoryPrice': ''
+    };
 
-                document.getElementById('existingStockInfo').classList.add('hidden');
-                this.updateInventoryLabels('pcs');
-                this.updateInventoryCalculations();
+    for (const [id, value] of Object.entries(fields)) {
+        const element = document.getElementById(id);
+        if (element) {
+            if (element.tagName === 'SELECT' || element.tagName === 'TEXTAREA') {
+                element.value = value;
+            } else {
+                element.value = value;
             }
+        } else {
+            console.warn(`⚠️ Element ${id} not found`);
+        }
+    }
+
+    // Set branch if admin
+    if (this.isAdmin) {
+        const inventoryBranch = document.getElementById('inventoryBranch');
+        if (inventoryBranch) inventoryBranch.value = this.user.branch;
+    }
+
+    // Hide existing stock info
+    const existingStockInfo = document.getElementById('existingStockInfo');
+    if (existingStockInfo) existingStockInfo.classList.add('hidden');
+    
+    // Update labels and calculations
+    try {
+        this.updateInventoryLabels('pcs');
+        this.updateInventoryCalculations();
+    } catch (error) {
+        console.error('Error updating inventory calculations:', error);
+    }
+}
 
 handleDescTypeChange(descType) {
     const priceField = document.getElementById('productPrice');
@@ -1499,60 +1576,83 @@ handleDescTypeChange(descType) {
     }
 }
 
-            updateInventoryLabels(unit) {
-                const labels = {
-                    'pcs': 'pcs',
-                    'kg': 'kg',
-                    'grams': 'grams',
-                    'liters': 'liters',
-                    'packs': 'packs',
-                    'bottles': 'bottles'
-                };
+updateInventoryLabels(unit) {
+    const labels = {
+        'pcs': 'pcs',
+        'kg': 'kg',
+        'grams': 'grams',
+        'liters': 'liters',
+        'packs': 'packs',
+        'bottles': 'bottles'
+    };
 
-                document.getElementById('currentStockLabel').textContent = `Stock per Item (${labels[unit]})`;
-                document.getElementById('quantityLabel').textContent = 'Number of Items';
-                document.getElementById('minStockLabel').textContent = `Min Stock (${labels[unit]})`;
-                
-                // Update display units
-                document.getElementById('totalQuantityDisplay').textContent = '0 ' + labels[unit];
-                document.getElementById('existingUnitDisplay').textContent = labels[unit];
-                document.getElementById('finalUnitDisplay').textContent = labels[unit];
-            }
+    const currentStockLabel = document.getElementById('currentStockLabel');
+    const quantityLabel = document.getElementById('quantityLabel');
+    const minStockLabel = document.getElementById('minStockLabel');
+    const totalQuantityDisplay = document.getElementById('totalQuantityDisplay');
+    const existingUnitDisplay = document.getElementById('existingUnitDisplay');
+    const finalUnitDisplay = document.getElementById('finalUnitDisplay');
+
+    if (currentStockLabel) currentStockLabel.textContent = `Stock per Item (${labels[unit]})`;
+    if (quantityLabel) quantityLabel.textContent = 'Number of Items';
+    if (minStockLabel) minStockLabel.textContent = `Min Stock (${labels[unit]})`;
+    if (totalQuantityDisplay) totalQuantityDisplay.textContent = '0 ' + labels[unit];
+    if (existingUnitDisplay) existingUnitDisplay.textContent = labels[unit];
+    if (finalUnitDisplay) finalUnitDisplay.textContent = labels[unit];
+}
 
             updateInventoryCalculations() {
-                const stockPerItem = parseFloat(document.getElementById('inventoryCurrentStock').value) || 0;
-                const quantity = parseFloat(document.getElementById('inventoryQuantity').value) || 1;
-                const pricePerItem = parseFloat(document.getElementById('inventoryPrice').value) || 0;
-                const unit = document.getElementById('inventoryUnit').value;
+    const stockPerItemEl = document.getElementById('inventoryCurrentStock');
+    const quantityEl = document.getElementById('inventoryQuantity');
+    const pricePerItemEl = document.getElementById('inventoryPrice');
+    const unitEl = document.getElementById('inventoryUnit');
 
-                const totalQuantity = stockPerItem * quantity;
-                const totalPrice = pricePerItem * quantity;
+    if (!stockPerItemEl || !quantityEl || !unitEl) {
+        console.warn('Missing inventory calculation elements');
+        return;
+    }
 
-                // Get existing stock if editing
-                let existingStock = 0;
-                if (this.editingInventory) {
-                    existingStock = parseFloat(this.convertToDisplayUnit(this.editingInventory).current_stock) || 0;
-                }
+    const stockPerItem = parseFloat(stockPerItemEl.value) || 0;
+    const quantity = parseFloat(quantityEl.value) || 1;
+    const pricePerItem = parseFloat(pricePerItemEl?.value) || 0;
+    const unit = unitEl.value;
 
-                const finalStock = existingStock + totalQuantity;
+    const totalQuantity = stockPerItem * quantity;
+    const totalPrice = pricePerItem * quantity;
 
-                // Update displays
-                const labels = {
-                    'pcs': 'pcs',
-                    'kg': 'kg',
-                    'grams': 'grams',
-                    'liters': 'liters',
-                    'packs': 'packs',
-                    'bottles': 'bottles'
-                };
+    // Get existing stock if editing
+    let existingStock = 0;
+    if (this.editingInventory) {
+        const displayItem = this.convertToDisplayUnit(this.editingInventory);
+        existingStock = parseFloat(displayItem.current_stock) || 0;
+    }
 
-                document.getElementById('totalQuantityDisplay').textContent = 
-                    `${totalQuantity.toFixed(2)} ${labels[unit]}`;
-                document.getElementById('totalPriceDisplay').textContent = 
-                    `₱${totalPrice.toFixed(2)}`;
-                document.getElementById('finalStockDisplay').textContent = 
-                    `${finalStock.toFixed(2)} ${labels[unit]}`;
-            }
+    const finalStock = existingStock + totalQuantity;
+
+    // Update displays
+    const labels = {
+        'pcs': 'pcs',
+        'kg': 'kg',
+        'grams': 'grams',
+        'liters': 'liters',
+        'packs': 'packs',
+        'bottles': 'bottles'
+    };
+
+    const totalQuantityDisplay = document.getElementById('totalQuantityDisplay');
+    const totalPriceDisplay = document.getElementById('totalPriceDisplay');
+    const finalStockDisplay = document.getElementById('finalStockDisplay');
+
+    if (totalQuantityDisplay) {
+        totalQuantityDisplay.textContent = `${totalQuantity.toFixed(2)} ${labels[unit]}`;
+    }
+    if (totalPriceDisplay) {
+        totalPriceDisplay.textContent = `₱${totalPrice.toFixed(2)}`;
+    }
+    if (finalStockDisplay) {
+        finalStockDisplay.textContent = `${finalStock.toFixed(2)} ${labels[unit]}`;
+    }
+}
 
             updateStockCalculations() {
                 const stockPerItem = parseFloat(document.getElementById('stockPerItem').value) || 0;
@@ -1887,29 +1987,32 @@ updateImagePreview(imageUrl) {
                 }
             }
 
-            convertToDisplayUnit(item) {
-                if (item.unit === 'liters') {
-                    return {
-                        ...item,
-                        current_stock: item.current_stock * 1000,
-                        min_stock: item.min_stock * 1000,
-                        display_unit: 'ml'
-                    };
-                }
-                return { ...item, display_unit: item.unit };
-            }
+convertToDisplayUnit(item) {
+    if (!item) return item;
+    
+    if (item.unit === 'liters') {
+        return {
+            ...item,
+            current_stock: item.current_stock * 1000,
+            min_stock: item.min_stock * 1000,
+            display_unit: 'ml'
+        };
+    }
+    return { ...item, display_unit: item.unit };
+}
 
-            convertToStorageUnit(item) {
-                if (item.unit === 'liters') {
-                    return {
-                        ...item,
-                        current_stock: item.current_stock / 1000,
-                        min_stock: item.min_stock / 1000
-                    };
-                }
-                return item;
-            }
-
+convertToStorageUnit(item) {
+    if (!item) return item;
+    
+    if (item.unit === 'liters') {
+        return {
+            ...item,
+            current_stock: item.current_stock / 1000,
+            min_stock: item.min_stock / 1000
+        };
+    }
+    return item;
+}
             showSuccess(message) {
                 const modal = document.getElementById('successModal');
                 document.getElementById('successTitle').textContent = 'Success!';
@@ -1934,7 +2037,7 @@ updateImagePreview(imageUrl) {
         });
     </script>
 
-    <script>
+<script>
 document.addEventListener('DOMContentLoaded', function() {
     const addProductBtn = document.getElementById('addProductBtn');
     const productModal = document.getElementById('productModal');
@@ -1955,6 +2058,30 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.addEventListener('click', function() {
                 productModal.classList.add('hidden');
                 productModal.style.display = 'none';
+            });
+        });
+    }
+    
+    // Add Inventory Modal Fix
+    const addInventoryBtn = document.getElementById('addInventoryBtn');
+    const inventoryModal = document.getElementById('inventoryModal');
+    
+    if (addInventoryBtn && inventoryModal) {
+        addInventoryBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            inventoryModal.classList.remove('hidden');
+            inventoryModal.classList.add('flex');
+            inventoryModal.style.display = 'flex';
+        });
+        
+        // Close modal
+        const closeButtons = inventoryModal.querySelectorAll('.modal-close, #cancelInventory');
+        closeButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                inventoryModal.classList.add('hidden');
+                inventoryModal.style.display = 'none';
             });
         });
     }

@@ -1,0 +1,275 @@
+
+        /* Custom K-STREET Styles */
+        :root {
+            --primary-red: #dc2626;
+            --primary-red-dark: #b91c1c;
+            --gray-900: #111827;
+        }
+
+        /* Navbar Styles */
+        .navbar-kstreet {
+            background: linear-gradient(135deg, #111827, #000);
+            height: 64px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar-logo {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary-red), #ef4444);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 20px;
+        }
+
+        .nav-link-kstreet {
+            color: #9ca3af;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .nav-link-kstreet:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-link-kstreet.active {
+            color: white;
+            background: rgba(220, 38, 38, 0.2);
+            border: 1px solid rgba(220, 38, 38, 0.4);
+        }
+
+        .navbar-user-kstreet {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+        }
+
+        .user-avatar-kstreet {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--primary-red), #ef4444);
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        /* Tab Styles */
+        .tab-btn-kstreet {
+            padding: 12px 24px;
+            background: #f3f4f6;
+            border-radius: 8px;
+            font-weight: 600;
+            color: #4b5563;
+            transition: all 0.2s;
+        }
+
+        .tab-btn-kstreet:hover {
+            background: #e5e7eb;
+        }
+
+        .tab-btn-kstreet.active {
+            background: var(--primary-red);
+            color: white;
+        }
+
+        /* Table Styles */
+        .table-kstreet {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        }
+
+        .table-kstreet th {
+            background: #f9fafb;
+            color: #374151;
+            font-weight: 600;
+        }
+
+        .table-kstreet tr:hover {
+            background: #f9fafb;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content-kstreet {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Button Styles */
+        .btn-kstreet-primary {
+            background: var(--primary-red);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-kstreet-primary:hover {
+            background: var(--primary-red-dark);
+        }
+
+        .btn-kstreet-secondary {
+            background: #f3f4f6;
+            color: #374151;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-kstreet-secondary:hover {
+            background: #e5e7eb;
+        }
+
+        /* Form Styles */
+        .form-select-kstreet, .form-input-kstreet {
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            width: 100%;
+            transition: all 0.2s;
+        }
+
+        .form-select-kstreet:focus, .form-input-kstreet:focus {
+            outline: none;
+            border-color: var(--primary-red);
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+        }
+
+        /* Receipt Styles */
+        .receipt-kstreet {
+            font-family: 'Courier New', monospace;
+            max-width: 400px;
+            background: white;
+        }
+
+        .void-stamp-kstreet {
+            color: var(--primary-red);
+            font-weight: 900;
+            font-size: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border: 3px solid var(--primary-red);
+            padding: 8px;
+            border-radius: 4px;
+            transform: rotate(-5deg);
+        }
+
+        /* Animation for modal */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-show {
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        /* Loading Spinner */
+        .spinner-kstreet {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e5e7eb;
+            border-top-color: var(--primary-red);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Pagination */
+        .pagination-kstreet {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .btn-pagination-kstreet {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .btn-pagination-kstreet:hover:not(.disabled) {
+            background: #f9fafb;
+        }
+
+        .btn-pagination-kstreet.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Payment Method Badges */
+        .payment-method-badge.cash {
+            background: #dcfce7;
+            color: #166534;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .payment-method-badge.card {
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .payment-method-badge.gcash {
+            background: #f0f9ff;
+            color: #0369a1;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .payment-method-badge.maya {
+            background: #f5f3ff;
+            color: #5b21b6;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        /* Void Badge */
+        .badge-void-kstreet {
+            background: #dc2626;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+        }
+   

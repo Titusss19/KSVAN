@@ -286,4 +286,12 @@
             background: var(--primary-red);
             color: white;
         }
+
+        .modal-overlay.hidden {
+    display: none !important;
+}
+
+.modal-overlay:not(.hidden) {
+    display: flex !important;
+}
    

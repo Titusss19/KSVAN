@@ -251,7 +251,7 @@ $currentUser = $user;
     <!-- Modals -->
     
     <!-- Add/Edit Product Modal -->
-    <div id="productModal" class="fixed inset-0 modal-overlay hidden items-center justify-center p-4 z-50">
+    <div id="productModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center p-4 z-50">
         <div class="modal-content-kstreet max-w-2xl w-full modal-show max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center p-6 border-b">
                 <h3 class="text-xl font-bold text-gray-900" id="productModalTitle">Add New Product</h3>
@@ -1419,21 +1419,40 @@ getUserFromPHP() {
                 this.updateInventoryCalculations();
             }
 
-            resetProductForm() {
-                document.getElementById('productCode').value = '';
-                document.getElementById('productName').value = '';
-                document.getElementById('productCategory').value = 'Food';
-                document.getElementById('productDescType').value = 'k-street food';
-                document.getElementById('productPrice').value = '';
-                document.getElementById('productImage').value = '';
-                
-                if (this.isAdmin) {
-                    document.getElementById('productBranch').value = this.user.branch;
-                }
+resetProductForm() {
+    console.log('Resetting product form...');
+    
+    // Reset fields safely with null checks
+    const productCode = document.getElementById('productCode');
+    if (productCode) productCode.value = '';
+    
+    const productName = document.getElementById('productName');
+    if (productName) productName.value = '';
+    
+    const productCategory = document.getElementById('productCategory');
+    if (productCategory) productCategory.value = 'Food';
+    
+    const productDescType = document.getElementById('productDescType');
+    if (productDescType) productDescType.value = 'k-street food';
+    
+    const productPrice = document.getElementById('productPrice');
+    if (productPrice) productPrice.value = '';
+    
+    const productImage = document.getElementById('productImage');
+    if (productImage) productImage.value = '';
+    
+    // Set branch if admin
+    if (this.isAdmin) {
+        const productBranch = document.getElementById('productBranch');
+        if (productBranch) productBranch.value = this.user.branch;
+    }
 
-                this.handleDescTypeChange('k-street food');
-                this.updateImagePreview('');
-            }
+    // Handle description type change
+    this.handleDescTypeChange('k-street food');
+    
+    // Update image preview
+    this.updateImagePreview('');
+}
 
             resetInventoryForm() {
                 document.getElementById('inventoryProductCode').value = '';
@@ -1456,25 +1475,29 @@ getUserFromPHP() {
                 this.updateInventoryCalculations();
             }
 
-            handleDescTypeChange(descType) {
-                const priceField = document.getElementById('productPrice');
-                const priceLabel = document.getElementById('priceLabel');
-                const priceNote = document.getElementById('priceNote');
-                const flavorNote = document.getElementById('flavorNote');
+handleDescTypeChange(descType) {
+    const priceField = document.getElementById('productPrice');
+    const priceNote = document.getElementById('priceNote');
+    const flavorNote = document.getElementById('flavorNote');
 
-                if (descType === 'k-street Flavor') {
-                    priceField.value = '0';
-                    priceField.disabled = true;
-                    priceField.classList.add('bg-gray-100', 'text-gray-500');
-                    priceNote.classList.remove('hidden');
-                    flavorNote.classList.remove('hidden');
-                } else {
-                    priceField.disabled = false;
-                    priceField.classList.remove('bg-gray-100', 'text-gray-500');
-                    priceNote.classList.add('hidden');
-                    flavorNote.classList.add('hidden');
-                }
-            }
+    if (!priceField) {
+        console.warn('Price field not found');
+        return;
+    }
+
+    if (descType === 'k-street Flavor') {
+        priceField.value = '0';
+        priceField.disabled = true;
+        priceField.classList.add('bg-gray-100', 'text-gray-500');
+        if (priceNote) priceNote.classList.remove('hidden');
+        if (flavorNote) flavorNote.classList.remove('hidden');
+    } else {
+        priceField.disabled = false;
+        priceField.classList.remove('bg-gray-100', 'text-gray-500');
+        if (priceNote) priceNote.classList.add('hidden');
+        if (flavorNote) flavorNote.classList.add('hidden');
+    }
+}
 
             updateInventoryLabels(unit) {
                 const labels = {
@@ -1560,20 +1583,25 @@ getUserFromPHP() {
                     pricePerItem > 0 ? `₱${pricePerItem.toFixed(2)}` : 'No change';
             }
 
-            updateImagePreview(imageUrl) {
-                const preview = document.getElementById('imagePreview');
-                const img = document.getElementById('previewImage');
+updateImagePreview(imageUrl) {
+    const preview = document.getElementById('imagePreview');
+    const img = document.getElementById('previewImage');
 
-                if (imageUrl) {
-                    img.src = imageUrl;
-                    img.onerror = () => {
-                        img.src = 'https://via.placeholder.com/150';
-                    };
-                    preview.classList.remove('hidden');
-                } else {
-                    preview.classList.add('hidden');
-                }
-            }
+    if (!preview || !img) {
+        console.warn('Image preview elements not found');
+        return;
+    }
+
+    if (imageUrl) {
+        img.src = imageUrl;
+        img.onerror = () => {
+            img.src = 'https://via.placeholder.com/150?text=No+Image';
+        };
+        preview.classList.remove('hidden');
+    } else {
+        preview.classList.add('hidden');
+    }
+}
 
             saveProduct() {
     // Validation
@@ -1905,5 +1933,32 @@ getUserFromPHP() {
             window.productSystem = new ProductsInventorySystem();
         });
     </script>
+
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const addProductBtn = document.getElementById('addProductBtn');
+    const productModal = document.getElementById('productModal');
+    
+    if (addProductBtn && productModal) {
+        addProductBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            productModal.classList.remove('hidden');
+            productModal.classList.add('flex');
+            productModal.style.display = 'flex';
+        });
+        
+        // Close modal
+        const closeButtons = productModal.querySelectorAll('.modal-close, #cancelProduct');
+        closeButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                productModal.classList.add('hidden');
+                productModal.style.display = 'none';
+            });
+        });
+    }
+});
+</script>
 </body>
 </html>

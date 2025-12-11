@@ -1,7 +1,7 @@
 <?php
 // NO whitespace before this line!
 session_start();
-require_once '../config/database.php'; // FIXED: was 'config/database.php'
+require_once 'config/database.php'; // FIXED: was 'config/database.php'
 
 // Clean output buffer
 if (ob_get_level()) ob_end_clean();

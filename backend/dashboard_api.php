@@ -1,261 +1,475 @@
-<!-- FILE 1: php/dashboard_api.php -->
-<!-- Paste this in your backend/dashboard_api.php -->
-
 <?php
+// backend/dashboard_api.php - COMPLETE FIXED VERSION
 session_start();
-header('Content-Type: application/json');
 
-// Include database connection
-require_once '../config/database.php';
+require_once __DIR__ . '/config/database.php';
+
+header('Content-Type: application/json');
 
 // Check authentication
 if (!isset($_SESSION['user'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-    exit;
+    echo json_encode(['success' => false, 'message' => 'Not authenticated']);
+    exit();
 }
+
+error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE);
+ini_set('display_errors', 0);
 
 $user = $_SESSION['user'];
-$action = $_GET['action'] ?? $_POST['action'] ?? '';
+$action = $_POST['action'] ?? '';
 
-try {
-    switch ($action) {
-        
-        // ===== GET STATS =====
-        case 'getStats':
-            $branch = $_POST['branch'] ?? 'all';
-            $stats = getStats($conn, $user, $branch);
-            echo json_encode(['success' => true, 'data' => $stats]);
-            break;
+global $pdo;
 
-        // ===== GET USERS =====
-        case 'getUsers':
-            $branch = $_POST['branch'] ?? $user['branch'];
-            $users = getUsers($conn, $user, $branch);
-            echo json_encode(['success' => true, 'data' => $users]);
-            break;
-
-        // ===== ADD USER =====
-        case 'addUser':
-            $email = $_POST['email'] ?? '';
-            $username = $_POST['username'] ?? '';
-            $password = $_POST['password'] ?? '';
-            $role = $_POST['role'] ?? 'cashier';
-            $branch = $_POST['branch'] ?? 'main';
-            $status = $_POST['status'] ?? 'Active';
-
-            if (!$email || !$password) {
-                echo json_encode(['success' => false, 'message' => 'Email and password required']);
-                break;
-            }
-
-            $result = addUser($conn, $email, $username, $password, $role, $branch, $status);
-            echo json_encode($result);
-            break;
-
-        // ===== UPDATE USER =====
-        case 'updateUser':
-            $id = $_POST['id'] ?? 0;
-            $email = $_POST['email'] ?? '';
-            $username = $_POST['username'] ?? '';
-            $role = $_POST['role'] ?? 'cashier';
-            $branch = $_POST['branch'] ?? 'main';
-            $status = $_POST['status'] ?? 'Active';
-
-            $result = updateUser($conn, $id, $email, $username, $role, $branch, $status);
-            echo json_encode($result);
-            break;
-
-        // ===== DELETE USER =====
-        case 'deleteUser':
-            $id = $_POST['id'] ?? 0;
-            $result = deleteUser($conn, $id);
-            echo json_encode($result);
-            break;
-
-        // ===== GET ANNOUNCEMENTS =====
-        case 'getAnnouncements':
-            $branch = $_POST['branch'] ?? $user['branch'];
-            $announcements = getAnnouncements($conn, $user, $branch);
-            echo json_encode(['success' => true, 'data' => $announcements]);
-            break;
-
-        // ===== POST ANNOUNCEMENT =====
-        case 'postAnnouncement':
-            $title = $_POST['title'] ?? '';
-            $message = $_POST['message'] ?? '';
-            $type = $_POST['type'] ?? 'info';
-
-            if (!$title || !$message) {
-                echo json_encode(['success' => false, 'message' => 'Title and message required']);
-                break;
-            }
-
-            $result = postAnnouncement($conn, $title, $message, $type, $user);
-            echo json_encode($result);
-            break;
-
-        default:
-            echo json_encode(['success' => false, 'message' => 'Invalid action']);
-    }
-
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Server error: ' . $e->getMessage()]);
+// ===== HELPER FUNCTIONS =====
+function getUserBranch($user) {
+    return $user['branch'] ?? 'main';
 }
 
-// ============================================
-// FUNCTIONS
-// ============================================
+function hasPermission($user, $requiredRole) {
+    $userRole = $user['role'] ?? 'cashier';
+    $roleHierarchy = ['cashier' => 1, 'manager' => 2, 'admin' => 3, 'owner' => 4];
+    return ($roleHierarchy[$userRole] ?? 0) >= ($roleHierarchy[$requiredRole] ?? 0);
+}
 
-function getStats($conn, $user, $branch) {
-    $branch_filter = ($branch === 'all' || $user['role'] === 'admin') ? '' : " AND branch = '{$branch}'";
-
-    // Get Gross Sales
-    $query = "SELECT SUM(total) as gross_sales, COUNT(*) as total_orders FROM orders WHERE is_void = 0{$branch_filter}";
-    $result = $conn->query($query);
-    $sales_data = $result->fetch_assoc();
-
-    // Get Voided Orders
-    $query = "SELECT SUM(total) as voided_amount, COUNT(*) as voided_count FROM orders WHERE is_void = 1{$branch_filter}";
-    $result = $conn->query($query);
-    $voided_data = $result->fetch_assoc();
-
-    // Get Inventory Total
-    $query = "SELECT SUM(total_price) as inventory_value, COUNT(*) as item_count FROM inventory_items{$branch_filter}";
-    $result = $conn->query($query);
-    $inventory_data = $result->fetch_assoc();
-
-    // Get Active Employees
-    $query = "SELECT COUNT(*) as active_count FROM users WHERE status = 'Active'{$branch_filter}";
-    $result = $conn->query($query);
-    $employees_data = $result->fetch_assoc();
-
-    // Today's Stats
-    $today = date('Y-m-d');
-    $query = "SELECT SUM(total) as today_sales, COUNT(*) as today_transactions FROM orders 
-              WHERE DATE(created_at) = '{$today}' AND is_void = 0{$branch_filter}";
-    $result = $conn->query($query);
-    $today_data = $result->fetch_assoc();
-
-    return [
-        'grossSales' => floatval($sales_data['gross_sales'] ?? 0),
-        'netSales' => floatval(($sales_data['gross_sales'] ?? 0) - ($voided_data['voided_amount'] ?? 0)),
-        'voidedAmount' => floatval($voided_data['voided_amount'] ?? 0),
-        'voidedCount' => intval($voided_data['voided_count'] ?? 0),
-        'todaySales' => floatval($today_data['today_sales'] ?? 0),
-        'todayTransactions' => intval($today_data['today_transactions'] ?? 0),
-        'inventoryValue' => floatval($inventory_data['inventory_value'] ?? 0),
-        'inventoryItemCount' => intval($inventory_data['item_count'] ?? 0),
-        'activeEmployees' => intval($employees_data['active_count'] ?? 0)
+function formatResponse($success, $message, $data = null) {
+    $response = [
+        'success' => $success,
+        'message' => $message
     ];
+    if ($data !== null) {
+        $response['data'] = $data;
+    }
+    return json_encode($response);
 }
 
-function getUsers($conn, $user, $branch) {
-    if ($user['role'] === 'admin') {
-        $query = "SELECT id, email, username, role, status, branch, created_at FROM users ORDER BY created_at DESC";
-        $result = $conn->query($query);
-    } else {
-        $query = "SELECT id, email, username, role, status, branch, created_at FROM users WHERE branch = ? ORDER BY created_at DESC";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param("s", $branch);
-        $stmt->execute();
-        $result = $stmt->get_result();
+function buildBranchFilter($selectedBranch, $userBranch, $userRole) {
+    if ($selectedBranch !== 'all' && ($userRole === 'admin' || $userRole === 'owner')) {
+        return ['WHERE branch = ?', [$selectedBranch]];
+    } elseif ($selectedBranch === 'all' && ($userRole !== 'admin' && $userRole !== 'owner')) {
+        return ['WHERE branch = ?', [$userBranch]];
+    } elseif ($selectedBranch !== 'all') {
+        return ['WHERE branch = ?', [$selectedBranch]];
     }
-
-    $users = [];
-    while ($row = $result->fetch_assoc()) {
-        $users[] = $row;
-    }
-    return $users;
+    return ['', []];
 }
 
-function addUser($conn, $email, $username, $password, $role, $branch, $status) {
-    // Check if email exists
-    $check_query = "SELECT id FROM users WHERE email = ?";
-    $stmt = $conn->prepare($check_query);
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result->num_rows > 0) {
-        return ['success' => false, 'message' => 'Email already exists'];
-    }
-
-    // Hash password
-    $hashed_password = password_hash($password, PASSWORD_BCRYPT);
-
-    // Insert user
-    $insert_query = "INSERT INTO users (email, username, password, role, status, branch) VALUES (?, ?, ?, ?, ?, ?)";
-    $stmt = $conn->prepare($insert_query);
-    $stmt->bind_param("ssssss", $email, $username, $hashed_password, $role, $status, $branch);
-
-    if ($stmt->execute()) {
-        return ['success' => true, 'message' => 'User added successfully', 'userId' => $conn->insert_id];
-    } else {
-        return ['success' => false, 'message' => 'Failed to add user'];
+// ===== GET DASHBOARD STATS =====
+if ($action === 'getStats') {
+    $selectedBranch = $_POST['branch'] ?? 'all';
+    $userBranch = getUserBranch($user);
+    
+    try {
+        $stats = [
+            'grossSales' => 0,
+            'netSales' => 0,
+            'voidedAmount' => 0,
+            'todaySales' => 0,
+            'todayGrossSales' => 0,
+            'todayVoidedAmount' => 0,
+            'todayTransactions' => 0,
+            'totalSales' => 0,
+            'inventoryValue' => 0,
+            'inventoryItemCount' => 0,
+            'totalTransactions' => 0,
+            'activeEmployees' => 0,
+            'voidedOrdersCount' => 0,
+            'todayVoidedOrdersCount' => 0
+        ];
+        
+        list($whereClause, $params) = buildBranchFilter($selectedBranch, $userBranch, $user['role']);
+        
+        // 1. Calculate sales stats
+        $salesQuery = "SELECT 
+            COALESCE(SUM(total), 0) as total_sales,
+            COALESCE(SUM(CASE WHEN is_void = 1 THEN total ELSE 0 END), 0) as voided_amount,
+            COUNT(*) as total_orders,
+            COALESCE(SUM(CASE WHEN is_void = 1 THEN 1 ELSE 0 END), 0) as voided_count
+            FROM orders $whereClause";
+        
+        $stmt = $pdo->prepare($salesQuery);
+        $stmt->execute($params);
+        $salesResult = $stmt->fetch();
+        
+        if ($salesResult) {
+            $stats['grossSales'] = floatval($salesResult['total_sales'] ?? 0);
+            $stats['voidedAmount'] = floatval($salesResult['voided_amount'] ?? 0);
+            $stats['netSales'] = $stats['grossSales'] - $stats['voidedAmount'];
+            $stats['totalSales'] = $stats['netSales'];
+            $stats['voidedOrdersCount'] = intval($salesResult['voided_count'] ?? 0);
+            $stats['totalTransactions'] = intval($salesResult['total_orders'] ?? 0) - $stats['voidedOrdersCount'];
+        }
+        
+        // 2. Today's stats
+        $today = date('Y-m-d');
+        if ($whereClause) {
+            $todayQuery = "SELECT 
+                COALESCE(SUM(total), 0) as today_sales,
+                COALESCE(SUM(CASE WHEN is_void = 1 THEN total ELSE 0 END), 0) as today_voided,
+                COUNT(*) as today_orders,
+                COALESCE(SUM(CASE WHEN is_void = 1 THEN 1 ELSE 0 END), 0) as today_voided_count
+                FROM orders 
+                WHERE DATE(created_at) = ? AND " . substr($whereClause, 6);
+            $todayParams = array_merge([$today], $params);
+        } else {
+            $todayQuery = "SELECT 
+                COALESCE(SUM(total), 0) as today_sales,
+                COALESCE(SUM(CASE WHEN is_void = 1 THEN total ELSE 0 END), 0) as today_voided,
+                COUNT(*) as today_orders,
+                COALESCE(SUM(CASE WHEN is_void = 1 THEN 1 ELSE 0 END), 0) as today_voided_count
+                FROM orders 
+                WHERE DATE(created_at) = ?";
+            $todayParams = [$today];
+        }
+        
+        $stmt = $pdo->prepare($todayQuery);
+        $stmt->execute($todayParams);
+        $todayResult = $stmt->fetch();
+        
+        if ($todayResult) {
+            $stats['todayGrossSales'] = floatval($todayResult['today_sales'] ?? 0);
+            $stats['todayVoidedAmount'] = floatval($todayResult['today_voided'] ?? 0);
+            $stats['todaySales'] = $stats['todayGrossSales'] - $stats['todayVoidedAmount'];
+            $stats['todayTransactions'] = intval($todayResult['today_orders'] ?? 0) - intval($todayResult['today_voided_count'] ?? 0);
+            $stats['todayVoidedOrdersCount'] = intval($todayResult['today_voided_count'] ?? 0);
+        }
+        
+        // 3. Inventory value
+        try {
+            $inventoryQuery = "SELECT 
+                COALESCE(SUM(total_price), 0) as total_value,
+                COUNT(*) as item_count
+                FROM inventory_items $whereClause";
+            
+            $stmt = $pdo->prepare($inventoryQuery);
+            $stmt->execute($params);
+            $inventoryResult = $stmt->fetch();
+            
+            if ($inventoryResult) {
+                $stats['inventoryValue'] = floatval($inventoryResult['total_value'] ?? 0);
+                $stats['inventoryItemCount'] = intval($inventoryResult['item_count'] ?? 0);
+            }
+        } catch (Exception $e) {
+            $stats['inventoryValue'] = 0;
+            $stats['inventoryItemCount'] = 0;
+        }
+        
+        // 4. Active employees
+        if ($whereClause) {
+            $employeesQuery = "SELECT COUNT(*) as active_count FROM users 
+                WHERE status = 'Active' AND " . substr($whereClause, 6);
+        } else {
+            $employeesQuery = "SELECT COUNT(*) as active_count FROM users WHERE status = 'Active'";
+        }
+        
+        $stmt = $pdo->prepare($employeesQuery);
+        $stmt->execute($params);
+        $employeesResult = $stmt->fetch();
+        
+        if ($employeesResult) {
+            $stats['activeEmployees'] = intval($employeesResult['active_count'] ?? 0);
+        }
+        
+        echo formatResponse(true, 'Stats retrieved successfully', $stats);
+        
+    } catch (PDOException $e) {
+        echo formatResponse(false, 'Error fetching stats: ' . $e->getMessage());
     }
 }
 
-function updateUser($conn, $id, $email, $username, $role, $branch, $status) {
-    $update_query = "UPDATE users SET email = ?, username = ?, role = ?, status = ?, branch = ? WHERE id = ?";
-    $stmt = $conn->prepare($update_query);
-    $stmt->bind_param("sssssi", $email, $username, $role, $status, $branch, $id);
-
-    if ($stmt->execute()) {
-        return ['success' => true, 'message' => 'User updated successfully'];
-    } else {
-        return ['success' => false, 'message' => 'Failed to update user'];
+// ===== GET USERS =====
+elseif ($action === 'getUsers') {
+    $selectedBranch = $_POST['branch'] ?? 'all';
+    
+    try {
+        if ($user['role'] === 'admin' || $user['role'] === 'owner') {
+            if ($selectedBranch === 'all') {
+                $query = "SELECT id, email, username, role, status, branch, created_at, void_pin FROM users ORDER BY created_at DESC";
+                $stmt = $pdo->prepare($query);
+                $stmt->execute();
+            } else {
+                $query = "SELECT id, email, username, role, status, branch, created_at, void_pin FROM users WHERE branch = ? ORDER BY created_at DESC";
+                $stmt = $pdo->prepare($query);
+                $stmt->execute([$selectedBranch]);
+            }
+        } else {
+            $userBranch = getUserBranch($user);
+            $query = "SELECT id, email, username, role, status, branch, created_at, void_pin FROM users WHERE branch = ? ORDER BY created_at DESC";
+            $stmt = $pdo->prepare($query);
+            $stmt->execute([$userBranch]);
+        }
+        
+        $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        foreach ($users as &$userRow) {
+            if ($userRow['role'] === 'owner') {
+                $userRow['role'] = 'admin';
+            }
+        }
+        
+        echo formatResponse(true, 'Users retrieved successfully', $users);
+        
+    } catch (PDOException $e) {
+        echo formatResponse(false, 'Error fetching users: ' . $e->getMessage());
     }
 }
 
-function deleteUser($conn, $id) {
-    $delete_query = "DELETE FROM users WHERE id = ?";
-    $stmt = $conn->prepare($delete_query);
-    $stmt->bind_param("i", $id);
-
-    if ($stmt->execute()) {
-        return ['success' => true, 'message' => 'User deleted successfully'];
-    } else {
-        return ['success' => false, 'message' => 'Failed to delete user'];
+// ===== ADD USER =====
+elseif ($action === 'addUser') {
+    if (!hasPermission($user, 'manager')) {
+        echo formatResponse(false, 'Insufficient permissions');
+        exit();
+    }
+    
+    $email = $_POST['email'] ?? '';
+    $username = $_POST['username'] ?? '';
+    $password = $_POST['password'] ?? '';
+    $confirmPassword = $_POST['confirmPassword'] ?? '';
+    $role = $_POST['role'] ?? 'cashier';
+    $status = $_POST['status'] ?? 'Active';
+    $branch = $_POST['branch'] ?? getUserBranch($user);
+    $void_pin = $_POST['void_pin'] ?? '';
+    
+    if (!$email || !$password || !$confirmPassword) {
+        echo formatResponse(false, 'Email and password are required');
+        exit();
+    }
+    
+    if ($password !== $confirmPassword) {
+        echo formatResponse(false, 'Passwords do not match');
+        exit();
+    }
+    
+    if (strlen($password) < 6) {
+        echo formatResponse(false, 'Password must be at least 6 characters');
+        exit();
+    }
+    
+    try {
+        $checkQuery = "SELECT id FROM users WHERE email = ?";
+        $checkStmt = $pdo->prepare($checkQuery);
+        $checkStmt->execute([$email]);
+        
+        if ($checkStmt->rowCount() > 0) {
+            echo formatResponse(false, 'Email already exists');
+            exit();
+        }
+        
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+        
+        $hashedVoidPin = null;
+        if ($void_pin && ($role === 'manager' || $role === 'admin')) {
+            if (strlen($void_pin) < 4) {
+                echo formatResponse(false, 'Void PIN must be at least 4 digits');
+                exit();
+            }
+            if (!preg_match('/^\d+$/', $void_pin)) {
+                echo formatResponse(false, 'Void PIN must contain only numbers');
+                exit();
+            }
+            $hashedVoidPin = password_hash($void_pin, PASSWORD_DEFAULT);
+        }
+        
+        $dbRole = $role === 'admin' ? 'owner' : $role;
+        
+        $insertQuery = "INSERT INTO users (email, username, password, role, status, branch, void_pin, created_at) 
+                       VALUES (?, ?, ?, ?, ?, ?, ?, NOW())";
+        $insertStmt = $pdo->prepare($insertQuery);
+        $insertStmt->execute([$email, $username, $hashedPassword, $dbRole, $status, $branch, $hashedVoidPin]);
+        
+        if ($insertStmt->rowCount() > 0) {
+            echo formatResponse(true, 'User added successfully');
+        } else {
+            echo formatResponse(false, 'Failed to add user');
+        }
+        
+    } catch (PDOException $e) {
+        echo formatResponse(false, 'Error adding user: ' . $e->getMessage());
     }
 }
 
-function getAnnouncements($conn, $user, $branch) {
-    if ($user['role'] === 'admin') {
-        $query = "SELECT * FROM announcements ORDER BY is_global DESC, created_at DESC";
-        $result = $conn->query($query);
-    } else {
-        $query = "SELECT * FROM announcements WHERE is_global = 1 OR branch = ? ORDER BY is_global DESC, created_at DESC";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param("s", $branch);
-        $stmt->execute();
-        $result = $stmt->get_result();
+// ===== UPDATE USER =====
+elseif ($action === 'updateUser') {
+    if (!hasPermission($user, 'manager')) {
+        echo formatResponse(false, 'Insufficient permissions');
+        exit();
     }
-
-    $announcements = [];
-    while ($row = $result->fetch_assoc()) {
-        $announcements[] = $row;
+    
+    $id = $_POST['id'] ?? 0;
+    $email = $_POST['email'] ?? '';
+    $username = $_POST['username'] ?? '';
+    $role = $_POST['role'] ?? 'cashier';
+    $status = $_POST['status'] ?? 'Active';
+    $branch = $_POST['branch'] ?? getUserBranch($user);
+    $void_pin = $_POST['void_pin'] ?? '';
+    
+    try {
+        $dbRole = $role === 'admin' ? 'owner' : $role;
+        
+        if ($void_pin !== '') {
+            if ($void_pin) {
+                if (($dbRole === 'manager' || $dbRole === 'owner')) {
+                    if (strlen($void_pin) < 4) {
+                        echo formatResponse(false, 'Void PIN must be at least 4 digits');
+                        exit();
+                    }
+                    if (!preg_match('/^\d+$/', $void_pin)) {
+                        echo formatResponse(false, 'Void PIN must contain only numbers');
+                        exit();
+                    }
+                    $hashedVoidPin = password_hash($void_pin, PASSWORD_DEFAULT);
+                } else {
+                    $hashedVoidPin = null;
+                }
+            } else {
+                $hashedVoidPin = null;
+            }
+            
+            $updateQuery = "UPDATE users SET email = ?, username = ?, role = ?, status = ?, branch = ?, void_pin = ? WHERE id = ?";
+            $stmt = $pdo->prepare($updateQuery);
+            $stmt->execute([$email, $username, $dbRole, $status, $branch, $hashedVoidPin, $id]);
+        } else {
+            $updateQuery = "UPDATE users SET email = ?, username = ?, role = ?, status = ?, branch = ? WHERE id = ?";
+            $stmt = $pdo->prepare($updateQuery);
+            $stmt->execute([$email, $username, $dbRole, $status, $branch, $id]);
+        }
+        
+        if ($stmt->rowCount() > 0) {
+            echo formatResponse(true, 'User updated successfully');
+        } else {
+            echo formatResponse(false, 'No changes made or user not found');
+        }
+        
+    } catch (PDOException $e) {
+        echo formatResponse(false, 'Error updating user: ' . $e->getMessage());
     }
-    return $announcements;
 }
 
-function postAnnouncement($conn, $title, $message, $type, $user) {
-    $author = $user['email'];
-    $is_global = ($user['role'] === 'admin') ? 1 : 0;
-    $branch = $is_global ? NULL : $user['branch'];
-
-    $insert_query = "INSERT INTO announcements (title, message, author, type, is_global, branch) VALUES (?, ?, ?, ?, ?, ?)";
-    $stmt = $conn->prepare($insert_query);
-    $stmt->bind_param("ssssis", $title, $message, $author, $type, $is_global, $branch);
-
-    if ($stmt->execute()) {
-        return ['success' => true, 'message' => 'Announcement posted', 'announcementId' => $conn->insert_id];
-    } else {
-        return ['success' => false, 'message' => 'Failed to post announcement'];
+// ===== DELETE USER =====
+elseif ($action === 'deleteUser') {
+    if (!hasPermission($user, 'manager')) {
+        echo formatResponse(false, 'Insufficient permissions');
+        exit();
+    }
+    
+    $id = $_POST['id'] ?? 0;
+    
+    try {
+        if ($user['role'] !== 'admin' && $user['role'] !== 'owner') {
+            $userBranch = getUserBranch($user);
+            $checkQuery = "SELECT id FROM users WHERE id = ? AND branch = ?";
+            $checkStmt = $pdo->prepare($checkQuery);
+            $checkStmt->execute([$id, $userBranch]);
+            
+            if ($checkStmt->rowCount() === 0) {
+                echo formatResponse(false, 'You can only delete users from your own branch');
+                exit();
+            }
+        }
+        
+        $deleteQuery = "DELETE FROM users WHERE id = ?";
+        $deleteStmt = $pdo->prepare($deleteQuery);
+        $deleteStmt->execute([$id]);
+        
+        if ($deleteStmt->rowCount() > 0) {
+            echo formatResponse(true, 'User deleted successfully');
+        } else {
+            echo formatResponse(false, 'User not found');
+        }
+        
+    } catch (PDOException $e) {
+        echo formatResponse(false, 'Error deleting user: ' . $e->getMessage());
     }
 }
 
+// ===== GET ANNOUNCEMENTS =====
+elseif ($action === 'getAnnouncements') {
+    $selectedBranch = $_POST['branch'] ?? 'all';
+    $userBranch = getUserBranch($user);
+    $userRole = $user['role'] ?? 'cashier';
+    
+    try {
+        if (($userRole === 'admin' || $userRole === 'owner') && $selectedBranch !== 'all') {
+            $query = "SELECT * FROM announcements WHERE is_global = 1 OR branch = ? ORDER BY created_at DESC";
+            $stmt = $pdo->prepare($query);
+            $stmt->execute([$selectedBranch]);
+        } elseif ($userRole === 'admin' || $userRole === 'owner') {
+            $query = "SELECT * FROM announcements ORDER BY created_at DESC";
+            $stmt = $pdo->prepare($query);
+            $stmt->execute();
+        } else {
+            $query = "SELECT * FROM announcements WHERE is_global = 1 OR branch = ? ORDER BY created_at DESC";
+            $stmt = $pdo->prepare($query);
+            $stmt->execute([$userBranch]);
+        }
+        
+        $announcements = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo formatResponse(true, 'Announcements retrieved successfully', $announcements);
+        
+    } catch (PDOException $e) {
+        echo formatResponse(false, 'Error fetching announcements: ' . $e->getMessage());
+    }
+}
+
+// ===== POST ANNOUNCEMENT =====
+elseif ($action === 'postAnnouncement') {
+    $title = $_POST['title'] ?? '';
+    $message = $_POST['message'] ?? '';
+    $type = $_POST['type'] ?? 'info';
+    
+    if (!$title || !$message) {
+        echo formatResponse(false, 'Title and message are required');
+        exit();
+    }
+    
+    $userBranch = getUserBranch($user);
+    $userRole = $user['role'] ?? 'cashier';
+    $author = $user['email'] ?? 'Admin';
+    
+    $isGlobal = ($userRole === 'admin' || $userRole === 'owner') ? 1 : 0;
+    $branch = $isGlobal ? null : $userBranch;
+    
+    try {
+        $query = "INSERT INTO announcements (title, message, type, branch, is_global, author, created_at) 
+                 VALUES (?, ?, ?, ?, ?, ?, NOW())";
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$title, $message, $type, $branch, $isGlobal, $author]);
+        
+        if ($stmt->rowCount() > 0) {
+            echo formatResponse(true, 'Announcement posted successfully');
+        } else {
+            echo formatResponse(false, 'Failed to post announcement');
+        }
+        
+    } catch (PDOException $e) {
+        echo formatResponse(false, 'Error posting announcement: ' . $e->getMessage());
+    }
+}
+
+// ===== GET BRANCHES =====
+elseif ($action === 'getBranches') {
+    try {
+        if ($user['role'] === 'admin' || $user['role'] === 'owner') {
+            $query = "SELECT DISTINCT branch FROM users WHERE branch IS NOT NULL AND branch != '' ORDER BY branch";
+            $stmt = $pdo->prepare($query);
+            $stmt->execute();
+        } else {
+            // Non-admin users only see their own branch
+            $userBranch = getUserBranch($user);
+            $query = "SELECT DISTINCT branch FROM users WHERE branch = ? ORDER BY branch";
+            $stmt = $pdo->prepare($query);
+            $stmt->execute([$userBranch]);
+        }
+        
+        $branches = $stmt->fetchAll(PDO::FETCH_COLUMN, 0);
+        echo formatResponse(true, 'Branches retrieved successfully', $branches);
+        
+    } catch (PDOException $e) {
+        echo formatResponse(false, 'Error fetching branches: ' . $e->getMessage());
+    }
+}
+
+// ===== DEFAULT RESPONSE =====
+else {
+    echo formatResponse(false, 'Invalid action');
+}
 ?>
-
-

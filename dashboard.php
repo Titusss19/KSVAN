@@ -19,31 +19,35 @@ $currentUser = $user;
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - K-STREET</title>
     <script src="https://cdn.tailwindcss.com"></script>
-   <link rel="stylesheet" href="css/dashboard.css">
+     <link rel="stylesheet" href="css/dashboard.css">
+    
 </head>
-<body>
-  <?php include 'components/navbar.php'; ?>
+<body class="bg-gray-50 min-h-screen">
+    <?php include 'components/navbar.php'; ?>
 
     <!-- Main Content -->
     <main class="py-6 px-4 sm:px-6 lg:px-8">
         <div class="max-w-7xl mx-auto">
             <!-- Welcome Banner -->
             <div class="mb-6 rounded-xl shadow-lg p-6" style="background-color: #FF001B;">
-                <h1 class="text-2xl font-bold text-white">Welcome, Manager Juan!</h1>
+                <h1 class="text-2xl font-bold text-white" id="welcomeTitle">Welcome, <?php echo htmlspecialchars($user['username'] ?? 'User'); ?>!</h1>
                 <p class="text-blue-100 mt-1">Here's what's happening with your business today.</p>
                 <div class="mt-2 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-blue-200">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                         <polyline points="9 22 9 12 15 12 15 22"></polyline>
                     </svg>
-                    <span class="text-blue-200 text-sm">Branch: Main Street</span>
+                    <span class="text-blue-200 text-sm" id="userBranch">Branch: <?php echo htmlspecialchars($user['branch'] ?? 'main'); ?></span>
                 </div>
             </div>
 
             <!-- Header Controls -->
-            <div class="mb-6 flex justify-between items-center">
-                <h1 class="text-2xl font-bold text-gray-800"></h1>
-                <div class="flex gap-2 items-center">
+            <div class="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">Dashboard Overview</h1>
+                    <p class="text-gray-600 text-sm mt-1">Real-time business analytics and management</p>
+                </div>
+                <div class="flex flex-wrap gap-2 items-center">
                     <div class="relative">
                         <button onclick="toggleBranchDropdown()" class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2 shadow-sm transition-all">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -57,7 +61,7 @@ $currentUser = $user;
 
                         <div id="branchDropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 z-50 hidden">
                             <div class="py-2">
-                                <a href="#" onclick="selectBranch('all', event)" class="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors text-gray-700">
+                                <a href="#" onclick="selectBranch('all')" class="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors text-gray-700">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                                         <polyline points="9 22 9 12 15 12 15 22"></polyline>
@@ -66,28 +70,13 @@ $currentUser = $user;
                                     <span class="ml-auto text-red-500" id="allCheck">✓</span>
                                 </a>
                                 <div class="border-t border-gray-100 my-1"></div>
-                                <a href="#" onclick="selectBranch('Main Street', event)" class="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors text-gray-700">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-400">
-                                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                                    </svg>
-                                    Main Street
-                                    <span id="mainCheck"></span>
-                                </a>
-                                <a href="#" onclick="selectBranch('Downtown', event)" class="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors text-gray-700">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-400">
-                                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                                    </svg>
-                                    Downtown
-                                    <span id="downCheck"></span>
-                                </a>
+                                <!-- Branches will be loaded dynamically -->
                             </div>
                         </div>
                     </div>
 
                     <button onclick="refreshAll()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg shadow-sm transition-all flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg id="refreshIcon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M23 4v6h-6"></path>
                             <path d="M1 20v-6h6"></path>
                             <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path>
@@ -117,7 +106,7 @@ $currentUser = $user;
                             </svg>
                         </div>
                     </div>
-                    <div class="text-3xl font-bold text-white mb-1">₱45,230.50</div>
+                    <div class="text-3xl font-bold text-white mb-1" id="netSales">₱0.00</div>
                     <div class="text-sm text-white mb-2">Net Sales</div>
                     <div class="text-xs text-white font-medium">All Time</div>
                 </div>
@@ -132,9 +121,9 @@ $currentUser = $user;
                             </svg>
                         </div>
                     </div>
-                    <div class="text-3xl font-bold text-white mb-1">₱52,890.00</div>
+                    <div class="text-3xl font-bold text-white mb-1" id="grossSales">₱0.00</div>
                     <div class="text-sm text-white mb-2">Gross Sales</div>
-                    <div class="text-xs text-white font-medium">Voided: -₱7,659.50</div>
+                    <div class="text-xs text-white font-medium" id="voidedAmount">Voided: ₱0.00</div>
                 </div>
 
                 <!-- Today Transactions -->
@@ -148,11 +137,11 @@ $currentUser = $user;
                             </svg>
                         </div>
                     </div>
-                    <div class="text-3xl font-bold text-white mb-1">24</div>
+                    <div class="text-3xl font-bold text-white mb-1" id="todayTransactions">0</div>
                     <div class="text-sm text-white mb-2">Today Transactions</div>
                     <div class="text-xs text-white font-medium">
-                        Net: ₱12,450.00 today
-                        <span class="block text-orange-300">Voided: -₱1,250.00</span>
+                        Net: <span id="todaySales">₱0.00</span> today
+                        <span class="block text-orange-300" id="todayVoided" style="display: none;">Voided: ₱0.00</span>
                     </div>
                 </div>
 
@@ -167,9 +156,9 @@ $currentUser = $user;
                             </svg>
                         </div>
                     </div>
-                    <div class="text-3xl font-bold text-white mb-1">₱125,450.00</div>
+                    <div class="text-3xl font-bold text-white mb-1" id="inventoryValue">₱0.00</div>
                     <div class="text-sm text-white mb-2">Inventory Value</div>
-                    <div class="text-xs text-white font-medium">1,245 items in stock</div>
+                    <div class="text-xs text-white font-medium" id="inventoryItems">0 items in stock</div>
                 </div>
 
                 <!-- Active Employees -->
@@ -184,7 +173,7 @@ $currentUser = $user;
                             </svg>
                         </div>
                     </div>
-                    <div class="text-3xl font-bold text-white mb-1">12</div>
+                    <div class="text-3xl font-bold text-white mb-1" id="activeEmployees">0</div>
                     <div class="text-sm text-white mb-2">Active Employees</div>
                     <div class="text-xs text-white font-medium">Currently working</div>
                 </div>
@@ -204,41 +193,26 @@ $currentUser = $user;
                         </div>
                         <div class="flex gap-2">
                             <button onclick="refreshAnnouncements()" class="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg id="refreshAnnouncementsIcon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M23 4v6h-6"></path>
                                     <path d="M1 20v-6h6"></path>
                                     <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path>
                                 </svg>
                             </button>
+                            <?php if(in_array($user['role'] ?? 'cashier', ['admin', 'owner', 'manager', 'cashier'])): ?>
                             <button onclick="openAnnouncementModal()" class="w-8 h-8 bg-gradient-to-br from-red-500 to-red-600 hover:from-black hover:to-black rounded-lg flex items-center justify-center shadow-md transition-all transform hover:scale-105">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
                                     <line x1="12" y1="5" x2="12" y2="19"></line>
                                     <line x1="5" y1="12" x2="19" y2="12"></line>
                                 </svg>
                             </button>
+                            <?php endif; ?>
                         </div>
                     </div>
 
-                    <div class="space-y-4 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
-                        <div class="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                            <div class="p-4 border-b border-gray-100">
-                                <div class="flex items-center justify-between">
-                                    <div>
-                                        <h4 class="font-semibold text-gray-800 text-sm">Admin</h4>
-                                        <div class="flex items-center gap-2">
-                                            <span class="text-xs text-gray-500">Just now</span>
-                                            <span class="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">Global</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="p-4">
-                                <h3 class="font-bold text-gray-800 text-lg mb-2">Welcome to K-STREET</h3>
-                                <p class="text-gray-700 text-sm mb-3">Welcome to the K-STREET management system. Please familiarize yourself with all features.</p>
-                                <div class="flex items-center gap-2">
-                                    <span class="text-xs font-medium bg-blue-100 text-blue-600 px-2 py-1 rounded-full">Information</span>
-                                </div>
-                            </div>
+                    <div class="space-y-4 max-h-96 overflow-y-auto pr-2 custom-scrollbar" id="announcementsContainer">
+                        <div class="text-center py-8 text-gray-500">
+                            Loading announcements...
                         </div>
                     </div>
                 </div>
@@ -247,23 +221,43 @@ $currentUser = $user;
                 <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
                     <h3 class="text-lg font-bold text-gray-800 mb-4">Quick Actions</h3>
                     <div class="flex flex-wrap gap-3 mb-6">
-                        <a href="#" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition font-medium text-sm">Open POS</a>
-                        <a href="#" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition font-medium text-sm">View Sales Report</a>
-                        <a href="#" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition font-medium text-sm">Manage Inventory</a>
+                        <a href="pos.php" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition font-medium text-sm">Open POS</a>
+                        <a href="sales_report.php" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition font-medium text-sm">View Sales Report</a>
+                        <a href="inventory.php" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition font-medium text-sm">Manage Inventory</a>
+                        <a href="reports.php" class="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition font-medium text-sm">Generate Reports</a>
                     </div>
 
                     <div class="pt-6 border-t border-gray-200">
-                        <h4 class="font-semibold text-gray-700 mb-3">Recent Activity</h4>
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-green-600">
-                                    <line x1="12" y1="1" x2="12" y2="23"></line>
-                                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                                </svg>
+                        <h4 class="font-semibold text-gray-700 mb-3">System Info</h4>
+                        <div class="space-y-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-blue-600">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-800">Your Role: <span class="font-semibold"><?php echo htmlspecialchars(ucfirst($user['role'] ?? 'cashier')); ?></span></p>
+                                    <p class="text-xs text-gray-500">Access Level: 
+                                        <?php 
+                                        $roleLevel = ['cashier' => 'Basic', 'manager' => 'Manager', 'admin' => 'Admin', 'owner' => 'Owner'];
+                                        echo $roleLevel[$user['role'] ?? 'cashier'] ?? 'Basic';
+                                        ?>
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <p class="text-sm text-gray-800">New sale: ₱12,450.00</p>
-                                <p class="text-xs text-gray-500">Today at 2:45 PM</p>
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-green-600">
+                                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                        <line x1="8" y1="21" x2="16" y2="21"></line>
+                                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-800">Last Login: <?php echo date('M d, Y h:i A'); ?></p>
+                                    <p class="text-xs text-gray-500">Session active</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -276,13 +270,14 @@ $currentUser = $user;
                     <h3 class="text-lg font-bold text-gray-800">System Users</h3>
                     <div class="flex gap-2">
                         <button onclick="refreshUsers()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg shadow-sm transition-all flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <svg id="refreshUsersIcon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M23 4v6h-6"></path>
                                 <path d="M1 20v-6h6"></path>
                                 <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path>
                             </svg>
                             Refresh
                         </button>
+                        <?php if(in_array($user['role'] ?? 'cashier', ['admin', 'owner', 'manager'])): ?>
                         <button onclick="openAddUserModal()" class="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-lg shadow-md transition-all transform hover:scale-105 flex items-center gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -292,6 +287,7 @@ $currentUser = $user;
                             </svg>
                             Add User
                         </button>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -310,102 +306,10 @@ $currentUser = $user;
                                 <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                                <td class="py-4 px-4 text-sm text-gray-600 font-medium">1</td>
-                                <td class="py-4 px-4 text-sm text-gray-800">juan@kstreet.com</td>
-                                <td class="py-4 px-4 text-sm text-gray-800">juan_sales</td>
-                                <td class="py-4 px-4">
-                                    <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mr-1">
-                                            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                                            <circle cx="9" cy="7" r="4"></circle>
-                                        </svg>
-                                        Cashier
-                                    </span>
-                                </td>
-                                <td class="py-4 px-4">
-                                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600">N/A</span>
-                                </td>
-                                <td class="py-4 px-4">
-                                    <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200">Main Street</span>
-                                </td>
-                                <td class="py-4 px-4 text-sm text-gray-600">Jan 15, 2024</td>
-                                <td class="py-4 px-4">
-                                    <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
-                                        <div class="w-2 h-2 rounded-full bg-green-500 mr-2"></div>
-                                        Active
-                                    </span>
-                                </td>
-                                <td class="py-4 px-4">
-                                    <div class="flex items-center gap-2">
-                                        <button onclick="openEditModal(1)" class="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                            </svg>
-                                        </button>
-                                        <button onclick="openDeleteModal(1)" class="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <polyline points="3 6 5 6 21 6"></polyline>
-                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                                <line x1="10" y1="11" x2="10" y2="17"></line>
-                                                <line x1="14" y1="11" x2="14" y2="17"></line>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                                <td class="py-4 px-4 text-sm text-gray-600 font-medium">2</td>
-                                <td class="py-4 px-4 text-sm text-gray-800">maria@kstreet.com</td>
-                                <td class="py-4 px-4 text-sm text-gray-800">maria_manager</td>
-                                <td class="py-4 px-4">
-                                    <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-blue-100 text-red-700 border border-red-200">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mr-1">
-                                            <path d="M12 15v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2zm10-10V7a4 4 0 0 0-8 0v4h8z"></path>
-                                        </svg>
-                                        Manager
-                                    </span>
-                                </td>
-                                <td class="py-4 px-4">
-                                    <div class="flex items-center gap-1">
-                                        <div class="w-2 h-2 rounded-full bg-green-500"></div>
-                                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-50 text-green-700 border border-green-200">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mr-1">
-                                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                                            </svg>
-                                            PIN Set
-                                        </span>
-                                    </div>
-                                </td>
-                                <td class="py-4 px-4">
-                                    <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200">Downtown</span>
-                                </td>
-                                <td class="py-4 px-4 text-sm text-gray-600">Dec 20, 2023</td>
-                                <td class="py-4 px-4">
-                                    <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
-                                        <div class="w-2 h-2 rounded-full bg-green-500 mr-2"></div>
-                                        Active
-                                    </span>
-                                </td>
-                                <td class="py-4 px-4">
-                                    <div class="flex items-center gap-2">
-                                        <button onclick="openEditModal(2)" class="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                            </svg>
-                                        </button>
-                                        <button onclick="openDeleteModal(2)" class="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <polyline points="3 6 5 6 21 6"></polyline>
-                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                                <line x1="10" y1="11" x2="10" y2="17"></line>
-                                                <line x1="14" y1="11" x2="14" y2="17"></line>
-                                            </svg>
-                                        </button>
-                                    </div>
+                        <tbody id="usersTableBody">
+                            <tr>
+                                <td colspan="9" class="py-8 text-center text-gray-500">
+                                    Loading users...
                                 </td>
                             </tr>
                         </tbody>
@@ -431,7 +335,7 @@ $currentUser = $user;
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Type</label>
-                    <select class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
+                    <select id="announcementType" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
                         <option value="info">Info (Blue)</option>
                         <option value="success">Success (Green)</option>
                         <option value="warning">Warning (Yellow)</option>
@@ -440,17 +344,23 @@ $currentUser = $user;
 
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Title</label>
-                    <input type="text" placeholder="Enter announcement title" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
+                    <input type="text" id="announcementTitle" placeholder="Enter announcement title" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
                 </div>
 
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Message</label>
-                    <textarea placeholder="Enter announcement message" rows="4" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"></textarea>
+                    <textarea id="announcementMessage" placeholder="Enter announcement message" rows="4" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"></textarea>
                 </div>
 
+                <?php if(in_array($user['role'] ?? 'cashier', ['admin', 'owner'])): ?>
                 <div class="bg-gradient-to-r from-blue-50 to-blue-100 p-3 rounded-lg border-2 border-blue-200">
                     <p class="text-sm text-blue-700 font-bold"><span class="font-extrabold">GLOBAL ANNOUNCEMENT</span> - This will be visible to ALL branches automatically</p>
                 </div>
+                <?php else: ?>
+                <div class="bg-gradient-to-r from-green-50 to-green-100 p-3 rounded-lg border-2 border-green-200">
+                    <p class="text-sm text-green-700 font-bold"><span class="font-extrabold">BRANCH ANNOUNCEMENT</span> - This will be visible only to your branch</p>
+                </div>
+                <?php endif; ?>
 
                 <div class="flex gap-3 pt-2">
                     <button onclick="closeAnnouncementModal()" class="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors">Cancel</button>
@@ -474,22 +384,26 @@ $currentUser = $user;
             </div>
 
             <div class="space-y-4">
-                <input type="email" placeholder="Email Address" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
-                <input type="text" placeholder="Username" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
-                <input type="password" placeholder="Password (min. 6 characters)" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
-                <input type="password" placeholder="Confirm Password" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
+                <input type="email" id="addUserEmail" placeholder="Email Address" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
+                <input type="text" id="addUsername" placeholder="Username" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
+                <input type="password" id="addPassword" placeholder="Password (min. 6 characters)" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
+                <input type="password" id="addConfirmPassword" placeholder="Confirm Password" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
                 
-                <select class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
-                    <option>Cashier</option>
-                    <option>Manager</option>
-                    <option>Owner</option>
+                <select id="addUserRole" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
+                    <option value="cashier">Cashier</option>
+                    <?php if(in_array($user['role'] ?? 'cashier', ['admin', 'owner', 'manager'])): ?>
+                    <option value="manager">Manager</option>
+                    <?php endif; ?>
+                    <?php if(in_array($user['role'] ?? 'cashier', ['admin', 'owner'])): ?>
+                    <option value="admin">Owner</option>
+                    <?php endif; ?>
                 </select>
 
-                <input type="text" placeholder="Branch name (e.g., Main, Branch1)" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
+                <input type="text" id="addUserBranch" placeholder="Branch name (e.g., Main, Branch1)" value="<?php echo htmlspecialchars($user['branch'] ?? ''); ?>" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
 
-                <select class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
-                    <option>Active</option>
-                    <option>Inactive</option>
+                <select id="addUserStatus" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
                 </select>
 
                 <div class="flex gap-3 pt-2">
@@ -514,20 +428,24 @@ $currentUser = $user;
             </div>
 
             <div class="space-y-4">
-                <input type="text" placeholder="Username" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
-                <input type="email" placeholder="Email" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
+                <input type="text" id="editUsername" placeholder="Username" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
+                <input type="email" id="editEmail" placeholder="Email" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
                 
-                <select class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
-                    <option>Cashier</option>
-                    <option>Manager</option>
-                    <option>Owner</option>
+                <select id="editUserRole" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
+                    <option value="cashier">Cashier</option>
+                    <?php if(in_array($user['role'] ?? 'cashier', ['admin', 'owner', 'manager'])): ?>
+                    <option value="manager">Manager</option>
+                    <?php endif; ?>
+                    <?php if(in_array($user['role'] ?? 'cashier', ['admin', 'owner'])): ?>
+                    <option value="admin">Owner</option>
+                    <?php endif; ?>
                 </select>
 
-                <input type="text" placeholder="Branch name" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
+                <input type="text" id="editUserBranch" placeholder="Branch name" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
 
-                <select class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
-                    <option>Active</option>
-                    <option>Inactive</option>
+                <select id="editUserStatus" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
                 </select>
 
                 <div class="flex gap-3 pt-2">
@@ -561,7 +479,7 @@ $currentUser = $user;
                     </svg>
                 </div>
                 <p class="text-center text-gray-700 mb-2">Are you sure you want to delete this user?</p>
-                <p class="text-center text-sm text-gray-600"><strong>juan@kstreet.com</strong></p>
+                <p class="text-center text-sm text-gray-600"><strong id="deleteUserEmail">user@example.com</strong></p>
                 <p class="text-center text-sm text-gray-500 mt-1">This action cannot be undone.</p>
             </div>
 
@@ -572,412 +490,29 @@ $currentUser = $user;
         </div>
     </div>
 
+    <!-- Feedback Modal -->
+    <div id="feedbackModal" class="modal">
+        <div class="modal-content">
+            <div class="mb-6">
+                <h3 class="text-xl font-bold text-center mb-2" id="feedbackTitle">Success!</h3>
+                <p class="text-center text-gray-700" id="feedbackMessage">Operation completed successfully.</p>
+            </div>
+            <div class="flex justify-center">
+                <button onclick="closeFeedback()" class="px-6 py-3 bg-red-500 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all transform hover:scale-105">
+                    Okay
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pass PHP user data to JavaScript -->
     <script>
-      
+        window.currentUser = <?php echo json_encode($user); ?>;
 
-        // Branch Dropdown
-        function toggleBranchDropdown() {
-            const dropdown = document.getElementById('branchDropdown');
-            const chevron = document.getElementById('chevronIcon');
-            dropdown.classList.toggle('hidden');
-            chevron.style.transform = dropdown.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
-        }
-
-        function selectBranch(branch, event) {
-            event.preventDefault();
-            document.getElementById('branchText').textContent = branch === 'all' ? 'All Branches' : branch;
-            document.getElementById('branchDropdown').classList.add('hidden');
-            
-            // Update checkmarks
-            document.getElementById('allCheck').textContent = branch === 'all' ? '✓' : '';
-            document.getElementById('mainCheck').textContent = branch === 'Main Street' ? '✓' : '';
-            document.getElementById('downCheck').textContent = branch === 'Downtown' ? '✓' : '';
-        }
-
-        // Announcement Modal
-        function openAnnouncementModal() {
-            document.getElementById('announcementModal').classList.add('active');
-        }
-
-        function closeAnnouncementModal() {
-            document.getElementById('announcementModal').classList.remove('active');
-        }
-
-        function postAnnouncement() {
-            alert('Announcement posted successfully!');
-            closeAnnouncementModal();
-        }
-
-        function refreshAnnouncements() {
-            alert('Announcements refreshed');
-        }
-
-        // Add User Modal
-        function openAddUserModal() {
-            document.getElementById('addUserModal').classList.add('active');
-        }
-
-        function closeAddUserModal() {
-            document.getElementById('addUserModal').classList.remove('active');
-        }
-
-        function addUser() {
-            alert('User added successfully!');
-            closeAddUserModal();
-        }
-
-        // Edit Modal
-        function openEditModal(userId) {
-            document.getElementById('editModal').classList.add('active');
-        }
-
-        function closeEditModal() {
-            document.getElementById('editModal').classList.remove('active');
-        }
-
-        function updateUser() {
-            alert('User updated successfully!');
-            closeEditModal();
-        }
-
-        // Delete Modal
-        function openDeleteModal(userId) {
-            document.getElementById('deleteModal').classList.add('active');
-        }
-
-        function closeDeleteModal() {
-            document.getElementById('deleteModal').classList.remove('active');
-        }
-
-        function confirmDelete() {
-            alert('User deleted successfully!');
-            closeDeleteModal();
-        }
-
-        // General Actions
-        function refreshAll() {
-            alert('Dashboard refreshed');
-        }
-
-        function refreshUsers() {
-            alert('Users refreshed');
-        }
-
-        function goToAttendance() {
-            alert('Navigating to Attendance page');
-        }
-
-        // Close dropdowns when clicking outside
-        document.addEventListener('click', function(event) {
-            const dropdown = document.getElementById('branchDropdown');
-            const button = event.target.closest('button');
-            
-            if (dropdown && !dropdown.contains(event.target) && button && button.onclick !== toggleBranchDropdown) {
-                dropdown.classList.add('hidden');
-            }
-        });
-
-        const API_BASE = 'php/dashboard_api.php';
-let currentBranch = 'all';
-
-// Initialize
-document.addEventListener('DOMContentLoaded', function() {
-    loadStats();
-    loadUsers();
-    loadAnnouncements();
-});
-
-// ===== STATS =====
-async function loadStats() {
-    try {
-        const response = await fetch(API_BASE, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `action=getStats&branch=${currentBranch}`
-        });
-        const data = await response.json();
         
-        if (data.success) {
-            updateStatsDisplay(data.data);
-        }
-    } catch (error) {
-        console.error('Error loading stats:', error);
-    }
-}
-
-function updateStatsDisplay(stats) {
-    // Update card values (adapt selectors to your HTML)
-    document.querySelectorAll('[data-stat="grossSales"]').forEach(el => {
-        el.textContent = '₱' + stats.grossSales.toLocaleString('en-US', {minimumFractionDigits: 2});
-    });
-    
-    document.querySelectorAll('[data-stat="netSales"]').forEach(el => {
-        el.textContent = '₱' + stats.netSales.toLocaleString('en-US', {minimumFractionDigits: 2});
-    });
-    
-    document.querySelectorAll('[data-stat="todayTransactions"]').forEach(el => {
-        el.textContent = stats.todayTransactions;
-    });
-    
-    document.querySelectorAll('[data-stat="inventoryValue"]').forEach(el => {
-        el.textContent = '₱' + stats.inventoryValue.toLocaleString('en-US', {minimumFractionDigits: 2});
-    });
-    
-    document.querySelectorAll('[data-stat="activeEmployees"]').forEach(el => {
-        el.textContent = stats.activeEmployees;
-    });
-}
-
-// ===== USERS =====
-async function loadUsers() {
-    try {
-        const response = await fetch(API_BASE, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `action=getUsers&branch=${currentBranch}`
-        });
-        const data = await response.json();
-        
-        if (data.success) {
-            displayUsers(data.data);
-        }
-    } catch (error) {
-        console.error('Error loading users:', error);
-    }
-}
-
-function displayUsers(users) {
-    const tbody = document.querySelector('table tbody');
-    if (!tbody) return;
-
-    tbody.innerHTML = '';
-    users.forEach(user => {
-        const row = document.createElement('tr');
-        row.className = 'border-b border-gray-100 hover:bg-gray-50 transition-colors';
-        row.innerHTML = `
-            <td class="py-4 px-4 text-sm text-gray-600 font-medium">${user.id}</td>
-            <td class="py-4 px-4 text-sm text-gray-800">${user.email}</td>
-            <td class="py-4 px-4 text-sm text-gray-800">${user.username || 'N/A'}</td>
-            <td class="py-4 px-4">
-                <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold 
-                    ${user.role === 'admin' ? 'bg-purple-100 text-purple-700' : user.role === 'manager' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}">
-                    ${user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                </span>
-            </td>
-            <td class="py-4 px-4"><span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">N/A</span></td>
-            <td class="py-4 px-4"><span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">${user.branch}</span></td>
-            <td class="py-4 px-4 text-sm text-gray-600">${new Date(user.created_at).toLocaleDateString()}</td>
-            <td class="py-4 px-4">
-                <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold 
-                    ${user.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}">
-                    <div class="w-2 h-2 rounded-full ${user.status === 'Active' ? 'bg-green-500' : 'bg-gray-400'} mr-2"></div>
-                    ${user.status}
-                </span>
-            </td>
-            <td class="py-4 px-4">
-                <div class="flex items-center gap-2">
-                    <button onclick="openEditModal(${user.id})" class="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                        </svg>
-                    </button>
-                    <button onclick="openDeleteModal(${user.id}, '${user.email}')" class="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
-                    </button>
-                </div>
-            </td>
-        `;
-        tbody.appendChild(row);
-    });
-}
-
-async function addUser() {
-    const email = prompt('Email:');
-    const username = prompt('Username:');
-    const password = prompt('Password:');
-    const branch = prompt('Branch:', 'main');
-
-    if (!email || !password) return;
-
-    try {
-        const response = await fetch(API_BASE, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `action=addUser&email=${encodeURIComponent(email)}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&branch=${branch}&role=cashier&status=Active`
-        });
-        const data = await response.json();
-        
-        if (data.success) {
-            alert('User added successfully');
-            loadUsers();
-        } else {
-            alert('Error: ' + data.message);
-        }
-    } catch (error) {
-        console.error('Error adding user:', error);
-    }
-}
-
-async function updateUser(id) {
-    const username = prompt('Username:');
-    const email = prompt('Email:');
-    const branch = prompt('Branch:', 'main');
-
-    if (!username || !email) return;
-
-    try {
-        const response = await fetch(API_BASE, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `action=updateUser&id=${id}&email=${encodeURIComponent(email)}&username=${encodeURIComponent(username)}&branch=${branch}&role=cashier&status=Active`
-        });
-        const data = await response.json();
-        
-        if (data.success) {
-            alert('User updated successfully');
-            loadUsers();
-            closeEditModal();
-        }
-    } catch (error) {
-        console.error('Error updating user:', error);
-    }
-}
-
-async function deleteUser(id) {
-    if (!confirm('Are you sure?')) return;
-
-    try {
-        const response = await fetch(API_BASE, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `action=deleteUser&id=${id}`
-        });
-        const data = await response.json();
-        
-        if (data.success) {
-            alert('User deleted successfully');
-            loadUsers();
-            closeDeleteModal();
-        }
-    } catch (error) {
-        console.error('Error deleting user:', error);
-    }
-}
-
-// ===== ANNOUNCEMENTS =====
-async function loadAnnouncements() {
-    try {
-        const response = await fetch(API_BASE, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `action=getAnnouncements&branch=${currentBranch}`
-        });
-        const data = await response.json();
-        
-        if (data.success) {
-            displayAnnouncements(data.data);
-        }
-    } catch (error) {
-        console.error('Error loading announcements:', error);
-    }
-}
-
-function displayAnnouncements(announcements) {
-    const container = document.querySelector('[data-announcements-container]');
-    if (!container) return;
-
-    container.innerHTML = '';
-    announcements.forEach(ann => {
-        const div = document.createElement('div');
-        div.className = 'bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow';
-        div.innerHTML = `
-            <div class="p-4 border-b border-gray-100">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h4 class="font-semibold text-gray-800 text-sm">${ann.author}</h4>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs text-gray-500">${new Date(ann.created_at).toLocaleString()}</span>
-                            ${ann.is_global ? '<span class="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">Global</span>' : ''}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="p-4">
-                <h3 class="font-bold text-gray-800 text-lg mb-2">${ann.title}</h3>
-                <p class="text-gray-700 text-sm">${ann.message}</p>
-            </div>
-        `;
-        container.appendChild(div);
-    });
-}
-
-async function postAnnouncement() {
-    const title = document.querySelector('[data-announcement-title]')?.value;
-    const message = document.querySelector('[data-announcement-message']?.value;
-    const type = document.querySelector('[data-announcement-type]')?.value || 'info';
-
-    if (!title || !message) {
-        alert('Title and message required');
-        return;
-    }
-
-    try {
-        const response = await fetch(API_BASE, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `action=postAnnouncement&title=${encodeURIComponent(title)}&message=${encodeURIComponent(message)}&type=${type}`
-        });
-        const data = await response.json();
-        
-        if (data.success) {
-            alert('Announcement posted');
-            closeAnnouncementModal();
-            loadAnnouncements();
-        }
-    } catch (error) {
-        console.error('Error posting announcement:', error);
-    }
-}
-
-// ===== MODALS =====
-function openEditModal(userId) {
-    document.getElementById('editModal').classList.add('active');
-}
-
-function closeEditModal() {
-    document.getElementById('editModal').classList.remove('active');
-}
-
-function openDeleteModal(userId, email) {
-    document.getElementById('deleteModal').classList.add('active');
-    document.querySelector('[data-delete-email]').textContent = email;
-    window.deleteUserId = userId;
-}
-
-function closeDeleteModal() {
-    document.getElementById('deleteModal').classList.remove('active');
-}
-
-function confirmDelete() {
-    deleteUser(window.deleteUserId);
-}
-
-function refreshAll() {
-    loadStats();
-    loadUsers();
-    loadAnnouncements();
-}
-
-function selectBranch(branch) {
-    currentBranch = branch;
-    loadStats();
-    loadUsers();
-    loadAnnouncements();
-}
     </script>
+
+    <!-- Include the dash.js file -->
+    <script src="Javascript/dash.js"></script>
 </body>
 </html>

@@ -264,60 +264,65 @@ $currentUser = $user;
                 </div>
             </div>
 
-            <!-- Employee List -->
-            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-bold text-gray-800">System Users</h3>
-                    <div class="flex gap-2">
-                        <button onclick="refreshUsers()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg shadow-sm transition-all flex items-center gap-2">
-                            <svg id="refreshUsersIcon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M23 4v6h-6"></path>
-                                <path d="M1 20v-6h6"></path>
-                                <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path>
-                            </svg>
-                            Refresh
-                        </button>
-                        <?php if(in_array($user['role'] ?? 'cashier', ['admin', 'owner', 'manager'])): ?>
-                        <button onclick="openAddUserModal()" class="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-lg shadow-md transition-all transform hover:scale-105 flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                                <circle cx="8.5" cy="7" r="4"></circle>
-                                <line x1="20" y1="8" x2="20" y2="14"></line>
-                                <line x1="23" y1="11" x2="17" y2="11"></line>
-                            </svg>
-                            Add User
-                        </button>
-                        <?php endif; ?>
-                    </div>
-                </div>
-
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead>
-                            <tr class="border-b-2 border-gray-200 bg-gray-50">
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">ID</th>
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Email</th>
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Username</th>
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Role</th>
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Void PIN</th>
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Branch</th>
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Created</th>
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Status</th>
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="usersTableBody">
-                            <tr>
-                                <td colspan="9" class="py-8 text-center text-gray-500">
-                                    Loading users...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+           <!-- Employee List -->
+<div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-bold text-gray-800">System Users</h3>
+        <div class="flex gap-2">
+            <button onclick="refreshUsers()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg shadow-sm transition-all flex items-center gap-2">
+                <svg id="refreshUsersIcon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 4v6h-6"></path>
+                    <path d="M1 20v-6h6"></path>
+                    <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path>
+                </svg>
+                Refresh
+            </button>
+            <?php 
+            // IMPORTANT: Tanging admin, owner, at manager lang ang makakapag-add ng users
+            $userRole = $user['role'] ?? 'cashier';
+            $allowedRoles = ['admin', 'owner', 'manager'];
+            if(in_array($userRole, $allowedRoles)): 
+            ?>
+            <button onclick="openAddUserModal()" class="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-lg shadow-md transition-all transform hover:scale-105 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="8.5" cy="7" r="4"></circle>
+                    <line x1="20" y1="8" x2="20" y2="14"></line>
+                    <line x1="23" y1="11" x2="17" y2="11"></line>
+                </svg>
+                Add User
+            </button>
+            <?php endif; ?>
         </div>
-    </main>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b-2 border-gray-200 bg-gray-50">
+                    <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">ID</th>
+                    <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Email</th>
+                    <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Username</th>
+                    <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Role</th>
+                    <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Void PIN</th>
+                    <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Branch</th>
+                    <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Created</th>
+                    <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Status</th>
+                    <?php if(in_array($userRole, $allowedRoles)): ?>
+                    <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Actions</th>
+                    <?php endif; ?>
+                </tr>
+            </thead>
+            <tbody id="usersTableBody">
+                <tr>
+                    <td colspan="<?php echo in_array($userRole, $allowedRoles) ? 9 : 8; ?>" class="py-8 text-center text-gray-500">
+                        Loading users...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
 
     <!-- Add Announcement Modal -->
     <div id="announcementModal" class="modal">
@@ -370,25 +375,75 @@ $currentUser = $user;
         </div>
     </div>
 
-    <!-- Add User Modal -->
-    <div id="addUserModal" class="modal">
-        <div class="modal-content">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold text-gray-800">Add New User</h2>
-                <button onclick="closeAddUserModal()" class="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
-            </div>
+   <!-- Add User Modal -->
+<div id="addUserModal" class="modal">
+    <div class="modal-content">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-bold text-gray-800">Add New User</h2>
+            <button onclick="closeAddUserModal()" class="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
 
-            <div class="space-y-4">
-                <input type="email" id="addUserEmail" placeholder="Email Address" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
-                <input type="text" id="addUsername" placeholder="Username" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
-                <input type="password" id="addPassword" placeholder="Password (min. 6 characters)" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
-                <input type="password" id="addConfirmPassword" placeholder="Confirm Password" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
-                
+        <div class="space-y-4">
+            <!-- IMPORTANT: Required fields with visual indicators -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Email Address 
+                    <span class="text-red-500 ml-1">*</span>
+                    <span class="text-xs text-red-500 font-normal">(Required)</span>
+                </label>
+                <input type="email" id="addUserEmail" placeholder="user@example.com" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
+                <p class="text-xs text-gray-500 mt-1">Must be a valid email address</p>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Username 
+                    <span class="text-red-500 ml-1">*</span>
+                    <span class="text-xs text-red-500 font-normal">(Required)</span>
+                </label>
+                <input type="text" id="addUsername" placeholder="Enter username" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
+                <p class="text-xs text-gray-500 mt-1">Minimum 3 characters</p>
+            </div>
+            
+            <div id="voidPinContainer" style="display: none;">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Void PIN 
+                    <span class="text-red-500 ml-1">*</span>
+                    <span class="text-xs text-red-500 font-normal">(Required for Manager/Owner)</span>
+                </label>
+                <input type="password" id="addVoidPin" placeholder="Enter 4-digit PIN" maxlength="4" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
+                <p class="text-xs text-gray-500 mt-1">4-digit numbers only (required for Manager/Owner roles)</p>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Password 
+                    <span class="text-red-500 ml-1">*</span>
+                    <span class="text-xs text-red-500 font-normal">(Required)</span>
+                </label>
+                <input type="password" id="addPassword" placeholder="Minimum 6 characters" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Confirm Password 
+                    <span class="text-red-500 ml-1">*</span>
+                    <span class="text-xs text-red-500 font-normal">(Required)</span>
+                </label>
+                <input type="password" id="addConfirmPassword" placeholder="Re-enter password" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Role 
+                    <span class="text-red-500 ml-1">*</span>
+                    <span class="text-xs text-red-500 font-normal">(Required)</span>
+                </label>
                 <select id="addUserRole" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
                     <option value="cashier">Cashier</option>
                     <?php if(in_array($user['role'] ?? 'cashier', ['admin', 'owner', 'manager'])): ?>
@@ -398,21 +453,45 @@ $currentUser = $user;
                     <option value="admin">Owner</option>
                     <?php endif; ?>
                 </select>
-
-                <input type="text" id="addUserBranch" placeholder="Branch name (e.g., Main, Branch1)" value="<?php echo htmlspecialchars($user['branch'] ?? ''); ?>" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
-
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Branch 
+                    <span class="text-red-500 ml-1">*</span>
+                    <span class="text-xs text-red-500 font-normal">(Required)</span>
+                </label>
+                <input type="text" id="addUserBranch" placeholder="e.g., Main, Branch1" value="<?php echo htmlspecialchars($user['branch'] ?? 'main'); ?>" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Status 
+                    <span class="text-red-500 ml-1">*</span>
+                    <span class="text-xs text-red-500 font-normal">(Required)</span>
+                </label>
                 <select id="addUserStatus" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all">
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
                 </select>
+            </div>
+            
+            <!-- Required fields note -->
+            <div class="bg-gradient-to-r from-red-50 to-red-100 p-3 rounded-lg border-2 border-red-200">
+                <p class="text-sm text-red-700 font-bold">
+                    <span class="font-extrabold">IMPORTANT:</span> 
+                    All fields marked with <span class="text-red-500">*</span> are required.
+                    Email and Username must be unique.
+                </p>
+            </div>
 
-                <div class="flex gap-3 pt-2">
-                    <button onclick="closeAddUserModal()" class="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors">Cancel</button>
-                    <button onclick="addUser()" class="flex-1 px-4 py-2.5 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all transform hover:scale-105">Add User</button>
-                </div>
+            <div class="flex gap-3 pt-2">
+                <button onclick="closeAddUserModal()" class="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors">Cancel</button>
+                <button onclick="addUser()" class="flex-1 px-4 py-2.5 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all transform hover:scale-105">Add User</button>
             </div>
         </div>
     </div>
+</div>
 
     <!-- Edit User Modal -->
     <div id="editModal" class="modal">
@@ -430,7 +509,7 @@ $currentUser = $user;
             <div class="space-y-4">
                 <input type="text" id="editUsername" placeholder="Username" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
                 <input type="email" id="editEmail" placeholder="Email" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
-                
+                <input type="password" id="editVoidPin" placeholder="Leave blank to keep existing PIN" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
                 <select id="editUserRole" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
                     <option value="cashier">Cashier</option>
                     <?php if(in_array($user['role'] ?? 'cashier', ['admin', 'owner', 'manager'])): ?>

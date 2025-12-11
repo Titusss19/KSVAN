@@ -1,5 +1,5 @@
 <?php
-// backend/dashboard_api.php - COMPLETE FIXED VERSION
+// backend/dashboard_api.php - UPDATED WITH VOID PIN SUPPORT
 session_start();
 
 require_once __DIR__ . '/config/database.php';
@@ -213,7 +213,7 @@ elseif ($action === 'getUsers') {
     }
 }
 
-// ===== ADD USER =====
+// ===== ADD USER - WITH VOID PIN SUPPORT =====
 elseif ($action === 'addUser') {
     if (!hasPermission($user, 'manager')) {
         echo formatResponse(false, 'Insufficient permissions');
@@ -256,8 +256,10 @@ elseif ($action === 'addUser') {
         
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
         
+        // ===== VOID PIN HANDLING =====
         $hashedVoidPin = null;
         if ($void_pin && ($role === 'manager' || $role === 'admin')) {
+            // Validate void_pin
             if (strlen($void_pin) < 4) {
                 echo formatResponse(false, 'Void PIN must be at least 4 digits');
                 exit();
@@ -287,7 +289,7 @@ elseif ($action === 'addUser') {
     }
 }
 
-// ===== UPDATE USER =====
+// ===== UPDATE USER - WITH VOID PIN SUPPORT =====
 elseif ($action === 'updateUser') {
     if (!hasPermission($user, 'manager')) {
         echo formatResponse(false, 'Insufficient permissions');
@@ -305,29 +307,38 @@ elseif ($action === 'updateUser') {
     try {
         $dbRole = $role === 'admin' ? 'owner' : $role;
         
-        if ($void_pin !== '') {
-            if ($void_pin) {
-                if (($dbRole === 'manager' || $dbRole === 'owner')) {
-                    if (strlen($void_pin) < 4) {
-                        echo formatResponse(false, 'Void PIN must be at least 4 digits');
-                        exit();
-                    }
-                    if (!preg_match('/^\d+$/', $void_pin)) {
-                        echo formatResponse(false, 'Void PIN must contain only numbers');
-                        exit();
-                    }
-                    $hashedVoidPin = password_hash($void_pin, PASSWORD_DEFAULT);
-                } else {
-                    $hashedVoidPin = null;
+        // ===== VOID PIN HANDLING =====
+        $hashedVoidPin = null;
+        $updateVoidPin = false;
+        
+        if (isset($_POST['void_pin']) && $_POST['void_pin'] !== '') {
+            // User provided a new void_pin
+            if ($dbRole === 'manager' || $dbRole === 'owner') {
+                if (strlen($void_pin) < 4) {
+                    echo formatResponse(false, 'Void PIN must be at least 4 digits');
+                    exit();
                 }
-            } else {
-                $hashedVoidPin = null;
+                if (!preg_match('/^\d+$/', $void_pin)) {
+                    echo formatResponse(false, 'Void PIN must contain only numbers');
+                    exit();
+                }
+                $hashedVoidPin = password_hash($void_pin, PASSWORD_DEFAULT);
+                $updateVoidPin = true;
             }
-            
+        } else if (isset($_POST['void_pin']) && $_POST['void_pin'] === '') {
+            // User explicitly cleared void_pin
+            $hashedVoidPin = null;
+            $updateVoidPin = true;
+        }
+        // If void_pin is not in POST, we don't update it
+        
+        if ($updateVoidPin) {
+            // Update with void_pin
             $updateQuery = "UPDATE users SET email = ?, username = ?, role = ?, status = ?, branch = ?, void_pin = ? WHERE id = ?";
             $stmt = $pdo->prepare($updateQuery);
             $stmt->execute([$email, $username, $dbRole, $status, $branch, $hashedVoidPin, $id]);
         } else {
+            // Update without changing void_pin
             $updateQuery = "UPDATE users SET email = ?, username = ?, role = ?, status = ?, branch = ? WHERE id = ?";
             $stmt = $pdo->prepare($updateQuery);
             $stmt->execute([$email, $username, $dbRole, $status, $branch, $id]);
@@ -453,7 +464,6 @@ elseif ($action === 'getBranches') {
             $stmt = $pdo->prepare($query);
             $stmt->execute();
         } else {
-            // Non-admin users only see their own branch
             $userBranch = getUserBranch($user);
             $query = "SELECT DISTINCT branch FROM users WHERE branch = ? ORDER BY branch";
             $stmt = $pdo->prepare($query);

@@ -64,3 +64,24 @@
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
+
+/* Add to existing dashboard.css */
+input:required:invalid, select:required:invalid {
+    border-color: #fca5a5;
+}
+
+input:required:valid, select:required:valid {
+    border-color: #86efac;
+}
+
+.required-star {
+    color: #ef4444;
+    font-weight: bold;
+}
+
+/* Disabled action buttons */
+.actions-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}

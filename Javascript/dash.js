@@ -357,6 +357,10 @@ function updateUsersDisplay() {
     return;
   }
 
+  // Check if current user has permission to edit/delete
+  const currentUserRole = appState.user.role || "cashier";
+  const canEditDelete = ["admin", "owner", "manager"].includes(currentUserRole);
+
   tbody.innerHTML = appState.users
     .map(
       (user) => `
@@ -409,20 +413,47 @@ function updateUsersDisplay() {
           ${user.status}
         </span>
       </td>
+      ${
+        canEditDelete
+          ? `
       <td class="py-4 px-4">
         <div class="flex items-center gap-2">
-          <button onclick="openEditModal(${
-            user.id
-          })" class="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors">Edit</button>
-          <button onclick="openDeleteModal(${user.id}, '${
-        user.email
-      }')" class="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors">Delete</button>
+          <button onclick="openEditModal(${user.id})" class="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors">Edit</button>
+          <button onclick="openDeleteModal(${user.id}, '${user.email}')" class="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors">Delete</button>
         </div>
-      </td>
+      </td>`
+          : `<td class="py-4 px-4 text-center text-gray-400">No Actions</td>`
+      }
     </tr>
   `
     )
     .join("");
+}
+
+// Add this function to dash.js
+function handleRoleChange() {
+  const roleSelect = document.getElementById("addUserRole");
+  const voidPinContainer = document.getElementById("voidPinContainer");
+  const voidPinInput = document.getElementById("addVoidPin");
+  
+  if (roleSelect && voidPinContainer && voidPinInput) {
+    roleSelect.addEventListener("change", function() {
+      if (this.value === "manager" || this.value === "admin") {
+        voidPinContainer.style.display = "block";
+        voidPinInput.required = true;
+      } else {
+        voidPinContainer.style.display = "none";
+        voidPinInput.required = false;
+        voidPinInput.value = "";
+      }
+    });
+    
+    // Initial check
+    if (roleSelect.value === "manager" || roleSelect.value === "admin") {
+      voidPinContainer.style.display = "block";
+      voidPinInput.required = true;
+    }
+  }
 }
 
 // ===== ANNOUNCEMENTS LOADING =====
@@ -607,17 +638,43 @@ async function postAnnouncement() {
 }
 
 async function addUser() {
-  const email = document.getElementById("addUserEmail")?.value || "";
-  const username = document.getElementById("addUsername")?.value || "";
+  const email = document.getElementById("addUserEmail")?.value.trim() || "";
+  const username = document.getElementById("addUsername")?.value.trim() || "";
   const password = document.getElementById("addPassword")?.value || "";
   const confirmPassword =
     document.getElementById("addConfirmPassword")?.value || "";
   const role = document.getElementById("addUserRole")?.value || "cashier";
-  const branch = document.getElementById("addUserBranch")?.value || "main";
+  const branch =
+    document.getElementById("addUserBranch")?.value.trim() || "main";
   const status = document.getElementById("addUserStatus")?.value || "Active";
+  const void_pin = document.getElementById("addVoidPin")?.value || "";
 
-  if (!email || !username || !password || !confirmPassword) {
-    showFeedback("Warning", "Please fill in all required fields", "warning");
+  // IMPORTANT: Validate required fields
+  if (!email || !username || !password || !confirmPassword || !branch) {
+    showFeedback(
+      "Warning",
+      "Please fill in all required fields marked with *",
+      "warning"
+    );
+    return;
+  }
+
+  // Email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    showFeedback("Error", "Please enter a valid email address", "error");
+    return;
+  }
+
+  // Username validation
+  if (username.length < 3) {
+    showFeedback("Error", "Username must be at least 3 characters", "error");
+    return;
+  }
+
+  // Password validation
+  if (password.length < 6) {
+    showFeedback("Error", "Password must be at least 6 characters", "error");
     return;
   }
 
@@ -626,9 +683,25 @@ async function addUser() {
     return;
   }
 
-  if (password.length < 6) {
-    showFeedback("Error", "Password must be at least 6 characters", "error");
+  // Void PIN validation for Manager/Owner
+  if ((role === "manager" || role === "admin") && !void_pin) {
+    showFeedback(
+      "Error",
+      "Void PIN is required for Manager/Owner roles",
+      "error"
+    );
     return;
+  }
+
+  if (void_pin) {
+    if (void_pin.length !== 4) {
+      showFeedback("Error", "Void PIN must be exactly 4 digits", "error");
+      return;
+    }
+    if (!/^\d+$/.test(void_pin)) {
+      showFeedback("Error", "Void PIN must contain only numbers", "error");
+      return;
+    }
   }
 
   try {
@@ -640,13 +713,19 @@ async function addUser() {
       role: role,
       branch: branch,
       status: status,
+      void_pin: void_pin,
     });
 
     if (result.success) {
+      // Clear all fields
       document.getElementById("addUserEmail").value = "";
       document.getElementById("addUsername").value = "";
       document.getElementById("addPassword").value = "";
       document.getElementById("addConfirmPassword").value = "";
+      document.getElementById("addVoidPin").value = "";
+      document.getElementById("addUserBranch").value =
+        appState.user.branch || "main";
+
       closeAddUserModal();
       loadUsers();
       showFeedback("Success", "User added successfully", "success");
@@ -655,10 +734,11 @@ async function addUser() {
     }
   } catch (error) {
     console.error("Error adding user:", error);
-    showFeedback("Error", "Error adding user", "error");
+    showFeedback("Error", "Error adding user. Please try again.", "error");
   }
 }
 
+// ===== EXISTING updateUser FUNCTION - JUST ADD void_pin =====
 async function updateUser() {
   if (!appState.selectedEmployee) {
     showFeedback("Error", "No user selected", "error");
@@ -670,6 +750,23 @@ async function updateUser() {
   const role = document.getElementById("editUserRole")?.value || "cashier";
   const branch = document.getElementById("editUserBranch")?.value || "main";
   const status = document.getElementById("editUserStatus")?.value || "Active";
+  const void_pin = document.getElementById("editVoidPin")?.value || ""; // ADD THIS LINE
+
+  // ADD VOID PIN VALIDATION
+  if (void_pin) {
+    if (role === "cashier") {
+      showFeedback("Error", "Cashier accounts cannot have Void PIN", "error");
+      return;
+    }
+    if (void_pin.length < 4) {
+      showFeedback("Error", "Void PIN must be at least 4 digits", "error");
+      return;
+    }
+    if (!/^\d+$/.test(void_pin)) {
+      showFeedback("Error", "Void PIN must contain only numbers", "error");
+      return;
+    }
+  }
 
   try {
     const result = await apiCall("updateUser", {
@@ -679,6 +776,7 @@ async function updateUser() {
       role: role,
       branch: branch,
       status: status,
+      void_pin: void_pin, // ADD THIS LINE
     });
 
     if (result.success) {
@@ -690,7 +788,7 @@ async function updateUser() {
     }
   } catch (error) {
     console.error("Error updating user:", error);
-    showFeedback("Error", "Error updating user", "error");
+    showFeedback("Error", "Error updating user. Please try again.", "error");
   }
 }
 
@@ -771,7 +869,16 @@ document.addEventListener("DOMContentLoaded", function () {
         loadBranches();
       }
     }
+
+    // Hide "Add User" button for cashiers
+    const addUserBtn = document.querySelector('button[onclick="openAddUserModal()"]');
+    if (addUserBtn && !['admin', 'owner', 'manager'].includes(currentUser.role)) {
+      addUserBtn.style.display = "none";
+    }
   }
+
+  // Initialize role change listener for void PIN
+  handleRoleChange();
 
   setTimeout(() => {
     loadStats();

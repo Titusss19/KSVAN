@@ -19,6 +19,9 @@
             padding: 24px;
             transform: transition 0.3s ease;
         }
+
+         .content-wrapper {
+            opacity: 0;}
         
         .stat-card:hover {
             transform: scale(1.05);

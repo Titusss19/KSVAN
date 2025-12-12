@@ -1,0 +1,186 @@
+
+/* Prevent layout shift during page load */
+html {
+    overflow-y: scroll;
+}
+
+body {
+    min-height: 100vh;
+}
+
+/* Smooth transitions for content */
+main, .content-wrapper {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    will-change: opacity, transform;
+}
+
+/* Fade-in animation for dropdown */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.content-wrapper {
+            opacity: 0;
+        }
+
+.animate-fadeIn {
+    animation: fadeIn 0.2s ease-out;
+}
+
+/* Dropdown arrow rotation */
+#user-section.active #dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Prevent flash of unstyled content */
+.content-wrapper {
+    min-height: calc(100vh - 4rem);
+}
+
+/* Smooth scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1e293b;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+
+/* Navigation link active state enhancement */
+.nav-link.bg-red-600 {
+    position: relative;
+}
+
+.nav-link.bg-red-600::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+/* Backdrop blur for dropdown */
+#user-dropdown {
+    backdrop-filter: blur(8px);
+    background-color: rgba(30, 41, 59, 0.95);
+}
+
+/* Prevent content jump */
+header {
+    height: 4rem;
+}
+
+/* Responsive Modal */
+#account-settings-modal > div {
+    width: 95%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+@media (max-width: 640px) {
+    #account-settings-modal > div {
+        width: 95%;
+        max-width: none;
+        margin: 1rem;
+    }
+    
+    /* Smaller padding on mobile */
+    #account-settings-modal .p-6 {
+        padding: 1rem;
+    }
+    
+    /* Stack grid on mobile */
+    #account-settings-modal .grid-cols-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    #account-settings-modal h3 {
+        font-size: 1rem;
+    }
+    
+    #account-settings-modal input {
+        font-size: 0.875rem;
+    }
+    
+    #account-settings-modal button {
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+    }
+}
+
+/* Force hide modal when hidden class is present */
+#account-settings-modal.hidden {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+/* Show modal */
+#account-settings-modal:not(.hidden) {
+    display: flex !important;
+}
+
+/* Prevent body scroll when modal is open */
+body.modal-open {
+    overflow: hidden;
+}
+
+/* Modal animation */
+#account-settings-modal:not(.hidden) > div {
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+/* Force hide modal completely when hidden class is present */
+#account-settings-modal.hidden {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+/* Ensure modal content is contained */
+#account-settings-modal.hidden * {
+    display: none !important;
+}

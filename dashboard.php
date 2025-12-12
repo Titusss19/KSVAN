@@ -20,14 +20,15 @@ $currentUser = $user;
     <title>Dashboard - K-STREET</title>
     <script src="https://cdn.tailwindcss.com"></script>
      <link rel="stylesheet" href="css/dashboard.css">
-    
+       <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
     <?php include 'components/navbar.php'; ?>
 
     <!-- Main Content -->
-    <main class="py-6 px-4 sm:px-6 lg:px-8">
-        <div class="max-w-7xl mx-auto">
+    <main class="content-wrapper">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+       
             <!-- Welcome Banner -->
             <div class="mb-6 rounded-xl shadow-lg p-6" style="background-color: #FF001B;">
                 <h1 class="text-2xl font-bold text-white" id="welcomeTitle">Welcome, <?php echo htmlspecialchars($user['username'] ?? 'User'); ?>!</h1>

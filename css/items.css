@@ -19,6 +19,9 @@
             color: #374151;
             font-weight: 600;
         }
+        .content-wrapper {
+            opacity: 0;
+        }
 
         .table-kstreet tr:hover {
             background: #f9fafb;

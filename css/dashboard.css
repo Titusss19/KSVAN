@@ -85,3 +85,6 @@ input:required:valid, select:required:valid {
     cursor: not-allowed;
     pointer-events: none;
 }
+.content-wrapper {
+            opacity: 0;
+        }

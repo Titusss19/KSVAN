@@ -26,8 +26,8 @@ $currentUser = $user;
 <script id="userData" type="application/json">
     <?php echo json_encode($user); ?>
 </script>
-    <!-- Main Content -->
-    <div class="pt-6 px-6 max-w-7xl mx-auto">
+     <main class="content-wrapper">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <!-- Header -->
         <div class="flex justify-between items-start mb-8">
             <div class="flex-1">

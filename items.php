@@ -38,6 +38,7 @@ $currentUser = $user;
                
             </div>
             
+<?php if ($user['role'] === 'admin' || $user['role'] === 'owner'): ?>
             <div class="branch-selector">
                 <select id="branchFilter" class="form-select-kstreet w-48">
                     <option value="all">All Branches</option>
@@ -46,6 +47,14 @@ $currentUser = $user;
                     <option value="south">South Branch</option>
                 </select>
             </div>
+            <?php else: ?>
+            <div class="branch-display">
+                <span class="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg border border-blue-200 font-medium">
+                    <i class="fas fa-building mr-2"></i>
+                    <?php echo ucfirst($user['branch']); ?> Branch
+                </span>
+            </div>
+            <?php endif; ?>
         </div>
 
         <!-- Report Tabs -->
@@ -57,7 +66,7 @@ $currentUser = $user;
             <button class="tab-btn-kstreet" data-tab="inventory">
                 <i class="fas fa-cube"></i>
                 Item Inventory
-                <span class="bg-red-600 text-white text-xs px-2 py-1 rounded-full ml-2" id="lowStockCount">0</span>
+                <!-- <span class="bg-red-600 text-white text-xs px-2 py-1 rounded-full ml-2" id="lowStockCount">0</span> -->
             </button>
         </div>
 
@@ -464,7 +473,7 @@ $currentUser = $user;
     </div>
 
     <!-- Stock Management Modal -->
-    <div id="stockModal" class="fixed inset-0 modal-overlay hidden items-center justify-center p-4 z-50">
+    <!-- <div id="stockModal" class="fixed inset-0 modal-overlay hidden items-center justify-center p-4 z-50">
         <div class="modal-content-kstreet max-w-md w-full modal-show">
             <div class="flex justify-between items-center p-6 border-b">
                 <h3 class="text-xl font-bold text-gray-900">Stock Management</h3>
@@ -524,7 +533,7 @@ $currentUser = $user;
                         <textarea id="stockNotes" rows="2" placeholder="Enter notes (optional)" class="form-input-kstreet"></textarea>
                     </div>
 
-                    <!-- Calculations -->
+                    
                     <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
                         <h4 class="text-sm font-semibold text-blue-800 mb-2">Calculations</h4>
                         <div class="grid grid-cols-2 gap-4 text-xs">
@@ -554,7 +563,7 @@ $currentUser = $user;
                 </button>
             </div>
         </div>
-    </div>
+    </div> -->
 
     <!-- View Product Modal -->
     <div id="viewModal" class="fixed inset-0 modal-overlay hidden items-center justify-center p-4 z-50">
@@ -685,7 +694,7 @@ $currentUser = $user;
                 this.editingInventory = null;
                 this.itemToDelete = null;
                 this.inventoryToDelete = null;
-                this.selectedInventory = null;
+                // this.selectedInventory = null;
                 this.currentModalType = 'product';
                 
                 this.products = [];
@@ -713,7 +722,7 @@ async init() {
     }
     
     this.renderProductsTable();
-    this.updateLowStockCount();
+    // this.updateLowStockCount();
     
     console.log('=== INIT COMPLETED ===');
 }
@@ -812,16 +821,19 @@ getUserFromPHP() {
     };
 }
 
-            setupUser() {
-                this.isAdmin = this.user.role === 'admin' || this.user.role === 'owner';
-                if (this.isAdmin) {
-                    this.selectedBranch = 'all';
-                } else {
-                    this.selectedBranch = this.user.branch;
-                    document.getElementById('branchFilter').value = this.user.branch;
-                    document.getElementById('branchFilter').disabled = true;
-                }
-            }
+setupUser() {
+    this.isAdmin = this.user.role === 'admin' || this.user.role === 'owner';
+    if (this.isAdmin) {
+        this.selectedBranch = 'all';
+    } else {
+        this.selectedBranch = this.user.branch;
+        const branchFilter = document.getElementById('branchFilter');
+        if (branchFilter) {
+            branchFilter.value = this.user.branch;
+            branchFilter.disabled = true;
+        }
+    }
+}
 
             bindEvents() {
                 // Tab switching
@@ -836,11 +848,14 @@ getUserFromPHP() {
                 });
 
                 // Branch filter
-                document.getElementById('branchFilter').addEventListener('change', (e) => {
-                    this.selectedBranch = e.target.value;
-                    this.renderCurrentTable();
-                    this.updateLowStockCount();
-                });
+const branchFilter = document.getElementById('branchFilter');
+if (branchFilter) {
+    branchFilter.addEventListener('change', (e) => {
+        this.selectedBranch = e.target.value;
+        this.renderCurrentTable();
+        this.updateLowStockCount();
+    });
+}
 
                 // Product search
                 document.getElementById('productSearch').addEventListener('input', (e) => {
@@ -927,18 +942,18 @@ getUserFromPHP() {
                 });
 
                 // Stock modal
-                document.getElementById('cancelStock').addEventListener('click', () => {
-                    document.getElementById('stockModal').classList.add('hidden');
-                });
+                // document.getElementById('cancelStock').addEventListener('click', () => {
+                //     document.getElementById('stockModal').classList.add('hidden');
+                // });
 
-                document.getElementById('processStock').addEventListener('click', () => this.processStockTransaction());
+                // document.getElementById('processStock').addEventListener('click', () => this.processStockTransaction());
 
-                // Stock calculations
-                ['stockPerItem', 'stockQuantity', 'stockPricePerItem', 'stockTransactionType'].forEach(id => {
-                    document.getElementById(id).addEventListener('input', () => {
-                        this.updateStockCalculations();
-                    });
-                });
+                // // Stock calculations
+                // ['stockPerItem', 'stockQuantity', 'stockPricePerItem', 'stockTransactionType'].forEach(id => {
+                //     document.getElementById(id).addEventListener('input', () => {
+                //         this.updateStockCalculations();
+                //     });
+                // });
 
                 // View modal
                 document.getElementById('closeView').addEventListener('click', () => {
@@ -1118,9 +1133,9 @@ getUserFromPHP() {
                         </td>
                         <td class="py-4 px-6">
                             <div class="flex gap-2">
-                                <button class="btn-icon btn-view" onclick="productSystem.viewProduct(${product.id})">
+                              <!--  <button class="btn-icon btn-view" onclick="productSystem.viewProduct(${product.id})">
                                     <i class="fas fa-eye"></i>
-                                </button>
+                                </button> -->
                                 <button class="btn-icon btn-edit" onclick="productSystem.editProduct(${product.id})">
                                     <i class="fas fa-edit"></i>
                                 </button>
@@ -1352,30 +1367,30 @@ getUserFromPHP() {
     console.log('✓ Inventory modal opened');
 }
 
-            showStockModal(inventoryId) {
-                const inventory = this.inventory.find(item => item.id === inventoryId);
-                if (!inventory) return;
+            // showStockModal(inventoryId) {
+            //     const inventory = this.inventory.find(item => item.id === inventoryId);
+            //     if (!inventory) return;
 
-                this.selectedInventory = inventory;
-                const modal = document.getElementById('stockModal');
+            //     this.selectedInventory = inventory;
+            //     const modal = document.getElementById('stockModal');
 
-                // Update modal content
-                document.getElementById('stockItemName').textContent = inventory.name;
-                document.getElementById('currentStockDisplay').textContent = 
-                    `${parseFloat(inventory.current_stock).toFixed(2)} ${inventory.display_unit || inventory.unit}`;
-                document.getElementById('minStockDisplay').textContent = 
-                    `${parseFloat(inventory.min_stock).toFixed(2)} ${inventory.display_unit || inventory.unit}`;
-                document.getElementById('stockUnitDisplay').textContent = inventory.display_unit || inventory.unit;
+            //     // Update modal content
+            //     document.getElementById('stockItemName').textContent = inventory.name;
+            //     document.getElementById('currentStockDisplay').textContent = 
+            //         `${parseFloat(inventory.current_stock).toFixed(2)} ${inventory.display_unit || inventory.unit}`;
+            //     document.getElementById('minStockDisplay').textContent = 
+            //         `${parseFloat(inventory.min_stock).toFixed(2)} ${inventory.display_unit || inventory.unit}`;
+            //     document.getElementById('stockUnitDisplay').textContent = inventory.display_unit || inventory.unit;
 
-                // Reset form
-                document.getElementById('stockPerItem').value = '';
-                document.getElementById('stockQuantity').value = '1';
-                document.getElementById('stockPricePerItem').value = inventory.price || '';
-                document.getElementById('stockNotes').value = '';
+            //     // Reset form
+            //     document.getElementById('stockPerItem').value = '';
+            //     document.getElementById('stockQuantity').value = '1';
+            //     document.getElementById('stockPricePerItem').value = inventory.price || '';
+            //     document.getElementById('stockNotes').value = '';
 
-                this.updateStockCalculations();
-                modal.classList.remove('hidden');
-            }
+            //     this.updateStockCalculations();
+            //     modal.classList.remove('hidden');
+            // }
 
             showDeleteModal(type, id) {
                 this.currentModalType = type;
@@ -1654,34 +1669,34 @@ updateInventoryLabels(unit) {
     }
 }
 
-            updateStockCalculations() {
-                const stockPerItem = parseFloat(document.getElementById('stockPerItem').value) || 0;
-                const quantity = parseFloat(document.getElementById('stockQuantity').value) || 1;
-                const pricePerItem = parseFloat(document.getElementById('stockPricePerItem').value) || 0;
-                const transactionType = document.getElementById('stockTransactionType').value;
+            // updateStockCalculations() {
+            //     const stockPerItem = parseFloat(document.getElementById('stockPerItem').value) || 0;
+            //     const quantity = parseFloat(document.getElementById('stockQuantity').value) || 1;
+            //     const pricePerItem = parseFloat(document.getElementById('stockPricePerItem').value) || 0;
+            //     const transactionType = document.getElementById('stockTransactionType').value;
                 
-                if (!this.selectedInventory) return;
+            //     if (!this.selectedInventory) return;
 
-                const totalStockToAdd = stockPerItem * quantity;
-                const totalPrice = pricePerItem * quantity;
+            //     const totalStockToAdd = stockPerItem * quantity;
+            //     const totalPrice = pricePerItem * quantity;
 
-                let finalStock = parseFloat(this.selectedInventory.current_stock);
-                if (transactionType === 'IN') {
-                    finalStock += totalStockToAdd;
-                } else {
-                    finalStock -= totalStockToAdd;
-                }
+            //     let finalStock = parseFloat(this.selectedInventory.current_stock);
+            //     if (transactionType === 'IN') {
+            //         finalStock += totalStockToAdd;
+            //     } else {
+            //         finalStock -= totalStockToAdd;
+            //     }
 
-                // Update displays
-                document.getElementById('totalStockToAdd').textContent = 
-                    `${totalStockToAdd.toFixed(2)} ${this.selectedInventory.display_unit || this.selectedInventory.unit}`;
-                document.getElementById('totalStockPrice').textContent = 
-                    `₱${totalPrice.toFixed(2)}`;
-                document.getElementById('finalStockAfterTransaction').textContent = 
-                    `${finalStock.toFixed(2)} ${this.selectedInventory.display_unit || this.selectedInventory.unit}`;
-                document.getElementById('newPricePerItem').textContent = 
-                    pricePerItem > 0 ? `₱${pricePerItem.toFixed(2)}` : 'No change';
-            }
+            //     // Update displays
+            //     document.getElementById('totalStockToAdd').textContent = 
+            //         `${totalStockToAdd.toFixed(2)} ${this.selectedInventory.display_unit || this.selectedInventory.unit}`;
+            //     document.getElementById('totalStockPrice').textContent = 
+            //         `₱${totalPrice.toFixed(2)}`;
+            //     document.getElementById('finalStockAfterTransaction').textContent = 
+            //         `${finalStock.toFixed(2)} ${this.selectedInventory.display_unit || this.selectedInventory.unit}`;
+            //     document.getElementById('newPricePerItem').textContent = 
+            //         pricePerItem > 0 ? `₱${pricePerItem.toFixed(2)}` : 'No change';
+            // }
 
 updateImagePreview(imageUrl) {
     const preview = document.getElementById('imagePreview');
@@ -1849,59 +1864,59 @@ updateImagePreview(imageUrl) {
                     this.showLoading(false);
                     document.getElementById('inventoryModal').classList.add('hidden');
                     this.renderInventoryTable();
-                    this.updateLowStockCount();
+                    // this.updateLowStockCount();
                     this.editingInventory = null;
                 }, 1000);
             }
 
-            processStockTransaction() {
-                const stockPerItem = parseFloat(document.getElementById('stockPerItem').value);
-                const quantity = parseFloat(document.getElementById('stockQuantity').value);
-                const transactionType = document.getElementById('stockTransactionType').value;
+            // processStockTransaction() {
+            //     const stockPerItem = parseFloat(document.getElementById('stockPerItem').value);
+            //     const quantity = parseFloat(document.getElementById('stockQuantity').value);
+            //     const transactionType = document.getElementById('stockTransactionType').value;
 
-                if (!stockPerItem || stockPerItem <= 0) {
-                    this.showError('Please enter a valid stock per item!');
-                    return;
-                }
+            //     if (!stockPerItem || stockPerItem <= 0) {
+            //         this.showError('Please enter a valid stock per item!');
+            //         return;
+            //     }
 
-                if (!quantity || quantity <= 0) {
-                    this.showError('Please enter a valid quantity!');
-                    return;
-                }
+            //     if (!quantity || quantity <= 0) {
+            //         this.showError('Please enter a valid quantity!');
+            //         return;
+            //     }
 
-                const totalStockToAdd = stockPerItem * quantity;
-                const pricePerItem = parseFloat(document.getElementById('stockPricePerItem').value) || 0;
-                const totalPriceToAdd = pricePerItem * quantity;
+            //     const totalStockToAdd = stockPerItem * quantity;
+            //     const pricePerItem = parseFloat(document.getElementById('stockPricePerItem').value) || 0;
+            //     const totalPriceToAdd = pricePerItem * quantity;
 
-                // Check for out of stock
-                if (transactionType === 'OUT' && totalStockToAdd > this.selectedInventory.current_stock) {
-                    this.showError('Cannot deduct more stock than available!');
-                    return;
-                }
+            //     // Check for out of stock
+            //     if (transactionType === 'OUT' && totalStockToAdd > this.selectedInventory.current_stock) {
+            //         this.showError('Cannot deduct more stock than available!');
+            //         return;
+            //     }
 
-                // Update inventory
-                this.showLoading(true);
-                setTimeout(() => {
-                    if (transactionType === 'IN') {
-                        this.selectedInventory.current_stock += totalStockToAdd;
-                        this.selectedInventory.total_price += totalPriceToAdd;
-                    } else {
-                        this.selectedInventory.current_stock -= totalStockToAdd;
-                        this.selectedInventory.total_price -= totalPriceToAdd;
-                    }
+            //     // Update inventory
+            //     this.showLoading(true);
+            //     setTimeout(() => {
+            //         if (transactionType === 'IN') {
+            //             this.selectedInventory.current_stock += totalStockToAdd;
+            //             this.selectedInventory.total_price += totalPriceToAdd;
+            //         } else {
+            //             this.selectedInventory.current_stock -= totalStockToAdd;
+            //             this.selectedInventory.total_price -= totalPriceToAdd;
+            //         }
 
-                    if (pricePerItem > 0) {
-                        this.selectedInventory.price = pricePerItem;
-                    }
+            //         if (pricePerItem > 0) {
+            //             this.selectedInventory.price = pricePerItem;
+            //         }
 
-                    this.showSuccess(`Stock ${transactionType === 'IN' ? 'added' : 'deducted'} successfully!`);
-                    this.showLoading(false);
-                    document.getElementById('stockModal').classList.add('hidden');
-                    this.renderInventoryTable();
-                    this.updateLowStockCount();
-                    this.selectedInventory = null;
-                }, 1000);
-            }
+            //         this.showSuccess(`Stock ${transactionType === 'IN' ? 'added' : 'deducted'} successfully!`);
+            //         this.showLoading(false);
+            //         document.getElementById('stockModal').classList.add('hidden');
+            //         this.renderInventoryTable();
+            //         this.updateLowStockCount();
+            //         this.selectedInventory = null;
+            //     }, 1000);
+            // }
 
             confirmDelete() {
                 this.showLoading(true);
@@ -1920,7 +1935,7 @@ updateImagePreview(imageUrl) {
                             this.inventory.splice(index, 1);
                         }
                         this.showSuccess('Inventory item deleted successfully!');
-                        this.updateLowStockCount();
+                        // this.updateLowStockCount();
                     }
 
                     this.showLoading(false);
@@ -1971,21 +1986,21 @@ updateImagePreview(imageUrl) {
                 }
             }
 
-            updateLowStockCount() {
-                const lowStockItems = this.inventory.filter(item => this.getStockStatus(item) === 'low-stock');
-                const lowStockCount = lowStockItems.length;
+            // updateLowStockCount() {
+            //     const lowStockItems = this.inventory.filter(item => this.getStockStatus(item) === 'low-stock');
+            //     const lowStockCount = lowStockItems.length;
 
-                document.getElementById('lowStockCount').textContent = lowStockCount;
-                document.getElementById('lowStockItems').textContent = `${lowStockCount} items need restocking`;
+            //     document.getElementById('lowStockCount').textContent = lowStockCount;
+            //     document.getElementById('lowStockItems').textContent = `${lowStockCount} items need restocking`;
 
-                // Show/hide alert
-                const alert = document.getElementById('lowStockAlert');
-                if (lowStockCount > 0) {
-                    alert.classList.remove('hidden');
-                } else {
-                    alert.classList.add('hidden');
-                }
-            }
+            //     // Show/hide alert
+            //     const alert = document.getElementById('lowStockAlert');
+            //     if (lowStockCount > 0) {
+            //         alert.classList.remove('hidden');
+            //     } else {
+            //         alert.classList.add('hidden');
+            //     }
+            // }
 
 convertToDisplayUnit(item) {
     if (!item) return item;

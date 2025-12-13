@@ -38,6 +38,7 @@ $currentUser = $user;
                
             </div>
             
+            <?php if ($user['role'] === 'admin' || $user['role'] === 'owner'): ?>
             <div class="branch-selector">
                 <select id="branchFilter" class="form-select-kstreet w-48">
                     <option value="all">All Branches</option>
@@ -46,6 +47,14 @@ $currentUser = $user;
                     <option value="south">South Branch</option>
                 </select>
             </div>
+            <?php else: ?>
+            <div class="branch-display">
+                <span class="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg border border-blue-200 font-medium">
+                    <i class="fas fa-building mr-2"></i>
+                    <?php echo ucfirst($user['branch']); ?> Branch
+                </span>
+            </div>
+            <?php endif; ?>
         </div>
 
         <!-- Report Tabs -->
@@ -57,7 +66,7 @@ $currentUser = $user;
             <button class="tab-btn-kstreet" data-tab="inventory">
                 <i class="fas fa-cube"></i>
                 Item Inventory
-                <span class="bg-red-600 text-white text-xs px-2 py-1 rounded-full ml-2" id="lowStockCount">0</span>
+                
             </button>
         </div>
 
@@ -251,7 +260,11 @@ $currentUser = $user;
     <!-- Modals -->
     
     <!-- Add/Edit Product Modal -->
+<<<<<<< Updated upstream
     <div id="productModal" class="fixed inset-0 modal-overlay hidden items-center justify-center p-4 z-50">
+=======
+<div id="productModal" class="modal-overlay hidden">
+>>>>>>> Stashed changes
         <div class="modal-content-kstreet max-w-2xl w-full modal-show max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center p-6 border-b">
                 <h3 class="text-xl font-bold text-gray-900" id="productModalTitle">Add New Product</h3>
@@ -339,7 +352,11 @@ $currentUser = $user;
     </div>
 
     <!-- Add/Edit Inventory Modal -->
+<<<<<<< Updated upstream
     <div id="inventoryModal" class="fixed inset-0 modal-overlay hidden items-center justify-center p-4 z-50">
+=======
+<div id="inventoryModal" class="modal-overlay hidden">
+>>>>>>> Stashed changes
         <div class="modal-content-kstreet max-w-2xl w-full modal-show max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center p-6 border-b">
                 <h3 class="text-xl font-bold text-gray-900" id="inventoryModalTitle">Add New Inventory Item</h3>
@@ -464,7 +481,7 @@ $currentUser = $user;
     </div>
 
     <!-- Stock Management Modal -->
-    <div id="stockModal" class="fixed inset-0 modal-overlay hidden items-center justify-center p-4 z-50">
+<!-- <div id="stockModal" class="modal-overlay hidden">
         <div class="modal-content-kstreet max-w-md w-full modal-show">
             <div class="flex justify-between items-center p-6 border-b">
                 <h3 class="text-xl font-bold text-gray-900">Stock Management</h3>
@@ -524,7 +541,7 @@ $currentUser = $user;
                         <textarea id="stockNotes" rows="2" placeholder="Enter notes (optional)" class="form-input-kstreet"></textarea>
                     </div>
 
-                    <!-- Calculations -->
+                
                     <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
                         <h4 class="text-sm font-semibold text-blue-800 mb-2">Calculations</h4>
                         <div class="grid grid-cols-2 gap-4 text-xs">
@@ -554,10 +571,10 @@ $currentUser = $user;
                 </button>
             </div>
         </div>
-    </div>
+    </div> -->
 
     <!-- View Product Modal -->
-    <div id="viewModal" class="fixed inset-0 modal-overlay hidden items-center justify-center p-4 z-50">
+<div id="viewModal" class="modal-overlay hidden">
         <div class="modal-content-kstreet max-w-md w-full modal-show">
             <div class="flex justify-between items-center p-6 border-b">
                 <h3 class="text-xl font-bold text-gray-900">Product Details</h3>
@@ -605,7 +622,7 @@ $currentUser = $user;
     </div>
 
     <!-- Delete Confirmation Modal -->
-    <div id="deleteModal" class="fixed inset-0 modal-overlay hidden items-center justify-center p-4 z-50">
+<div id="deleteModal" class="modal-overlay hidden">
         <div class="modal-content-kstreet max-w-md w-full modal-show">
             <div class="flex justify-between items-center p-6 border-b bg-red-50">
                 <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2">
@@ -644,7 +661,7 @@ $currentUser = $user;
     </div>
 
     <!-- Success Modal -->
-    <div id="successModal" class="fixed inset-0 modal-overlay hidden items-center justify-center p-4 z-50">
+<div id="successModal" class="modal-overlay hidden">
         <div class="modal-content-kstreet max-w-md w-full modal-show">
             <div class="flex justify-center mb-4">
                 <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
@@ -685,7 +702,7 @@ $currentUser = $user;
                 this.editingInventory = null;
                 this.itemToDelete = null;
                 this.inventoryToDelete = null;
-                this.selectedInventory = null;
+                // this.selectedInventory = null;
                 this.currentModalType = 'product';
                 
                 this.products = [];
@@ -713,7 +730,7 @@ async init() {
     }
     
     this.renderProductsTable();
-    this.updateLowStockCount();
+    
     
     console.log('=== INIT COMPLETED ===');
 }
@@ -812,16 +829,19 @@ getUserFromPHP() {
     };
 }
 
-            setupUser() {
-                this.isAdmin = this.user.role === 'admin' || this.user.role === 'owner';
-                if (this.isAdmin) {
-                    this.selectedBranch = 'all';
-                } else {
-                    this.selectedBranch = this.user.branch;
-                    document.getElementById('branchFilter').value = this.user.branch;
-                    document.getElementById('branchFilter').disabled = true;
-                }
-            }
+setupUser() {
+    this.isAdmin = this.user.role === 'admin' || this.user.role === 'owner';
+    if (this.isAdmin) {
+        this.selectedBranch = 'all';
+    } else {
+        this.selectedBranch = this.user.branch;
+        const branchFilter = document.getElementById('branchFilter');
+        if (branchFilter) {
+            branchFilter.value = this.user.branch;
+            branchFilter.disabled = true;
+        }
+    }
+}
 
             bindEvents() {
                 // Tab switching
@@ -836,11 +856,15 @@ getUserFromPHP() {
                 });
 
                 // Branch filter
-                document.getElementById('branchFilter').addEventListener('change', (e) => {
-                    this.selectedBranch = e.target.value;
-                    this.renderCurrentTable();
-                    this.updateLowStockCount();
-                });
+// Branch filter - only if it exists
+const branchFilter = document.getElementById('branchFilter');
+if (branchFilter) {
+    branchFilter.addEventListener('change', (e) => {
+        this.selectedBranch = e.target.value;
+        this.renderCurrentTable();
+        
+    });
+}
 
                 // Product search
                 document.getElementById('productSearch').addEventListener('input', (e) => {
@@ -888,24 +912,31 @@ getUserFromPHP() {
                 document.getElementById('addInventoryBtn').addEventListener('click', () => this.showInventoryModal());
 
                 // Modal close buttons
-                document.querySelectorAll('.modal-close').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const modal = e.target.closest('.modal-overlay');
-                        modal.classList.add('hidden');
-                    });
-                });
+document.querySelectorAll('.modal-close').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        const modal = e.target.closest('.modal-overlay');
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+        document.body.classList.remove('modal-open');
+    });
+});
 
                 // Product modal buttons
-                document.getElementById('cancelProduct').addEventListener('click', () => {
-                    document.getElementById('productModal').classList.add('hidden');
-                });
-
+document.getElementById('cancelProduct').addEventListener('click', () => {
+    const modal = document.getElementById('productModal');
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+    document.body.classList.remove('modal-open');
+});
                 document.getElementById('saveProduct').addEventListener('click', () => this.saveProduct());
 
                 // Inventory modal buttons
-                document.getElementById('cancelInventory').addEventListener('click', () => {
-                    document.getElementById('inventoryModal').classList.add('hidden');
-                });
+document.getElementById('cancelInventory').addEventListener('click', () => {
+    const modal = document.getElementById('inventoryModal');
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+    document.body.classList.remove('modal-open');
+});
 
                 document.getElementById('saveInventory').addEventListener('click', () => this.saveInventory());
 
@@ -927,18 +958,18 @@ getUserFromPHP() {
                 });
 
                 // Stock modal
-                document.getElementById('cancelStock').addEventListener('click', () => {
-                    document.getElementById('stockModal').classList.add('hidden');
-                });
+                // document.getElementById('cancelStock').addEventListener('click', () => {
+                //     document.getElementById('stockModal').classList.add('hidden');
+                // });
 
-                document.getElementById('processStock').addEventListener('click', () => this.processStockTransaction());
+                // document.getElementById('processStock').addEventListener('click', () => this.processStockTransaction());
 
-                // Stock calculations
-                ['stockPerItem', 'stockQuantity', 'stockPricePerItem', 'stockTransactionType'].forEach(id => {
-                    document.getElementById(id).addEventListener('input', () => {
-                        this.updateStockCalculations();
-                    });
-                });
+                // // Stock calculations
+                // ['stockPerItem', 'stockQuantity', 'stockPricePerItem', 'stockTransactionType'].forEach(id => {
+                //     document.getElementById(id).addEventListener('input', () => {
+                //         this.updateStockCalculations();
+                //     });
+                // });
 
                 // View modal
                 document.getElementById('closeView').addEventListener('click', () => {
@@ -1205,9 +1236,9 @@ getUserFromPHP() {
                         </td>
                         <td class="py-4 px-6">
                             <div class="flex gap-2">
-                                <button class="btn-icon btn-stock" onclick="productSystem.showStockModal(${item.id})">
+                               <!-- <button class="btn-icon btn-stock" onclick="productSystem.showStockModal(${item.id})">
                                     <i class="fas fa-exchange-alt"></i>
-                                </button>
+                                </button> -->
                                 <button class="btn-icon btn-edit" onclick="productSystem.editInventory(${item.id})">
                                     <i class="fas fa-edit"></i>
                                 </button>
@@ -1255,48 +1286,72 @@ getUserFromPHP() {
                 }
             }
 
-            showProductModal(product = null) {
-                this.editingItem = product;
-                const modal = document.getElementById('productModal');
-                const title = document.getElementById('productModalTitle');
-                const branchInfo = document.getElementById('branchInfoSection');
+showProductModal(product = null) {
+    this.editingItem = product;
+    const modal = document.getElementById('productModal');
+    const title = document.getElementById('productModalTitle');
+    const branchInfo = document.getElementById('branchInfoSection');
 
-                if (product) {
-                    title.textContent = 'Edit Product';
-                    this.fillProductForm(product);
-                } else {
-                    title.textContent = 'Add New Product';
-                    this.resetProductForm();
-                }
+    if (product) {
+        title.textContent = 'Edit Product';
+        this.fillProductForm(product);
+    } else {
+        title.textContent = 'Add New Product';
+        this.resetProductForm();
+    }
 
-                // Update branch info
-                if (this.isAdmin) {
-                    branchInfo.innerHTML = `
-                        <label class="block text-sm font-medium text-blue-700 mb-2">Select Branch for this Product *</label>
-                        <select id="productBranch" class="border border-gray-300 p-2 rounded-lg w-full focus:ring-2 focus:ring-red-500 focus:border-transparent">
-                            ${['main', 'north', 'south'].map(branch => `
-                                <option value="${branch}" ${branch === (product?.branch || this.user.branch) ? 'selected' : ''}>
-                                    ${branch} ${branch === this.user.branch ? '(Your Branch)' : ''}
-                                </option>
-                            `).join('')}
-                        </select>
-                    `;
-                } else {
-                    branchInfo.innerHTML = `
-                        <p class="text-sm text-blue-700 font-medium">
-                            This product will be added to: <span class="font-bold">${this.user.branch}</span> branch
-                        </p>
-                    `;
-                }
+    // Update branch info
+    if (this.isAdmin) {
+        branchInfo.innerHTML = `
+            <label class="block text-sm font-medium text-blue-700 mb-2">Select Branch for this Product *</label>
+            <select id="productBranch" class="border border-gray-300 p-2 rounded-lg w-full focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                ${['main', 'north', 'south'].map(branch => `
+                    <option value="${branch}" ${branch === (product?.branch || this.user.branch) ? 'selected' : ''}>
+                        ${branch} ${branch === this.user.branch ? '(Your Branch)' : ''}
+                    </option>
+                `).join('')}
+            </select>
+        `;
+    } else {
+        branchInfo.innerHTML = `
+            <p class="text-sm text-blue-700 font-medium">
+                This product will be added to: <span class="font-bold">${this.user.branch}</span> branch
+            </p>
+        `;
+    }
 
-                modal.classList.remove('hidden');
-            }
+    // Show modal properly
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    document.body.classList.add('modal-open');
+    
+    // Force reflow to ensure styles are applied
+    modal.offsetHeight;
+}
 
+<<<<<<< Updated upstream
             showInventoryModal(inventory = null) {
                 this.editingInventory = inventory;
                 const modal = document.getElementById('inventoryModal');
                 const title = document.getElementById('inventoryModalTitle');
                 const branchInfo = document.getElementById('inventoryBranchInfo');
+=======
+showInventoryModal(inventory = null) {
+    console.log('🔵 showInventoryModal called', inventory);
+    
+    this.editingInventory = inventory;
+    
+    const modal = document.getElementById('inventoryModal');
+    if (!modal) {
+        console.error('❌ Inventory modal not found');
+        return;
+    }
+    
+    const title = document.getElementById('inventoryModalTitle');
+    if (title) {
+        title.textContent = inventory ? 'Edit Inventory Item' : 'Add New Inventory Item';
+    }
+>>>>>>> Stashed changes
 
                 if (inventory) {
                     title.textContent = 'Edit Inventory Item';
@@ -1328,31 +1383,53 @@ getUserFromPHP() {
 
                 modal.classList.remove('hidden');
             }
+<<<<<<< Updated upstream
+=======
+        } else {
+            branchInfo.innerHTML = `
+                <p class="text-sm text-blue-700 font-medium">
+                    Branch: <span class="font-bold">${this.user.branch}</span>
+                </p>
+            `;
+        }
+    }
 
-            showStockModal(inventoryId) {
-                const inventory = this.inventory.find(item => item.id === inventoryId);
-                if (!inventory) return;
+    // Show modal properly
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    document.body.classList.add('modal-open');
+    
+    // Force reflow
+    modal.offsetHeight;
+    
+    console.log('✓ Inventory modal opened');
+}
+>>>>>>> Stashed changes
 
-                this.selectedInventory = inventory;
-                const modal = document.getElementById('stockModal');
+            // showStockModal(inventoryId) {
+            //     const inventory = this.inventory.find(item => item.id === inventoryId);
+            //     if (!inventory) return;
 
-                // Update modal content
-                document.getElementById('stockItemName').textContent = inventory.name;
-                document.getElementById('currentStockDisplay').textContent = 
-                    `${parseFloat(inventory.current_stock).toFixed(2)} ${inventory.display_unit || inventory.unit}`;
-                document.getElementById('minStockDisplay').textContent = 
-                    `${parseFloat(inventory.min_stock).toFixed(2)} ${inventory.display_unit || inventory.unit}`;
-                document.getElementById('stockUnitDisplay').textContent = inventory.display_unit || inventory.unit;
+            //     this.selectedInventory = inventory;
+            //     const modal = document.getElementById('stockModal');
 
-                // Reset form
-                document.getElementById('stockPerItem').value = '';
-                document.getElementById('stockQuantity').value = '1';
-                document.getElementById('stockPricePerItem').value = inventory.price || '';
-                document.getElementById('stockNotes').value = '';
+            //     // Update modal content
+            //     document.getElementById('stockItemName').textContent = inventory.name;
+            //     document.getElementById('currentStockDisplay').textContent = 
+            //         `${parseFloat(inventory.current_stock).toFixed(2)} ${inventory.display_unit || inventory.unit}`;
+            //     document.getElementById('minStockDisplay').textContent = 
+            //         `${parseFloat(inventory.min_stock).toFixed(2)} ${inventory.display_unit || inventory.unit}`;
+            //     document.getElementById('stockUnitDisplay').textContent = inventory.display_unit || inventory.unit;
 
-                this.updateStockCalculations();
-                modal.classList.remove('hidden');
-            }
+            //     // Reset form
+            //     document.getElementById('stockPerItem').value = '';
+            //     document.getElementById('stockQuantity').value = '1';
+            //     document.getElementById('stockPricePerItem').value = inventory.price || '';
+            //     document.getElementById('stockNotes').value = '';
+
+            //     this.updateStockCalculations();
+            //     modal.classList.remove('hidden');
+            // }
 
             showDeleteModal(type, id) {
                 this.currentModalType = type;
@@ -1531,34 +1608,34 @@ getUserFromPHP() {
                     `${finalStock.toFixed(2)} ${labels[unit]}`;
             }
 
-            updateStockCalculations() {
-                const stockPerItem = parseFloat(document.getElementById('stockPerItem').value) || 0;
-                const quantity = parseFloat(document.getElementById('stockQuantity').value) || 1;
-                const pricePerItem = parseFloat(document.getElementById('stockPricePerItem').value) || 0;
-                const transactionType = document.getElementById('stockTransactionType').value;
+            // updateStockCalculations() {
+            //     const stockPerItem = parseFloat(document.getElementById('stockPerItem').value) || 0;
+            //     const quantity = parseFloat(document.getElementById('stockQuantity').value) || 1;
+            //     const pricePerItem = parseFloat(document.getElementById('stockPricePerItem').value) || 0;
+            //     const transactionType = document.getElementById('stockTransactionType').value;
                 
-                if (!this.selectedInventory) return;
+            //     if (!this.selectedInventory) return;
 
-                const totalStockToAdd = stockPerItem * quantity;
-                const totalPrice = pricePerItem * quantity;
+            //     const totalStockToAdd = stockPerItem * quantity;
+            //     const totalPrice = pricePerItem * quantity;
 
-                let finalStock = parseFloat(this.selectedInventory.current_stock);
-                if (transactionType === 'IN') {
-                    finalStock += totalStockToAdd;
-                } else {
-                    finalStock -= totalStockToAdd;
-                }
+            //     let finalStock = parseFloat(this.selectedInventory.current_stock);
+            //     if (transactionType === 'IN') {
+            //         finalStock += totalStockToAdd;
+            //     } else {
+            //         finalStock -= totalStockToAdd;
+            //     }
 
-                // Update displays
-                document.getElementById('totalStockToAdd').textContent = 
-                    `${totalStockToAdd.toFixed(2)} ${this.selectedInventory.display_unit || this.selectedInventory.unit}`;
-                document.getElementById('totalStockPrice').textContent = 
-                    `₱${totalPrice.toFixed(2)}`;
-                document.getElementById('finalStockAfterTransaction').textContent = 
-                    `${finalStock.toFixed(2)} ${this.selectedInventory.display_unit || this.selectedInventory.unit}`;
-                document.getElementById('newPricePerItem').textContent = 
-                    pricePerItem > 0 ? `₱${pricePerItem.toFixed(2)}` : 'No change';
-            }
+            //     // Update displays
+            //     document.getElementById('totalStockToAdd').textContent = 
+            //         `${totalStockToAdd.toFixed(2)} ${this.selectedInventory.display_unit || this.selectedInventory.unit}`;
+            //     document.getElementById('totalStockPrice').textContent = 
+            //         `₱${totalPrice.toFixed(2)}`;
+            //     document.getElementById('finalStockAfterTransaction').textContent = 
+            //         `${finalStock.toFixed(2)} ${this.selectedInventory.display_unit || this.selectedInventory.unit}`;
+            //     document.getElementById('newPricePerItem').textContent = 
+            //         pricePerItem > 0 ? `₱${pricePerItem.toFixed(2)}` : 'No change';
+            // }
 
             updateImagePreview(imageUrl) {
                 const preview = document.getElementById('imagePreview');
@@ -1721,87 +1798,107 @@ getUserFromPHP() {
                     this.showLoading(false);
                     document.getElementById('inventoryModal').classList.add('hidden');
                     this.renderInventoryTable();
-                    this.updateLowStockCount();
+                    
                     this.editingInventory = null;
                 }, 1000);
             }
 
-            processStockTransaction() {
-                const stockPerItem = parseFloat(document.getElementById('stockPerItem').value);
-                const quantity = parseFloat(document.getElementById('stockQuantity').value);
-                const transactionType = document.getElementById('stockTransactionType').value;
+            // processStockTransaction() {
+            //     const stockPerItem = parseFloat(document.getElementById('stockPerItem').value);
+            //     const quantity = parseFloat(document.getElementById('stockQuantity').value);
+            //     const transactionType = document.getElementById('stockTransactionType').value;
 
-                if (!stockPerItem || stockPerItem <= 0) {
-                    this.showError('Please enter a valid stock per item!');
-                    return;
-                }
+            //     if (!stockPerItem || stockPerItem <= 0) {
+            //         this.showError('Please enter a valid stock per item!');
+            //         return;
+            //     }
 
-                if (!quantity || quantity <= 0) {
-                    this.showError('Please enter a valid quantity!');
-                    return;
-                }
+            //     if (!quantity || quantity <= 0) {
+            //         this.showError('Please enter a valid quantity!');
+            //         return;
+            //     }
 
-                const totalStockToAdd = stockPerItem * quantity;
-                const pricePerItem = parseFloat(document.getElementById('stockPricePerItem').value) || 0;
-                const totalPriceToAdd = pricePerItem * quantity;
+            //     const totalStockToAdd = stockPerItem * quantity;
+            //     const pricePerItem = parseFloat(document.getElementById('stockPricePerItem').value) || 0;
+            //     const totalPriceToAdd = pricePerItem * quantity;
 
-                // Check for out of stock
-                if (transactionType === 'OUT' && totalStockToAdd > this.selectedInventory.current_stock) {
-                    this.showError('Cannot deduct more stock than available!');
-                    return;
-                }
+            //     // Check for out of stock
+            //     if (transactionType === 'OUT' && totalStockToAdd > this.selectedInventory.current_stock) {
+            //         this.showError('Cannot deduct more stock than available!');
+            //         return;
+            //     }
 
-                // Update inventory
-                this.showLoading(true);
-                setTimeout(() => {
-                    if (transactionType === 'IN') {
-                        this.selectedInventory.current_stock += totalStockToAdd;
-                        this.selectedInventory.total_price += totalPriceToAdd;
-                    } else {
-                        this.selectedInventory.current_stock -= totalStockToAdd;
-                        this.selectedInventory.total_price -= totalPriceToAdd;
-                    }
+            //     // Update inventory
+            //     this.showLoading(true);
+            //     setTimeout(() => {
+            //         if (transactionType === 'IN') {
+            //             this.selectedInventory.current_stock += totalStockToAdd;
+            //             this.selectedInventory.total_price += totalPriceToAdd;
+            //         } else {
+            //             this.selectedInventory.current_stock -= totalStockToAdd;
+            //             this.selectedInventory.total_price -= totalPriceToAdd;
+            //         }
 
-                    if (pricePerItem > 0) {
-                        this.selectedInventory.price = pricePerItem;
-                    }
+            //         if (pricePerItem > 0) {
+            //             this.selectedInventory.price = pricePerItem;
+            //         }
 
-                    this.showSuccess(`Stock ${transactionType === 'IN' ? 'added' : 'deducted'} successfully!`);
-                    this.showLoading(false);
-                    document.getElementById('stockModal').classList.add('hidden');
-                    this.renderInventoryTable();
-                    this.updateLowStockCount();
-                    this.selectedInventory = null;
-                }, 1000);
-            }
+            //         this.showSuccess(`Stock ${transactionType === 'IN' ? 'added' : 'deducted'} successfully!`);
+            //         this.showLoading(false);
+            //         document.getElementById('stockModal').classList.add('hidden');
+            //         this.renderInventoryTable();
+                    
+            //         this.selectedInventory = null;
+            //     }, 1000);
+            // }
 
-            confirmDelete() {
-                this.showLoading(true);
-                setTimeout(() => {
-                    if (this.currentModalType === 'product') {
-                        // Remove product
-                        const index = this.products.findIndex(item => item.id === this.itemToDelete.id);
-                        if (index > -1) {
-                            this.products.splice(index, 1);
-                        }
-                        this.showSuccess('Product deleted successfully!');
-                    } else {
-                        // Remove inventory
-                        const index = this.inventory.findIndex(item => item.id === this.inventoryToDelete.id);
-                        if (index > -1) {
-                            this.inventory.splice(index, 1);
-                        }
-                        this.showSuccess('Inventory item deleted successfully!');
-                        this.updateLowStockCount();
-                    }
+confirmDelete() {
+    const item = this.currentModalType === 'product' ? this.itemToDelete : this.inventoryToDelete;
+    
+    if (!item) {
+        alert('Error: No item selected for deletion');
+        return;
+    }
 
-                    this.showLoading(false);
-                    document.getElementById('deleteModal').classList.add('hidden');
-                    this.renderCurrentTable();
-                    this.itemToDelete = null;
-                    this.inventoryToDelete = null;
-                }, 1000);
-            }
+    // Create FormData
+    const formData = new FormData();
+    formData.append('type', this.currentModalType);
+    formData.append('id', item.id);
+
+    // Send to server
+    this.showLoading(true);
+    
+    fetch('backend/delete_item.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        this.showLoading(false);
+        
+        if (data.success) {
+            this.showSuccess(data.message);
+            document.getElementById('deleteModal').classList.add('hidden');
+            
+            // Reload page to refresh data
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            alert('Error: ' + data.error);
+            document.getElementById('deleteModal').classList.add('hidden');
+        }
+    })
+    .catch(error => {
+        this.showLoading(false);
+        alert('Error: ' + error.message);
+        document.getElementById('deleteModal').classList.add('hidden');
+    });
+    
+    // Reset
+    this.itemToDelete = null;
+    this.inventoryToDelete = null;
+}
 
             viewProduct(productId) {
                 const product = this.products.find(item => item.id === productId);
@@ -1843,6 +1940,7 @@ getUserFromPHP() {
                 }
             }
 
+<<<<<<< Updated upstream
             updateLowStockCount() {
                 const lowStockItems = this.inventory.filter(item => this.getStockStatus(item) === 'low-stock');
                 const lowStockCount = lowStockItems.length;
@@ -1881,6 +1979,21 @@ getUserFromPHP() {
                 }
                 return item;
             }
+=======
+convertToDisplayUnit(item) {
+    if (!item) return item;
+    
+    if (item.unit === 'liters') {
+        return {
+            ...item,
+            current_stock: item.current_stock * 1000,
+            min_stock: item.min_stock * 1000,
+            display_unit: 'ml'
+        };
+    }
+    return { ...item, display_unit: item.unit };
+}
+>>>>>>> Stashed changes
 
             showSuccess(message) {
                 const modal = document.getElementById('successModal');
@@ -1904,6 +2017,13 @@ getUserFromPHP() {
         document.addEventListener('DOMContentLoaded', function() {
             window.productSystem = new ProductsInventorySystem();
         });
+<<<<<<< Updated upstream
+=======
+
+
+
+        
+>>>>>>> Stashed changes
     </script>
 </body>
 </html>

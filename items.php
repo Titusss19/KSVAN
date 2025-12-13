@@ -295,10 +295,11 @@ $currentUser = $user;
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
                             <select id="productCategory" class="form-select-kstreet">
-                                <option value="Food">Food</option>
-                                <option value="Beverage">Beverage</option>
-                                <option value="Dessert">Dessert</option>
-                                <option value="Snack">Snack</option>
+                                
+                                <option value="Main">Main</option>
+                                <option value="Bundle">Bundle</option>
+                                <option value="Drinks">Drinks</option>
+                                <option value="Sides">Sides</option>
                             </select>
                         </div>
 
@@ -1493,7 +1494,7 @@ resetProductForm() {
     if (productName) productName.value = '';
     
     const productCategory = document.getElementById('productCategory');
-    if (productCategory) productCategory.value = 'Food';
+    if (productCategory) productCategory.value = 'Main';
     
     const productDescType = document.getElementById('productDescType');
     if (productDescType) productDescType.value = 'k-street food';

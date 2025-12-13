@@ -1,4 +1,4 @@
-// pos.js - Complete POS Frontend JavaScript
+// pos.js - UPDATED WITH DATABASE IMAGE DISPLAY AND PAGINATION - FIXED VERSION
 // ============================
 // GLOBAL VARIABLES
 // ============================
@@ -23,7 +23,9 @@ let searchTerm = "";
 let paymentAmount = "";
 let changeAmount = 0;
 let receiptContent = "";
-let orderSaved = false; // NEW: Flag to prevent duplicate saves
+let orderSaved = false;
+let currentPage = 1;
+let itemsPerPage = 9;
 
 // ============================
 // INITIALIZATION
@@ -149,7 +151,7 @@ async function checkCurrentStoreStatus() {
 
     storeOpen = data.isOpen || false;
     updateStoreToggleButton();
-    renderProducts(); // UPDATED: Re-render products to enable/disable buttons
+    renderProducts();
 
     if (data.lastAction) {
       lastActionTime = data.lastAction.timestamp;
@@ -159,7 +161,7 @@ async function checkCurrentStoreStatus() {
     console.error("Error checking store status:", error);
     storeOpen = false;
     updateStoreToggleButton();
-    renderProducts(); // UPDATED: Re-render products
+    renderProducts();
   }
 }
 
@@ -197,10 +199,9 @@ async function handleStoreToggle() {
     const data = await response.json();
 
     if (data.success) {
-      // UPDATED: Update store status FIRST before showing modal
       storeOpen = newStatus;
       updateStoreToggleButton();
-      renderProducts(); // UPDATED: Immediate render
+      renderProducts();
 
       const actionTime = new Date().toLocaleTimeString("en-US", {
         hour: "2-digit",
@@ -212,7 +213,6 @@ async function handleStoreToggle() {
       lastActionTime = new Date().toISOString();
       updateLastActionTime();
 
-      // Show modal AFTER updating state
       showStoreSuccessModal(newStatus, actionTime);
     } else {
       alert("Failed to update store status");
@@ -291,17 +291,14 @@ function showStoreSuccessModal(isOpen, actionTime) {
 
 function closeStoreModal() {
   document.getElementById("storeSuccessModal").classList.remove("active");
-  // UPDATED: Force complete UI refresh
   updateStoreToggleButton();
   updateLastActionTime();
   renderProducts();
 
-  // Also update discount buttons state
   const pwdBtn = document.getElementById("pwdDiscountBtn");
   const empBtn = document.getElementById("employeeDiscountBtn");
 
   if (storeOpen) {
-    // Enable discount buttons
     pwdBtn.disabled = false;
     empBtn.disabled = false;
     pwdBtn.style.opacity = "1";
@@ -309,7 +306,6 @@ function closeStoreModal() {
     pwdBtn.style.cursor = "pointer";
     empBtn.style.cursor = "pointer";
   } else {
-    // Disable discount buttons
     pwdBtn.disabled = true;
     empBtn.disabled = true;
     pwdBtn.style.opacity = "0.5";
@@ -339,6 +335,7 @@ async function fetchProducts() {
 
     const data = await response.json();
     console.log("Products fetched:", data.length);
+    console.log("Sample product with image data:", data[0]); // Check the image field
 
     products = data.filter((item) => item.description_type === "k-street food");
 
@@ -416,7 +413,7 @@ async function fetchUpgrades() {
 }
 
 // ============================
-// RENDER FUNCTIONS
+// RENDER FUNCTIONS - UPDATED IMAGE DISPLAY WITH PAGINATION
 // ============================
 function renderCategoryButtons() {
   const container = document.getElementById("categoryButtons");
@@ -438,6 +435,7 @@ function renderCategoryButtons() {
 
 function renderProducts() {
   const grid = document.getElementById("productGrid");
+  const paginationContainer = document.getElementById("paginationContainer");
 
   const filtered = products.filter((product) => {
     const matchesCategory =
@@ -448,7 +446,23 @@ function renderProducts() {
     return matchesCategory && matchesSearch;
   });
 
-  if (filtered.length === 0) {
+  // Calculate total pages
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+
+  // Ensure current page is valid
+  if (currentPage > totalPages && totalPages > 0) {
+    currentPage = totalPages;
+  } else if (currentPage < 1) {
+    currentPage = 1;
+  }
+
+  // Get items for current page
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedItems = filtered.slice(startIndex, endIndex);
+
+  // If no products found
+  if (paginatedItems.length === 0) {
     grid.innerHTML = `
             <div class="col-span-full text-center py-12 text-gray-400">
                 <div class="text-5xl mb-3">🔍</div>
@@ -456,10 +470,16 @@ function renderProducts() {
                 <p class="text-sm mt-1">Try different search terms or category</p>
             </div>
         `;
+
+    // Hide pagination if no items
+    if (paginationContainer) {
+      paginationContainer.style.display = "none";
+    }
     return;
   }
 
-  grid.innerHTML = filtered
+  // Render products for current page
+  grid.innerHTML = paginatedItems
     .map(
       (product) => `
         <div class="group border-2 rounded-2xl p-4 transition-all duration-300 ${
@@ -468,19 +488,8 @@ function renderProducts() {
             : "border-gray-200 opacity-80"
         }">
             <div class="h-40 rounded-xl mb-3 overflow-hidden flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-    ${
-      product.image &&
-      product.image.trim() !== "" &&
-      !product.image.includes("fbcdn.net")
-        ? `<img src="${product.image}" 
-                alt="${product.name}" 
-                onerror="this.onerror=null; this.src='images/no-image.png';"
-                class="object-cover h-full w-full group-hover:scale-110 transition-transform duration-300">`
-        : `<img src="img/kslogo.png" 
-                alt="No Image Available" 
-                class="object-cover h-full w-full opacity-50">`
-    }
-</div>
+                ${getProductImageHtml(product)}
+            </div>
             <h3 class="font-bold text-lg text-gray-800 mb-1">${
               product.name
             }</h3>
@@ -506,10 +515,211 @@ function renderProducts() {
     )
     .join("");
 
-  // UPDATED: Log render state for debugging
+  // Render pagination if there are more than itemsPerPage items
+  if (filtered.length > itemsPerPage) {
+    renderPagination(filtered.length, totalPages, startIndex, endIndex);
+    if (paginationContainer) {
+      paginationContainer.style.display = "block";
+    }
+  } else {
+    if (paginationContainer) {
+      paginationContainer.style.display = "none";
+    }
+  }
+
   console.log(
     `Products rendered. Store status: ${storeOpen ? "OPEN" : "CLOSED"}`
   );
+}
+
+// Function to render pagination controls - FIXED: Added startIndex and endIndex parameters
+function renderPagination(totalItems, totalPages, startIndex, endIndex) {
+  const paginationContainer = document.getElementById("paginationContainer");
+  if (!paginationContainer) {
+    // Create pagination container if it doesn't exist
+    const productGrid = document.getElementById("productGrid");
+    const parent = productGrid.parentElement;
+
+    const newPaginationContainer = document.createElement("div");
+    newPaginationContainer.id = "paginationContainer";
+    newPaginationContainer.className = "mt-6 flex justify-center";
+    parent.appendChild(newPaginationContainer);
+
+    // Update the variable
+    const paginationContainer = newPaginationContainer;
+  }
+
+  let paginationHTML = `
+    <div class="flex flex-col items-center justify-center space-y-3">
+      <div class="flex items-center justify-center space-x-2">
+        <button onclick="goToPage(${currentPage - 1})" 
+                ${currentPage === 1 ? "disabled" : ""}
+                class="px-4 py-2 rounded-lg font-medium transition-all ${
+                  currentPage === 1
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }">
+          ← Previous
+        </button>
+  `;
+
+  // Show page numbers
+  const maxVisiblePages = 5;
+  let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+  let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+  if (endPage - startPage + 1 < maxVisiblePages) {
+    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+  }
+
+  // Show first page if not in range
+  if (startPage > 1) {
+    paginationHTML += `
+      <button onclick="goToPage(1)" class="px-4 py-2 rounded-lg font-medium transition-all ${
+        1 === currentPage
+          ? "bg-red-600 text-white"
+          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+      }">
+        1
+      </button>
+      ${startPage > 2 ? '<span class="px-2 text-gray-400">...</span>' : ""}
+    `;
+  }
+
+  // Page numbers
+  for (let i = startPage; i <= endPage; i++) {
+    paginationHTML += `
+      <button onclick="goToPage(${i})" class="px-4 py-2 rounded-lg font-medium transition-all ${
+      i === currentPage
+        ? "bg-red-600 text-white"
+        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+    }">
+        ${i}
+      </button>
+    `;
+  }
+
+  // Show last page if not in range
+  if (endPage < totalPages) {
+    paginationHTML += `
+      ${
+        endPage < totalPages - 1
+          ? '<span class="px-2 text-gray-400">...</span>'
+          : ""
+      }
+      <button onclick="goToPage(${totalPages})" class="px-4 py-2 rounded-lg font-medium transition-all ${
+      totalPages === currentPage
+        ? "bg-red-600 text-white"
+        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+    }">
+        ${totalPages}
+      </button>
+    `;
+  }
+
+  paginationHTML += `
+        <button onclick="goToPage(${currentPage + 1})" 
+                ${currentPage === totalPages ? "disabled" : ""}
+                class="px-4 py-2 rounded-lg font-medium transition-all ${
+                  currentPage === totalPages
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }">
+          Next →
+        </button>
+      </div>
+      <div class="text-center text-gray-600 text-sm">
+        Showing ${startIndex + 1}-${Math.min(
+    endIndex,
+    totalItems
+  )} of ${totalItems} products
+      </div>
+    </div>
+  `;
+
+  paginationContainer.innerHTML = paginationHTML;
+}
+
+// Function to go to specific page
+function goToPage(page) {
+  const filtered = products.filter((product) => {
+    const matchesCategory =
+      activeCategory === "All" || product.category === activeCategory;
+    const matchesSearch = product.name
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+
+  if (page >= 1 && page <= totalPages) {
+    currentPage = page;
+    renderProducts();
+    // Scroll to top of product grid
+    document
+      .getElementById("productGrid")
+      .scrollIntoView({ behavior: "smooth" });
+  }
+}
+
+// UPDATED: Function to get product image HTML - FIXED VERSION
+function getProductImageHtml(product) {
+  // Check if product has image field in database
+  console.log(`Product ${product.name} image data:`, product.image);
+
+  if (
+    product.image &&
+    product.image.trim() !== "" &&
+    product.image !== "null"
+  ) {
+    // Clean the image URL
+    let imageUrl = product.image.trim();
+
+    // Remove any quotes or unwanted characters
+    imageUrl = imageUrl.replace(/["']/g, "");
+
+    // Check if it's a valid image URL
+    if (
+      imageUrl.match(/\.(jpg|jpeg|png|gif|bmp|webp)$/i) ||
+      imageUrl.includes("http")
+    ) {
+      // If it's a relative path that doesn't start with http
+      if (!imageUrl.startsWith("http") && !imageUrl.startsWith("/")) {
+        // Try different possible paths
+        if (imageUrl.startsWith("img/")) {
+          // Already has img/ prefix
+          return `<img src="${imageUrl}" 
+                  alt="${product.name}" 
+                  onerror="this.onerror=null; this.src='img/kslogo.png';"
+                  class="object-cover h-full w-full group-hover:scale-110 transition-transform duration-300">`;
+        } else if (imageUrl.startsWith("uploads/")) {
+          // Already has uploads/ prefix
+          return `<img src="${imageUrl}" 
+                  alt="${product.name}" 
+                  onerror="this.onerror=null; this.src='img/kslogo.png';"
+                  class="object-cover h-full w-full group-hover:scale-110 transition-transform duration-300">`;
+        } else {
+          // Try with img/ prefix first
+          return `<img src="img/${imageUrl}" 
+                  alt="${product.name}" 
+                  onerror="this.onerror=null; this.src='uploads/${imageUrl}'; this.onerror=function(){this.onerror=null; this.src='img/kslogo.png';};"
+                  class="object-cover h-full w-full group-hover:scale-110 transition-transform duration-300">`;
+        }
+      } else {
+        // Full URL (http/https) or absolute path
+        return `<img src="${imageUrl}" 
+                alt="${product.name}" 
+                onerror="this.onerror=null; this.src='img/kslogo.png';"
+                class="object-cover h-full w-full group-hover:scale-110 transition-transform duration-300">`;
+      }
+    }
+  }
+
+  // Default logo if no image found or invalid
+  return `<img src="img/kslogo.png" 
+          alt="${product.name}" 
+          class="object-contain h-32 w-32 opacity-70">`;
 }
 
 function renderCart() {
@@ -622,12 +832,14 @@ function renderCart() {
 // ============================
 function filterCategory(category) {
   activeCategory = category;
+  currentPage = 1; // Reset to first page when changing category
   renderCategoryButtons();
   renderProducts();
 }
 
 function handleSearch(e) {
   searchTerm = e.target.value;
+  currentPage = 1; // Reset to first page when searching
   renderProducts();
 }
 
@@ -852,7 +1064,6 @@ function toggleAddon(addonId) {
   const checkSpan = button.querySelector(".addon-check");
 
   if (index !== -1) {
-    // Remove addon
     selectedAddons.splice(index, 1);
     button.className =
       "p-3 rounded-xl border-2 transition-all text-left bg-gray-50 border-gray-200 text-gray-700 hover:border-red-300";
@@ -860,7 +1071,6 @@ function toggleAddon(addonId) {
       "addon-check w-5 h-5 rounded-full border-2 border-gray-300 flex items-center justify-center";
     checkSpan.textContent = "";
   } else {
-    // Add addon
     selectedAddons.push(addon);
     button.className =
       "p-3 rounded-xl border-2 transition-all text-left bg-red-100 border-red-500 text-red-700";
@@ -876,7 +1086,6 @@ function toggleUpgrade(upgradeId) {
   const upgrade = [...upgrades, ...flavors].find((u) => u.id === upgradeId);
   if (!upgrade) return;
 
-  // Clear all upgrade selections
   document.querySelectorAll('[id^="upgrade-"]').forEach((btn) => {
     btn.className =
       "p-3 rounded-xl border-2 transition-all text-left bg-gray-50 border-gray-200 text-gray-700 hover:border-green-300";
@@ -887,10 +1096,8 @@ function toggleUpgrade(upgradeId) {
   });
 
   if (selectedUpgrade && selectedUpgrade.id === upgradeId) {
-    // Deselect
     selectedUpgrade = null;
   } else {
-    // Select new upgrade
     selectedUpgrade = upgrade;
     const button = document.getElementById(`upgrade-${upgradeId}`);
 
@@ -922,7 +1129,6 @@ function updateModalPricing() {
   );
   let finalPrice = basePrice;
 
-  // Update pricing based on upgrade
   if (selectedUpgrade) {
     finalPrice = parseFloat(selectedUpgrade.price);
     document.getElementById("priceLabel").textContent =
@@ -955,7 +1161,6 @@ function updateModalPricing() {
     document.getElementById("upgradeInfo").style.display = "none";
   }
 
-  // Show addons total
   if (addonsTotal > 0) {
     document.getElementById("addonsTotal").style.display = "flex";
     document.getElementById(
@@ -965,7 +1170,6 @@ function updateModalPricing() {
     document.getElementById("addonsTotal").style.display = "none";
   }
 
-  // Update final total
   const total = finalPrice + addonsTotal;
   document.getElementById("modalTotal").textContent = `₱${total.toFixed(2)}`;
 }
@@ -973,7 +1177,6 @@ function updateModalPricing() {
 function confirmAddToCart() {
   if (!selectedProduct) return;
 
-  // Get special instructions value
   const instructionsInput = document.getElementById("specialInstructions");
   specialInstructions = instructionsInput ? instructionsInput.value : "";
 
@@ -994,7 +1197,6 @@ function confirmAddToCart() {
     finalPrice: finalPrice,
   };
 
-  // Check if same item with same customizations exists
   const existingIndex = cart.findIndex(
     (item) =>
       item.id === cartItem.id &&
@@ -1044,7 +1246,7 @@ function clearCart() {
   paymentAmount = "";
   discountApplied = false;
   employeeDiscountApplied = false;
-  orderSaved = false; // UPDATED: Reset flag
+  orderSaved = false;
   document.getElementById("paymentInput").value = "";
   renderCart();
 }
@@ -1065,10 +1267,10 @@ function calculateTotal() {
   let total = subtotal;
 
   if (discountApplied) {
-    total *= 0.8; // 20% discount
+    total *= 0.8;
   }
   if (employeeDiscountApplied) {
-    total *= 0.95; // 5% discount
+    total *= 0.95;
   }
 
   return total;
@@ -1089,7 +1291,6 @@ function updateTotals() {
   document.getElementById("total").textContent = `₱${total.toFixed(2)}`;
   document.getElementById("changeAmount").textContent = `₱${change.toFixed(2)}`;
 
-  // Show/hide discount rows
   const pwdRow = document.getElementById("pwdDiscountRow");
   const empRow = document.getElementById("employeeDiscountRow");
 
@@ -1174,7 +1375,6 @@ function toggleEmployeeDiscount() {
 function setPaymentMethod(method) {
   paymentMethod = method;
 
-  // Update all payment method buttons
   const buttons = document.querySelectorAll(".payment-method-btn");
   buttons.forEach((btn) => {
     if (btn.textContent.trim() === method) {
@@ -1213,7 +1413,6 @@ async function processPayment() {
     return;
   }
 
-  // UPDATED: Check if order already saved to prevent duplicate
   if (orderSaved) {
     console.log("Order already saved, skipping duplicate save");
     return;
@@ -1245,10 +1444,8 @@ async function processPayment() {
   const change = amount - total;
   changeAmount = change;
 
-  // Generate receipt
   generateReceiptText();
 
-  // Prepare order data
   const productNames = cart
     .map((item) => {
       if (item.selectedUpgrade) {
@@ -1290,7 +1487,6 @@ async function processPayment() {
   };
 
   try {
-    // UPDATED: Set flag before saving
     orderSaved = true;
 
     const response = await fetch("backend/pos_api.php?action=create_order", {
@@ -1317,7 +1513,6 @@ async function processPayment() {
         change
       );
     } else {
-      // UPDATED: Reset flag on error
       orderSaved = false;
       showPaymentModal(
         "error",
@@ -1327,7 +1522,6 @@ async function processPayment() {
       );
     }
   } catch (error) {
-    // UPDATED: Reset flag on error
     orderSaved = false;
     console.error("Error saving order:", error);
     showPaymentModal(
@@ -1495,7 +1689,7 @@ function showReceipt() {
 
 function closeReceiptModal() {
   document.getElementById("receiptModal").classList.remove("active");
-  clearCart(); // This will reset the orderSaved flag
+  clearCart();
 }
 
 function printReceipt() {

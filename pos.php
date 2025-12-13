@@ -82,6 +82,11 @@ $currentUser = $user;
                             <p class="text-lg font-semibold text-gray-500">Loading products...</p>
                         </div>
                     </div>
+                    
+                    <!-- Pagination Container (initially hidden) -->
+                    <div id="paginationContainer" class="mt-6 flex justify-center" style="display: none;">
+                        <!-- Pagination will be loaded dynamically -->
+                    </div>
                 </div>
 
                 <!-- Right Panel - Order (1/3 width) -->
@@ -266,7 +271,7 @@ $currentUser = $user;
                 </div>
 
                 <div class="flex gap-3" id="paymentModalButtons">
-                    <button onclick="showReceipt()" class="flex-1 py-3.5 bg-gradient-to-r from-red-500 to-red-500 text-white rounded-xl font-semibold hover:from-red-600 hover:to-red-700 transition-all shadow-lg hover:shadow-xl">
+                    <button onclick="showReceipt()" class="flex-1 py-3.5 bg-gradient-to-r from-red-500 to-red-500 text-white rounded-xl font-semibold hover:from-red-600 hover:to-red-600 transition-all shadow-lg hover:shadow-xl">
                         View Receipt
                     </button>
                 </div>

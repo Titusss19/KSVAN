@@ -1115,7 +1115,7 @@ if (branchFilter) {
                         </td>
                         <td class="py-4 px-6">
                             <div class="flex items-center">
-                                <img src="${product.image}" alt="${product.name}" class="w-10 h-10 rounded-lg object-cover mr-3">
+                                
                                 <span class="font-medium text-gray-900">${product.name}</span>
                             </div>
                         </td>
@@ -1133,9 +1133,9 @@ if (branchFilter) {
                         </td>
                         <td class="py-4 px-6">
                             <div class="flex gap-2">
-                              <!--  <button class="btn-icon btn-view" onclick="productSystem.viewProduct(${product.id})">
+                               <button class="btn-icon btn-view" onclick="productSystem.viewProduct(${product.id})">
                                     <i class="fas fa-eye"></i>
-                                </button> -->
+                                </button>
                                 <button class="btn-icon btn-edit" onclick="productSystem.editProduct(${product.id})">
                                     <i class="fas fa-edit"></i>
                                 </button>
@@ -1220,9 +1220,7 @@ if (branchFilter) {
                         </td>
                         <td class="py-4 px-6">
                             <div class="flex gap-2">
-                                <button class="btn-icon btn-stock" onclick="productSystem.showStockModal(${item.id})">
-                                    <i class="fas fa-exchange-alt"></i>
-                                </button>
+
                                 <button class="btn-icon btn-edit" onclick="productSystem.editInventory(${item.id})">
                                     <i class="fas fa-edit"></i>
                                 </button>

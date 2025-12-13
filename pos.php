@@ -20,68 +20,7 @@ $currentUser = $user;
     <title>POS - K-STREET</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-    <style>
-        /* Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(4px);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-            padding: 1rem;
-        }
-        
-        .modal.active {
-            display: flex;
-        }
-        
-        .modal-content {
-            background: white;
-            border-radius: 1.5rem;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            max-width: 500px;
-            width: 100%;
-            max-height: 90vh;
-            overflow-y: auto;
-            animation: modalSlideIn 0.3s ease-out;
-        }
-        
-        @keyframes modalSlideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* Scrollbar Styles */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: #dc2626;
-            border-radius: 10px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: #b91c1c;
-        }
-    </style>
+    <link rel="stylesheet" href="css/pos.css">
 </head>
 <body>
     <!-- Include Navbar -->

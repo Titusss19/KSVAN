@@ -1,8 +1,9 @@
- * {
+
+        * {
             font-family: 'Outfit', sans-serif;
         }
-        
-        /* Loading Screen */
+
+        /* LOADING SCREEN */
         #loadingScreen {
             position: fixed;
             top: 0;
@@ -21,6 +22,7 @@
         #loadingScreen.hidden {
             opacity: 0;
             visibility: hidden;
+            pointer-events: none;
         }
         
         .loader {
@@ -40,33 +42,6 @@
             animation: pulse 2s ease-in-out infinite;
         }
         
-        /* Fade In Animations */
-        .fade-in {
-            opacity: 0;
-            animation: fadeIn 0.6s ease-out forwards;
-        }
-        
-        .fade-in-up {
-            opacity: 0;
-            transform: translateY(20px);
-            animation: fadeInUp 0.6s ease-out forwards;
-        }
-        
-        .fade-in-scale {
-            opacity: 0;
-            transform: scale(0.95);
-            animation: fadeInScale 0.6s ease-out forwards;
-        }
-        
-        /* Stagger delays for sequential animations */
-        .delay-100 { animation-delay: 0.1s; }
-        .delay-200 { animation-delay: 0.2s; }
-        .delay-300 { animation-delay: 0.3s; }
-        .delay-400 { animation-delay: 0.4s; }
-        .delay-500 { animation-delay: 0.5s; }
-        .delay-600 { animation-delay: 0.6s; }
-        .delay-700 { animation-delay: 0.7s; }
-        
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
@@ -75,40 +50,10 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
-        
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-        
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        @keyframes fadeInScale {
-            from {
-                opacity: 0;
-                transform: scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-        
+
+        /* MODAL STYLES */
         .modal {
-            display: none;
+            display: none !important;
             position: fixed;
             top: 0;
             left: 0;
@@ -120,11 +65,11 @@
             justify-content: center;
             align-items: center;
             padding: 1rem;
-            animation: fadeIn 0.2s ease-out;
         }
         
-        .modal.active {
-            display: flex;
+        .modal.show {
+            display: flex !important;
+            animation: fadeIn 0.2s ease-out;
         }
         
         .modal-content {
@@ -152,57 +97,20 @@
                 transform: translateY(0);
             }
         }
-        
-        @keyframes pulse-green {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
-        .pulse-animation {
-            animation: pulse-green 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 10px;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: #dc2626;
-            border-radius: 10px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: #b91c1c;
-        }
-        
-        input:focus, textarea:focus, select:focus {
-            outline: none;
-        }
-        
-        .card-hover {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .card-hover:hover {
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-        }
-        
+
+        /* BUTTON STYLES */
         .btn-primary {
             background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
             transition: all 0.3s ease;
+            cursor: pointer;
         }
         
         .btn-primary:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(220, 38, 38, 0.3);
         }
-        
+
+        /* BADGES */
         .badge {
             display: inline-flex;
             align-items: center;
@@ -217,25 +125,28 @@
             background-color: #d1fae5;
             color: #065f46;
         }
-        
-        .badge-blue {
-            background-color: #dbeafe;
-            color: #1e40af;
+
+        /* PULSE ANIMATION */
+        @keyframes pulse-green {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
         
-        .badge-red {
-            background-color: #fee2e2;
-            color: #991b1b;
+        .pulse-animation {
+            animation: pulse-green 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        /* CARD HOVER */
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
-        .stat-card {
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            border-radius: 0.75rem;
-            padding: 1rem;
-            text-align: center;
-            border: 1px solid #e2e8f0;
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
         }
-        
+
+        /* ICON BUTTONS */
         .icon-button {
             display: inline-flex;
             align-items: center;
@@ -244,11 +155,517 @@
             border-radius: 0.5rem;
             transition: all 0.2s ease;
             cursor: pointer;
+            border: 1px solid transparent;
         }
         
         .icon-button:hover {
             transform: scale(1.05);
+            border-color: currentColor;
         }
+
+        /* UTILITY */
+        .hidden {
+            display: none !important;
+        }
+        
         .content-wrapper {
             opacity: 0;
+            animation: fadeIn 0.6s ease-out forwards;
+            animation-delay: 0.3s;
         }
+
+        /* STAT CARD */
+        .stat-card {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+/* attendance.css - Full Modern Minimalist CSS */
+
+:root {
+    --primary: #dc2626;
+    --primary-light: #fecaca;
+    --primary-dark: #b91c1c;
+    --surface: #ffffff;
+    --surface-alt: #f8fafc;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --text-light: #64748b;
+    --success: #059669;
+    --warning: #d97706;
+    --info: #2563eb;
+    --radius: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.1);
+    --shadow-lg: 0 4px 6px -1px rgba(0,0,0,0.1);
+    --transition: all 0.2s ease;
+}
+
+/* Reset & Base */
+* {
+    font-family: 'Outfit', sans-serif;
+}
+
+/* Loading Screen */
+#loadingScreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+#loadingScreen.hidden {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+
+.loader {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.loading-text {
+    margin-top: 1rem;
+    color: var(--text-light);
+    font-weight: 500;
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+}
+
+.modal.show {
+    display: flex;
+    animation: fadeIn 0.2s ease;
+}
+
+.modal-content {
+    background: var(--surface);
+    border-radius: var(--radius);
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+
+/* Buttons */
+.btn-primary {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius);
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Employee Details Modal */
+.employee-details-minimal {
+    background: var(--surface);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.employee-profile-minimal {
+    padding: 2rem;
+    text-align: center;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.employee-avatar-minimal {
+    width: 80px;
+    height: 80px;
+    background: var(--primary);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: 700;
+    margin: 0 auto 1rem;
+}
+
+.employee-name-minimal {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.25rem;
+}
+
+.employee-username-minimal {
+    font-size: 0.875rem;
+    color: var(--text-light);
+    font-weight: 500;
+}
+
+.info-grid-minimal {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    padding: 2rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.info-item-minimal {
+    display: flex;
+    flex-direction: column;
+}
+
+.info-label-minimal {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+}
+
+.info-value-minimal {
+    font-size: 0.875rem;
+    color: var(--text);
+    font-weight: 500;
+}
+
+.info-value-minimal.daily-rate {
+    color: var(--success);
+    font-weight: 700;
+}
+
+/* Attendance Summary */
+.attendance-summary-minimal {
+    padding: 1.5rem;
+    background: var(--surface-alt);
+    border-bottom: 1px solid var(--border);
+}
+
+.summary-stats-minimal {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+}
+
+.stat-card-minimal {
+    background: var(--surface);
+    padding: 1rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    text-align: center;
+}
+
+.stat-label-minimal {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+}
+
+.stat-value-minimal {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.stat-value-minimal.earnings {
+    color: var(--success);
+}
+
+/* Date Filters */
+.date-filters-minimal {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.date-input-minimal {
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.875rem;
+    color: var(--text);
+    background: var(--surface);
+}
+
+.filter-btn-minimal {
+    padding: 0.5rem 1rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.filter-btn-minimal:hover {
+    background: var(--primary-dark);
+}
+
+/* Attendance Table */
+.attendance-table-minimal {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.attendance-table-minimal thead {
+    background: var(--surface-alt);
+    border-bottom: 2px solid var(--border);
+}
+
+.attendance-table-minimal th {
+    padding: 0.75rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: left;
+}
+
+.attendance-table-minimal td {
+    padding: 1rem;
+    font-size: 0.875rem;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+}
+
+.attendance-table-minimal tr:hover {
+    background: var(--surface-alt);
+}
+
+.status-pill-minimal {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-completed-minimal {
+    background: rgba(5, 150, 105, 0.1);
+    color: var(--success);
+}
+
+.status-onduty-minimal {
+    background: rgba(37, 99, 235, 0.1);
+    color: var(--info);
+}
+
+/* Empty State */
+.empty-state-minimal {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-light);
+}
+
+.empty-icon-minimal {
+    font-size: 2rem;
+    opacity: 0.3;
+    margin-bottom: 1rem;
+}
+
+.empty-title-minimal {
+    color: var(--text);
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+/* Download Button */
+.download-btn-minimal {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: var(--info);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.download-btn-minimal:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease;
+}
+
+.slide-up {
+    animation: slideUp 0.3s ease;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .summary-stats-minimal {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .info-grid-minimal {
+        grid-template-columns: 1fr;
+    }
+    
+    .date-filters-minimal {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .summary-stats-minimal {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ADD THESE STYLES TO FIX SCROLL ISSUE */
+/* FIX SCROLL FOR ENTIRE EMPLOYEE DETAILS */
+#viewEmployeeModal .modal-content {
+    max-width: 900px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+}
+
+#viewEmployeeContent {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.employee-details-minimal {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    max-height: 100%;
+}
+
+/* Custom scrollbar for better appearance */
+.employee-details-minimal::-webkit-scrollbar {
+    width: 6px;
+}
+
+.employee-details-minimal::-webkit-scrollbar-track {
+    background: var(--surface-alt);
+    border-radius: 3px;
+}
+
+.employee-details-minimal::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+}
+
+.employee-details-minimal::-webkit-scrollbar-thumb:hover {
+    background: var(--text-light);
+}
+
+/* Fix date filter layout */
+.date-filters-minimal {
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--border);
+    background: white;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.date-filters-minimal > div {
+    max-width: 100%;
+}
+
+/* Ensure proper spacing */
+.employee-profile-minimal,
+.info-grid-minimal,
+.attendance-summary-minimal,
+.attendance-table-minimal {
+    flex-shrink: 0;
+}
+
+/* Make sure the last element has bottom padding */
+.employee-details-minimal > div:last-child {
+    padding-bottom: 2rem;
+}
+
+.date-group {
+  margin-bottom: 2rem;
+}
+
+.date-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+  padding-left: 0.5rem;
+  border-left: 3px solid #ef4444;
+}

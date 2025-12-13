@@ -36,7 +36,7 @@ $isManager = $user['role'] === 'manager';
                     <img src="img/kslogo.png" alt="K-Street Logo" class="w-12 h-12">
                 </div>
                 <div>
-                    <h1 class="text-white font-bold text-lg leading-none">K-STREET</h1>
+                    <h1 class="text-red-600 font-bold text-xl leading-none">K-STREET</h1>
                 </div>
             </div>
 
@@ -107,38 +107,6 @@ $isManager = $user['role'] === 'manager';
                 </a>
                 <?php endif; ?>
             </nav>
-
-            <!-- Right Section - User Info and Actions -->
-            <div class="flex items-center space-x-4">
-                <!-- Users Button - Optional (visible to admin/owner) -->
-                <?php if ($isAdminOrOwner): ?>
-                <a href="users.php"
-                   data-page="users"
-                   class="nav-link flex items-center space-x-2 px-4 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-700 transition-all duration-200"
-                   title="Users">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                        <circle cx="9" cy="7" r="4"/>
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                    </svg>
-                    <span class="text-sm font-medium">Users</span>
-                </a>
-                <?php endif; ?>
-
-                <!-- Settings Button - Optional (visible to admin/owner) -->
-                <?php if ($isAdminOrOwner): ?>
-                <a href="settings.php"
-                   data-page="settings"
-                   class="nav-link flex items-center space-x-2 px-4 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-700 transition-all duration-200"
-                   title="Settings">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="3"/>
-                        <path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m3.08 3.08l4.24 4.24M1 12h6m6 0h6m-16.78 7.78l4.24-4.24m3.08-3.08l4.24-4.24"/>
-                    </svg>
-                    <span class="text-sm font-medium">Settings</span>
-                </a>
-                <?php endif; ?>
 
                 <!-- User Profile Section - CLICKABLE FOR DROPDOWN -->
                 <div class="relative">

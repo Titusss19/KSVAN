@@ -1895,186 +1895,178 @@ class SalesReport {
   // ============================================
   // EXPORT CASHIER SESSION TO EXCEL (INDIVIDUAL) - FIXED VERSION
   // ============================================
-  exportCashierSessionToExcel() {
-    const session = this.selectedSession;
-    if (!session) {
-      this.showNotification("warning", "No session selected");
-      return;
-    }
+  // Replace the exportCashierSessionToExcel function in your sales.js with this:
+exportCashierSessionToExcel() {
+  const session = this.selectedSession;
+  if (!session) {
+    this.showNotification("warning", "No session selected");
+    return;
+  }
 
-    const ws_data = [];
+  console.log("📊 Export Session Data:", session);
 
-    // HEADER SECTION - EXACTLY LIKE IMAGE
-    ws_data.push(["K - STREET"]);
-    ws_data.push([]);
-    ws_data.push(["CASHIER INFORMATION"]);
+  // FIX: Convert empty array or calculate from orders
+  let paymentMethods = {};
+  
+  if (session.payment_methods && typeof session.payment_methods === 'object' && !Array.isArray(session.payment_methods)) {
+    // Backend returned proper object
+    paymentMethods = session.payment_methods;
+    console.log("✅ Using payment_methods from backend:", paymentMethods);
+  } else if (session.orders && session.orders.length > 0) {
+    // Calculate from orders
+    console.log("⚠️ payment_methods empty/invalid, calculating from orders...");
+    session.orders.forEach(order => {
+      const method = order.payment_method || "Cash";
+      if (!paymentMethods[method]) {
+        paymentMethods[method] = { count: 0, total: 0 };
+      }
+      paymentMethods[method].count++;
+      paymentMethods[method].total += parseFloat(order.total || 0);
+    });
+    console.log("✅ Calculated payment_methods:", paymentMethods);
+  } else {
+    console.log("ℹ️ No orders found, showing empty payment methods table");
+  }
 
-    // Cashier Info - EXACT FORMAT LIKE IMAGE
-    ws_data.push([`Cashier Email: ${session.user_email}`]);
-    ws_data.push([`Login Time: ${this.formatDateTime(session.login_time)}`]);
-    ws_data.push([
-      `Logout Time: ${
-        session.logout_time
-          ? this.formatDateTime(session.logout_time)
-          : "Still Active"
-      }`,
-    ]);
-    ws_data.push([
-      `Session Duration: ${session.session_duration || "Still Active"}`,
-    ]);
-    ws_data.push([]);
+  const ws_data = [];
 
-    // SALES SUMMARY SECTION - EXACT FORMAT LIKE IMAGE
-    ws_data.push(["SALES SUMMARY"]);
-    ws_data.push([
-      `Starting Gross ${this.formatCurrency(session.start_gross_sales)}`,
-    ]);
-    ws_data.push([
-      `Ending Gross ${this.formatCurrency(session.end_gross_sales)}`,
-    ]);
-    ws_data.push([
-      `Sales During ${this.formatCurrency(session.session_sales)}`,
-    ]);
-    ws_data.push([`Total Transact ${session.transaction_count || 0}`]);
-    ws_data.push([
-      `Total Applied ${this.formatCurrency(session.total_discount)}`,
-    ]);
-    ws_data.push([`Total Void Am ${this.formatCurrency(session.total_void)}`]);
-    ws_data.push([]);
+  // ROW 1: K-STREET Header
+  ws_data.push(["K - STREET"]);
 
-    // PAYMENT METHODS TABLE (if exists)
-    if (
-      session.payment_methods &&
-      Object.keys(session.payment_methods).length > 0
-    ) {
-      ws_data.push(["", "Transaction Count", "Total Amount"]);
-      Object.entries(session.payment_methods).forEach(([method, data]) => {
-        ws_data.push([method, data.count, parseFloat(data.total)]);
-      });
-      ws_data.push([]);
-    }
+  // ROW 2: Empty
+  ws_data.push([""]);
 
-    // ORDERS DURING SESSION SECTION
-    if (session.orders && session.orders.length > 0) {
-      ws_data.push(["ORDERS DURING SESSION"]);
+  // ROW 3: CASHIER SESSION REPORT
+  ws_data.push(["CASHIER SESSION REPORT"]);
 
-      // Table headers
-      const orderHeaders = this.isAdmin()
+  // ROW 4: CASHIER INFORMATION Header
+  ws_data.push(["CASHIER INFORMATION"]);
+
+  // Cashier Info Data
+  ws_data.push(["Cashier Email:", session.user_email]);
+  ws_data.push(["Login Time:", this.formatDateTime(session.login_time)]);
+  ws_data.push(["Logout Time:", session.logout_time ? this.formatDateTime(session.logout_time) : "Still Active"]);
+  ws_data.push(["Session Duration:", session.session_duration || "Still Active"]);
+
+  // Empty row
+  ws_data.push([""]);
+
+  // SALES SUMMARY Header
+  ws_data.push(["SALES SUMMARY"]);
+
+  // Sales Summary Data
+  ws_data.push(["Starting Gross:", parseFloat(session.start_gross_sales || 0)]);
+  ws_data.push(["Ending Gross:", parseFloat(session.end_gross_sales || 0)]);
+  ws_data.push(["Sales During Session:", parseFloat(session.session_sales || 0)]);
+  ws_data.push(["Total Transactions:", session.transaction_count || 0]);
+  ws_data.push(["Total Applied Discount:", parseFloat(session.total_discount || 0)]);
+  ws_data.push(["Total Void Amount:", parseFloat(session.total_void || 0)]);
+
+  // Empty row
+  ws_data.push([""]);
+
+  // PAYMENT METHODS TABLE - ALWAYS SHOW
+  ws_data.push(["Payment Method", "Transaction Count", "Total Amount"]);
+  
+  if (Object.keys(paymentMethods).length > 0) {
+    console.log("✅ Adding payment methods data");
+    Object.entries(paymentMethods).forEach(([method, data]) => {
+      console.log(`  - ${method}: ${data.count} transactions, ₱${data.total}`);
+      ws_data.push([method, data.count, parseFloat(data.total)]);
+    });
+  } else {
+    console.log("ℹ️ No payment methods data - showing 'No transactions' row");
+    ws_data.push(["No transactions yet", 0, 0]);
+  }
+
+  // Empty row after payment methods
+  ws_data.push([""]);
+
+  // ORDERS DURING SESSION - ALWAYS SHOW
+  ws_data.push(["ORDERS DURING SESSION"]);
+
+  const orderHeaders = this.isAdmin()
+    ? ["Order ID", "Products", "Total Amount", "Order Type", "Payment Method", "Transaction Time", "Branch"]
+    : ["Order ID", "Products", "Total Amount", "Order Type", "Payment Method", "Transaction Time"];
+  ws_data.push(orderHeaders);
+
+  if (session.orders && session.orders.length > 0) {
+    console.log(`✅ Adding ${session.orders.length} orders`);
+    session.orders.forEach((order) => {
+      const row = this.isAdmin()
         ? [
-            "Order ID",
-            "Products",
-            "Total Amount",
-            "Order Type",
-            "Payment Method",
-            "Transaction Time",
-            "Branch",
+            order.id + (order.is_upgraded ? " [UPGRADED]" : ""),
+            this.formatProductNames(order),
+            parseFloat(order.total),
+            order.orderType,
+            order.payment_method || "Cash",
+            this.formatTime(order.created_at),
+            order.branch || "Unknown",
           ]
         : [
-            "Order ID",
-            "Products",
-            "Total Amount",
-            "Order Type",
-            "Payment Method",
-            "Transaction Time",
+            order.id + (order.is_upgraded ? " [UPGRADED]" : ""),
+            this.formatProductNames(order),
+            parseFloat(order.total),
+            order.orderType,
+            order.payment_method || "Cash",
+            this.formatTime(order.created_at),
           ];
-      ws_data.push(orderHeaders);
-
-      // Order data
-      session.orders.forEach((order) => {
-        const row = this.isAdmin()
-          ? [
-              order.id + (order.is_upgraded ? " [UPGRADED]" : ""),
-              this.formatProductNames(order),
-              parseFloat(order.total),
-              order.orderType,
-              order.payment_method || "Cash",
-              this.formatTime(order.created_at),
-              order.branch || "Unknown",
-            ]
-          : [
-              order.id + (order.is_upgraded ? " [UPGRADED]" : ""),
-              this.formatProductNames(order),
-              parseFloat(order.total),
-              order.orderType,
-              order.payment_method || "Cash",
-              this.formatTime(order.created_at),
-            ];
-        ws_data.push(row);
-      });
-
-      ws_data.push([]);
-    }
-
-    // FOOTER - EXACT FORMAT LIKE IMAGE
-    const generatedDate = new Date().toLocaleString("en-PH", {
-      year: "numeric",
-      month: "numeric",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
+      ws_data.push(row);
     });
-    ws_data.push([
-      `Generated: ${generatedDate} | Exported by: ${
-        window.currentUser?.name || "Admin"
-      }`,
-    ]);
-
-    // Create worksheet
-    const ws = XLSX.utils.aoa_to_sheet(ws_data);
-
-    // Apply EXACT styling to match image.png - FIXED VERSION
-    this.applyCashierSessionExactDesign(
-      ws,
-      ws_data.length,
-      session,
-      this.isAdmin()
-    );
-
-    // Set column widths based on content
-    const numCols = this.isAdmin() ? 7 : 6;
-    ws["!cols"] = this.isAdmin()
-      ? [
-          { wch: 15 }, // Order ID
-          { wch: 40 }, // Products
-          { wch: 15 }, // Total Amount
-          { wch: 15 }, // Order Type
-          { wch: 20 }, // Payment Method
-          { wch: 18 }, // Transaction Time
-          { wch: 18 }, // Branch
-        ]
-      : [
-          { wch: 15 }, // Order ID
-          { wch: 40 }, // Products
-          { wch: 15 }, // Total Amount
-          { wch: 15 }, // Order Type
-          { wch: 20 }, // Payment Method
-          { wch: 18 }, // Transaction Time
-        ];
-
-    // Create workbook
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(
-      wb,
-      ws,
-      `Session_${session.user_email.split("@")[0]}`
-    );
-
-    // Generate filename matching the image format
-    const dateStr = new Date().toISOString().split("T")[0].replace(/-/g, "");
-    const cashierStr = session.user_email
-      .split("@")[0]
-      .replace(/[^a-zA-Z0-9]/g, "_");
-    const filename = `K-STREET_Cashier_Report_${cashierStr}_${dateStr}.xlsx`;
-
-    // Download
-    XLSX.writeFile(wb, filename);
-
-    this.showNotification(
-      "success",
-      "Cashier session report exported successfully!"
-    );
+  } else {
+    console.log("ℹ️ No orders - showing 'No orders' row");
+    const emptyRow = this.isAdmin()
+      ? ["-", "No orders during this session", 0, "-", "-", "-", "-"]
+      : ["-", "No orders during this session", 0, "-", "-", "-"];
+    ws_data.push(emptyRow);
   }
+
+  // Empty row
+  ws_data.push([""]);
+
+  // Footer
+  const generatedDate = new Date().toLocaleString("en-PH", {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  ws_data.push([`Generated: ${generatedDate} | Exported by: ${window.currentUser?.name || "Admin"}`]);
+
+  console.log(`📄 Total rows: ${ws_data.length}`);
+
+  // Create worksheet
+  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+  // Apply styling
+  this.applyCashierSessionExactDesign(ws, ws_data.length, session, this.isAdmin());
+
+  // Set column widths
+  ws["!cols"] = this.isAdmin()
+    ? [
+        { wch: 25 }, { wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 18 }, { wch: 18 },
+      ]
+    : [
+        { wch: 25 }, { wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 18 },
+      ];
+
+  // Create workbook
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, `Session_${session.user_email.split("@")[0]}`);
+
+  // Generate filename
+  const dateStr = new Date().toISOString().split("T")[0].replace(/-/g, "");
+  const cashierStr = session.user_email.split("@")[0].replace(/[^a-zA-Z0-9]/g, "_");
+  const filename = `K-STREET_Cashier_Report_${cashierStr}_${dateStr}.xlsx`;
+
+  // Download
+  XLSX.writeFile(wb, filename);
+
+  console.log("✅ Excel downloaded:", filename);
+  this.showNotification("success", "Cashier session report exported successfully!");
+}
 
   // ============================================
   // EXPORT VOID TO EXCEL
@@ -2347,338 +2339,322 @@ class SalesReport {
     ws["!merges"].push({ s: { r: 3, c: 0 }, e: { r: 3, c: isAdmin ? 9 : 8 } });
   }
 
-  // ============================================
-  // APPLY CASHIER SESSION EXACT DESIGN (Matching image.png) - FIXED VERSION
-  // ============================================
-  // ============================================
-  // APPLY CASHIER SESSION EXACT DESIGN (Matching image.png) - COMPLETELY FIXED
-  // ============================================
-  applyCashierSessionExactDesign(ws, totalRows, session, isAdmin) {
-    // Color scheme matching the image
-    const redFill = { fgColor: { rgb: "FFDC2626" } };
-    const grayHeaderFill = { fgColor: { rgb: "FF374151" } };
+// Replace the applyCashierSessionExactDesign function in your sales.js with this:
 
-    // Font styles
-    const whiteFont = { color: { rgb: "FFFFFFFF" }, bold: true, size: 16 };
-    const sectionFont = { color: { rgb: "FFFFFFFF" }, bold: true, size: 11 };
-    const labelFont = { bold: true, size: 11, color: { rgb: "FF111827" } };
-    const valueFont = { size: 11, color: { rgb: "FF374151" } };
-    const currencyFont = { bold: true, size: 11, color: { rgb: "FF111827" } };
-    const smallFont = { size: 9, color: { rgb: "FF6B7280" } };
+applyCashierSessionExactDesign(ws, totalRows, session, isAdmin) {
+  // EXACT color scheme from target image
+  const redFill = { fgColor: { rgb: "FFFF0000" } };
+  const pinkFill = { fgColor: { rgb: "FFFFC7CE" } };
+  const greenFill = { fgColor: { rgb: "FFC6EFCE" } };
+  const lightGreenFill = { fgColor: { rgb: "FFE2EFDA" } };
+  const lightRedFill = { fgColor: { rgb: "FFFFC7CE" } };
+  const purpleFill = { fgColor: { rgb: "FF7030A0" } };
+  const blueFill = { fgColor: { rgb: "FFBDD7EE" } };
+  const grayFill = { fgColor: { rgb: "FFF2F2F2" } }; // For empty state
 
-    // Alignment styles
-    const centerAlign = {
-      horizontal: "center",
-      vertical: "center",
-      wrapText: true,
-    };
-    const leftAlign = { horizontal: "left", vertical: "center" };
-    const rightAlign = { horizontal: "right", vertical: "center" };
+  // Font styles
+  const whiteBoldFont = { color: { rgb: "FFFFFFFF" }, bold: true, size: 18 };
+  const blackBoldFont = { bold: true, size: 11, color: { rgb: "FF000000" } };
+  const regularFont = { size: 11, color: { rgb: "FF000000" } };
+  const greenFont = { bold: true, size: 11, color: { rgb: "FF00B050" } };
+  const blueFont = { bold: true, size: 11, color: { rgb: "FF0070C0" } };
+  const redFont = { bold: true, size: 11, color: { rgb: "FFFF0000" } };
+  const grayFont = { size: 10, color: { rgb: "FF666666" }, italic: true }; // For empty state
 
-    // Initialize merge cells - FIXED LINE
-    if (!ws["!merges"]) {
-      ws["!merges"] = [];
-    }
+  // Alignment
+  const centerAlign = { horizontal: "center", vertical: "center" };
+  const leftAlign = { horizontal: "left", vertical: "center" };
+  const rightAlign = { horizontal: "right", vertical: "center" };
 
-    // Helper function to apply border
-    const applyBorder = (cell) => {
-      cell.s = cell.s || {};
-      cell.s.border = {
-        top: { style: "thin", color: { rgb: "FFE5E7EB" } },
-        bottom: { style: "thin", color: { rgb: "FFE5E7EB" } },
-        left: { style: "thin", color: { rgb: "FFE5E7EB" } },
-        right: { style: "thin", color: { rgb: "FFE5E7EB" } },
-      };
-      return cell;
-    };
+  // Initialize merges
+  if (!ws["!merges"]) ws["!merges"] = [];
 
-    // ROW 1: K-STREET Header
-    const a1 = XLSX.utils.encode_cell({ r: 0, c: 0 });
-    ws[a1] = applyBorder(ws[a1] || {});
-    ws[a1].s = {
-      font: whiteFont,
-      fill: redFill,
-      alignment: centerAlign,
-    };
-    ws["!merges"].push({ s: { r: 0, c: 0 }, e: { r: 0, c: isAdmin ? 6 : 5 } });
+  // Helper to ensure cell exists and apply style
+  const styleCell = (row, col, style) => {
+    const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
+    if (!ws[cellRef]) ws[cellRef] = { v: "", t: "s" };
+    ws[cellRef].s = style;
+    return cellRef;
+  };
 
-    // ROW 3: CASHIER INFORMATION Header
-    const a3 = XLSX.utils.encode_cell({ r: 2, c: 0 });
-    ws[a3] = applyBorder(ws[a3] || {});
-    ws[a3].s = {
-      font: sectionFont,
-      fill: grayHeaderFill,
-      alignment: leftAlign,
-    };
-    ws["!merges"].push({ s: { r: 2, c: 0 }, e: { r: 2, c: isAdmin ? 6 : 5 } });
-
-    // Cashier Info Rows (4-7)
-    for (let i = 3; i <= 6; i++) {
-      const cellRef = XLSX.utils.encode_cell({ r: i, c: 0 });
-      if (ws[cellRef]) {
-        ws[cellRef] = applyBorder(ws[cellRef] || {});
-        ws[cellRef].s = {
-          font: i === 3 ? labelFont : valueFont,
-          alignment: leftAlign,
-          fill:
-            i % 2 === 0
-              ? { fgColor: { rgb: "FFF9FAFB" } }
-              : { fgColor: { rgb: "FFFFFFFF" } },
-        };
-        ws["!merges"].push({
-          s: { r: i, c: 0 },
-          e: { r: i, c: isAdmin ? 6 : 5 },
-        });
+  const applyBorder = (style) => {
+    return {
+      ...style,
+      border: {
+        top: { style: "thin", color: { rgb: "FF000000" } },
+        bottom: { style: "thin", color: { rgb: "FF000000" } },
+        left: { style: "thin", color: { rgb: "FF000000" } },
+        right: { style: "thin", color: { rgb: "FF000000" } }
       }
-    }
-
-    // ROW 9: SALES SUMMARY Header
-    const a9 = XLSX.utils.encode_cell({ r: 8, c: 0 });
-    ws[a9] = applyBorder(ws[a9] || {});
-    ws[a9].s = {
-      font: sectionFont,
-      fill: grayHeaderFill,
-      alignment: leftAlign,
     };
-    ws["!merges"].push({ s: { r: 8, c: 0 }, e: { r: 8, c: isAdmin ? 6 : 5 } });
+  };
 
-    // Sales Summary Rows (10-15)
-    const summaryRows = [
-      {
-        label: "Starting Gross",
-        value: session.start_gross_sales,
-        row: 9,
-        style: "regular",
-      },
-      {
-        label: "Ending Gross",
-        value: session.end_gross_sales,
-        row: 10,
-        style: "regular",
-      },
-      {
-        label: "Sales During",
-        value: session.session_sales,
-        row: 11,
-        style: "positive",
-      },
-      {
-        label: "Total Transact",
-        value: session.transaction_count || 0,
-        row: 12,
-        style: "regular",
-      },
-      {
-        label: "Total Applied",
-        value: session.total_discount,
-        row: 13,
-        style: "discount",
-      },
-      {
-        label: "Total Void Am",
-        value: session.total_void,
-        row: 14,
-        style: "void",
-      },
-    ];
-
-    summaryRows.forEach((item, index) => {
-      const cellRef = XLSX.utils.encode_cell({ r: item.row, c: 0 });
-      if (ws[cellRef]) {
-        ws[cellRef] = applyBorder(ws[cellRef] || {});
-
-        let fontStyle, bgColor;
-
-        switch (item.style) {
-          case "positive":
-            fontStyle = { bold: true, size: 11, color: { rgb: "FF10B981" } };
-            bgColor = { fgColor: { rgb: "FFF0FDF4" } };
-            ws[cellRef].v = `${item.label} $${this.formatCurrency(item.value)}`;
-            break;
-          case "discount":
-            fontStyle = { bold: true, size: 11, color: { rgb: "FF3B82F6" } };
-            bgColor = {
-              fgColor: { rgb: index % 2 === 0 ? "FFF9FAFB" : "FFFFFFFF" },
-            };
-            ws[cellRef].v = `${item.label} ${this.formatCurrency(item.value)}`;
-            break;
-          case "void":
-            fontStyle = { bold: true, size: 11, color: { rgb: "FFDC2626" } };
-            bgColor = { fgColor: { rgb: "FFFEE2E2" } };
-            ws[cellRef].v = `${item.label} ${this.formatCurrency(item.value)}`;
-            break;
-          default:
-            fontStyle = index === 0 ? labelFont : valueFont;
-            bgColor = {
-              fgColor: { rgb: index % 2 === 0 ? "FFF9FAFB" : "FFFFFFFF" },
-            };
-            ws[cellRef].v = `${item.label} ${this.formatCurrency(item.value)}`;
-        }
-
-        ws[cellRef].s = {
-          font: fontStyle,
-          fill: bgColor,
-          alignment: leftAlign,
-        };
-        ws["!merges"].push({
-          s: { r: item.row, c: 0 },
-          e: { r: item.row, c: isAdmin ? 6 : 5 },
-        });
-      }
+  const mergeCells = (startRow, startCol, endRow, endCol) => {
+    ws["!merges"].push({
+      s: { r: startRow, c: startCol },
+      e: { r: endRow, c: endCol }
     });
+  };
 
-    // PAYMENT METHODS TABLE
-    if (
-      session.payment_methods &&
-      Object.keys(session.payment_methods).length > 0
-    ) {
-      const paymentStartRow = 16;
-      const headerRow = paymentStartRow - 1;
+  // ROW 1: K-STREET Header (RED) - MERGE
+  styleCell(0, 0, applyBorder({
+    font: whiteBoldFont,
+    fill: redFill,
+    alignment: centerAlign
+  }));
+  mergeCells(0, 0, 0, isAdmin ? 6 : 5);
 
-      for (let col = 0; col < (isAdmin ? 7 : 6); col++) {
-        const cellRef = XLSX.utils.encode_cell({ r: headerRow, c: col });
-        ws[cellRef] = applyBorder(ws[cellRef] || {});
-        ws[cellRef].s = {
-          font: sectionFont,
-          fill: { fgColor: { rgb: "FF4B5563" } },
-          alignment: centerAlign,
-        };
+  // ROW 2: Empty - MERGE
+  mergeCells(1, 0, 1, isAdmin ? 6 : 5);
+
+  // ROW 3: CASHIER SESSION REPORT - MERGE
+  styleCell(2, 0, applyBorder({
+    font: blackBoldFont,
+    alignment: centerAlign
+  }));
+  mergeCells(2, 0, 2, isAdmin ? 6 : 5);
+
+  // ROW 4: CASHIER INFORMATION Header (PINK) - MERGE
+  styleCell(3, 0, applyBorder({
+    font: blackBoldFont,
+    fill: pinkFill,
+    alignment: leftAlign
+  }));
+  mergeCells(3, 0, 3, isAdmin ? 6 : 5);
+
+  // Rows 5-8: Cashier Info Data - DON'T MERGE, style both columns
+  for (let i = 4; i <= 7; i++) {
+    styleCell(i, 0, applyBorder({
+      font: regularFont,
+      alignment: leftAlign
+    }));
+    styleCell(i, 1, applyBorder({
+      font: regularFont,
+      alignment: leftAlign
+    }));
+  }
+
+  // ROW 9: Empty - MERGE
+  mergeCells(8, 0, 8, isAdmin ? 6 : 5);
+
+  // ROW 10: SALES SUMMARY Header (GREEN) - MERGE
+  styleCell(9, 0, applyBorder({
+    font: blackBoldFont,
+    fill: greenFill,
+    alignment: leftAlign
+  }));
+  mergeCells(9, 0, 9, isAdmin ? 6 : 5);
+
+  // Row 11: Starting Gross (normal) - DON'T MERGE
+  styleCell(10, 0, applyBorder({
+    font: regularFont,
+    alignment: leftAlign
+  }));
+  styleCell(10, 1, applyBorder({
+    font: regularFont,
+    alignment: rightAlign
+  }));
+
+  // Row 12: Ending Gross (normal) - DON'T MERGE
+  styleCell(11, 0, applyBorder({
+    font: regularFont,
+    alignment: leftAlign
+  }));
+  styleCell(11, 1, applyBorder({
+    font: regularFont,
+    alignment: rightAlign
+  }));
+
+  // Row 13: Sales During (GREEN text + light green background) - DON'T MERGE
+  styleCell(12, 0, applyBorder({
+    font: greenFont,
+    fill: lightGreenFill,
+    alignment: leftAlign
+  }));
+  styleCell(12, 1, applyBorder({
+    font: greenFont,
+    fill: lightGreenFill,
+    alignment: rightAlign
+  }));
+
+  // Row 14: Total Transact (normal) - DON'T MERGE
+  styleCell(13, 0, applyBorder({
+    font: regularFont,
+    alignment: leftAlign
+  }));
+  styleCell(13, 1, applyBorder({
+    font: regularFont,
+    alignment: rightAlign
+  }));
+
+  // Row 15: Total Applied (BLUE text) - DON'T MERGE
+  styleCell(14, 0, applyBorder({
+    font: blueFont,
+    alignment: leftAlign
+  }));
+  styleCell(14, 1, applyBorder({
+    font: blueFont,
+    alignment: rightAlign
+  }));
+
+  // Row 16: Total Void Am (RED text + light pink background) - DON'T MERGE
+  styleCell(15, 0, applyBorder({
+    font: redFont,
+    fill: lightRedFill,
+    alignment: leftAlign
+  }));
+  styleCell(15, 1, applyBorder({
+    font: redFont,
+    fill: lightRedFill,
+    alignment: rightAlign
+  }));
+
+  // ROW 17: Empty - MERGE
+  mergeCells(16, 0, 16, isAdmin ? 6 : 5);
+
+  // Payment Methods Table starts at row 17 (index 17)
+  let nextRow = 17;
+
+  // Payment Methods Header Row (PURPLE) - DON'T MERGE
+  for (let col = 0; col < 3; col++) {
+    styleCell(nextRow, col, applyBorder({
+      font: { bold: true, color: { rgb: "FFFFFFFF" }, size: 11 },
+      fill: purpleFill,
+      alignment: centerAlign
+    }));
+  }
+  nextRow++;
+
+  // Payment data rows - check if we have actual payment methods or placeholder
+  const paymentMethodsCount = session.payment_methods && 
+                               typeof session.payment_methods === 'object' && 
+                               !Array.isArray(session.payment_methods) ? 
+                               Object.keys(session.payment_methods).length : 0;
+
+  if (paymentMethodsCount > 0) {
+    // Real payment methods data
+    Object.entries(session.payment_methods).forEach(([method, data], index) => {
+      styleCell(nextRow, 0, applyBorder({
+        font: regularFont,
+        alignment: leftAlign
+      }));
+      
+      styleCell(nextRow, 1, applyBorder({
+        font: regularFont,
+        alignment: centerAlign
+      }));
+      
+      styleCell(nextRow, 2, applyBorder({
+        font: regularFont,
+        alignment: rightAlign
+      }));
+      
+      // Format currency
+      const cellRef = XLSX.utils.encode_cell({ r: nextRow, c: 2 });
+      if (ws[cellRef]) {
+        ws[cellRef].z = "₱#,##0.00";
       }
+      
+      nextRow++;
+    });
+  } else {
+    // No transactions - style the placeholder row
+    styleCell(nextRow, 0, applyBorder({
+      font: grayFont,
+      fill: grayFill,
+      alignment: leftAlign
+    }));
+    
+    styleCell(nextRow, 1, applyBorder({
+      font: grayFont,
+      fill: grayFill,
+      alignment: centerAlign
+    }));
+    
+    styleCell(nextRow, 2, applyBorder({
+      font: grayFont,
+      fill: grayFill,
+      alignment: rightAlign
+    }));
+    
+    nextRow++;
+  }
 
-      Object.entries(session.payment_methods).forEach(
-        ([method, data], index) => {
-          const row = headerRow + index + 1;
-          const methodCell = XLSX.utils.encode_cell({ r: row, c: 0 });
-          const countCell = XLSX.utils.encode_cell({ r: row, c: 1 });
-          const amountCell = XLSX.utils.encode_cell({ r: row, c: 2 });
+  // Empty row after payment methods - MERGE
+  mergeCells(nextRow, 0, nextRow, isAdmin ? 6 : 5);
+  nextRow++;
 
-          ws[methodCell] = applyBorder(ws[methodCell] || {});
-          ws[methodCell].s = {
-            font: labelFont,
-            fill:
-              index % 2 === 0
-                ? { fgColor: { rgb: "FFF9FAFB" } }
-                : { fgColor: { rgb: "FFFFFFFF" } },
-            alignment: leftAlign,
-          };
-
-          ws[countCell] = applyBorder(ws[countCell] || {});
-          ws[countCell].s = {
-            font: valueFont,
-            fill:
-              index % 2 === 0
-                ? { fgColor: { rgb: "FFF9FAFB" } }
-                : { fgColor: { rgb: "FFFFFFFF" } },
-            alignment: centerAlign,
-          };
-
-          ws[amountCell] = applyBorder(ws[amountCell] || {});
-          ws[amountCell].s = {
-            font: currencyFont,
-            fill:
-              index % 2 === 0
-                ? { fgColor: { rgb: "FFF9FAFB" } }
-                : { fgColor: { rgb: "FFFFFFFF" } },
-            alignment: rightAlign,
-          };
-          ws[amountCell].z = "P#,##0.00";
-        }
-      );
-    }
-
-    // ORDERS DURING SESSION Section
-    let ordersStartRow = -1;
-    for (let i = 0; i < totalRows; i++) {
-      const cellRef = XLSX.utils.encode_cell({ r: i, c: 0 });
-      if (ws[cellRef] && ws[cellRef].v === "ORDERS DURING SESSION") {
-        ordersStartRow = i;
-        break;
-      }
-    }
-
-    if (ordersStartRow !== -1 && session.orders && session.orders.length > 0) {
-      const headerRow = ordersStartRow;
-      const dataStartRow = ordersStartRow + 1;
-
-      const ordersHeader = XLSX.utils.encode_cell({ r: headerRow, c: 0 });
-      ws[ordersHeader] = applyBorder(ws[ordersHeader] || {});
-      ws[ordersHeader].s = {
-        font: sectionFont,
-        fill: grayHeaderFill,
-        alignment: leftAlign,
-      };
-      ws["!merges"].push({
-        s: { r: headerRow, c: 0 },
-        e: { r: headerRow, c: isAdmin ? 6 : 5 },
-      });
-
-      for (let col = 0; col < (isAdmin ? 7 : 6); col++) {
-        const cellRef = XLSX.utils.encode_cell({ r: dataStartRow, c: col });
-        ws[cellRef] = applyBorder(ws[cellRef] || {});
-        ws[cellRef].s = {
-          font: { bold: true, color: { rgb: "FFFFFFFF" }, size: 11 },
-          fill: { fgColor: { rgb: "FF4B5563" } },
-          alignment: centerAlign,
-        };
-      }
-
-      session.orders.forEach((order, index) => {
-        const row = dataStartRow + index + 1;
-
-        for (let col = 0; col < (isAdmin ? 7 : 6); col++) {
-          const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
-          ws[cellRef] = applyBorder(ws[cellRef] || {});
-
-          const cellStyle = {
-            font: valueFont,
-            fill:
-              index % 2 === 0
-                ? { fgColor: { rgb: "FFF9FAFB" } }
-                : { fgColor: { rgb: "FFFFFFFF" } },
-            alignment: col === 2 ? rightAlign : leftAlign,
-          };
-
-          if (col === 2) {
-            cellStyle.font = currencyFont;
-            if (ws[cellRef]) {
-              ws[cellRef].z = "P#,##0.00";
-            }
-          }
-
-          if (ws[cellRef]) {
-            if (
-              col === 0 &&
-              ws[cellRef].v &&
-              ws[cellRef].v.includes("[UPGRADED]")
-            ) {
-              cellStyle.font = {
-                bold: true,
-                size: 11,
-                color: { rgb: "FF8B5A2B" },
-              };
-            }
-
-            ws[cellRef].s = cellStyle;
-          }
-        }
-      });
-    }
-
-    // FOOTER styling
-    const footerRow = totalRows - 1;
-    const footerCell = XLSX.utils.encode_cell({ r: footerRow, c: 0 });
-    if (ws[footerCell]) {
-      ws[footerCell].s = {
-        font: smallFont,
-        fill: { fgColor: { rgb: "FFF3F4F6" } },
-        alignment: centerAlign,
-      };
-      ws["!merges"].push({
-        s: { r: footerRow, c: 0 },
-        e: { r: footerRow, c: isAdmin ? 6 : 5 },
-      });
+  // Find ORDERS DURING SESSION row
+  let ordersStartRow = -1;
+  for (let i = 0; i < totalRows; i++) {
+    const cellRef = XLSX.utils.encode_cell({ r: i, c: 0 });
+    if (ws[cellRef] && ws[cellRef].v === "ORDERS DURING SESSION") {
+      ordersStartRow = i;
+      break;
     }
   }
+
+  if (ordersStartRow !== -1) {
+    // ORDERS DURING SESSION Header (BLUE) - MERGE
+    styleCell(ordersStartRow, 0, applyBorder({
+      font: blackBoldFont,
+      fill: blueFill,
+      alignment: leftAlign
+    }));
+    mergeCells(ordersStartRow, 0, ordersStartRow, isAdmin ? 6 : 5);
+
+    // Table Header Row (PURPLE) - DON'T MERGE
+    const tableHeaderRow = ordersStartRow + 1;
+    for (let col = 0; col < (isAdmin ? 7 : 6); col++) {
+      styleCell(tableHeaderRow, col, applyBorder({
+        font: { bold: true, color: { rgb: "FFFFFFFF" }, size: 11 },
+        fill: purpleFill,
+        alignment: centerAlign
+      }));
+    }
+
+    // Order data rows or placeholder - DON'T MERGE
+    const hasOrders = session.orders && session.orders.length > 0;
+    const orderRowsCount = hasOrders ? session.orders.length : 1; // 1 for placeholder
+
+    for (let i = 0; i < orderRowsCount; i++) {
+      const row = tableHeaderRow + i + 1;
+      
+      for (let col = 0; col < (isAdmin ? 7 : 6); col++) {
+        if (hasOrders) {
+          // Real order data - normal style
+          styleCell(row, col, applyBorder({
+            font: regularFont,
+            alignment: col === 2 ? rightAlign : leftAlign  // Right-align Total Amount
+          }));
+          
+          // Format currency in Total Amount column (column 2)
+          if (col === 2) {
+            const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
+            if (ws[cellRef]) {
+              ws[cellRef].z = "₱#,##0.00";
+            }
+          }
+        } else {
+          // Placeholder row - gray italic style
+          styleCell(row, col, applyBorder({
+            font: grayFont,
+            fill: grayFill,
+            alignment: col === 1 ? leftAlign : centerAlign
+          }));
+        }
+      }
+    }
+  }
+
+  // Footer row - MERGE
+  const footerRow = totalRows - 1;
+  styleCell(footerRow, 0, applyBorder({
+    font: { size: 9, color: { rgb: "FF808080" }, italic: true },
+    alignment: centerAlign
+  }));
+  mergeCells(footerRow, 0, footerRow, isAdmin ? 6 : 5);
+}
 
   applyVoidExcelStyles(ws, totalRows) {
     // Styling for void report

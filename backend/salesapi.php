@@ -33,6 +33,12 @@ try {
                 getBranches($pdo);
             } elseif ($request === 'order' && isset($_GET['id'])) {
                 getOrder($pdo, $_GET['id'], $user);
+            } elseif ($request === 'cashier-sessions') {
+                getCashierSessions($pdo, $user);
+            } elseif ($request === 'cashier-details' && isset($_GET['id'])) {
+                getCashierDetails($pdo, $_GET['id'], $user);
+            } elseif ($request === 'void-orders') {
+                getVoidOrders($pdo, $user);
             } else {
                 throw new Exception('Invalid request');
             }
@@ -154,6 +160,392 @@ function getSales($pdo, $user) {
     echo json_encode([
         'success' => true,
         'data' => $sales,
+        'pagination' => [
+            'total' => (int)$total,
+            'page' => $page,
+            'limit' => $limit,
+            'pages' => ceil($total / $limit)
+        ]
+    ]);
+}
+
+// ============================================
+// GET CASHIER SESSIONS
+// ============================================
+function getCashierSessions($pdo, $user) {
+    $branch = isset($_GET['branch']) ? $_GET['branch'] : 'all';
+    $timeRange = isset($_GET['timeRange']) ? $_GET['timeRange'] : 'all';
+    $startDate = isset($_GET['startDate']) ? $_GET['startDate'] : null;
+    $endDate = isset($_GET['endDate']) ? $_GET['endDate'] : null;
+    $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+    $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+    $offset = ($page - 1) * $limit;
+    
+    // Build WHERE clause for sessions
+    $where = ["s.action = 'open'"];
+    $params = [];
+    
+    // Branch filter
+    if ($user['role'] === 'admin' || $user['role'] === 'owner') {
+        if ($branch !== 'all') {
+            $where[] = 's.branch = :branch';
+            $params[':branch'] = $branch;
+        }
+    } else {
+        $where[] = 's.branch = :branch';
+        $params[':branch'] = $user['branch'];
+    }
+    
+    // Time range filter
+    if ($timeRange === 'today') {
+        $where[] = 'DATE(s.timestamp) = CURDATE()';
+    } elseif ($timeRange === 'yesterday') {
+        $where[] = 'DATE(s.timestamp) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)';
+    } elseif ($timeRange === 'week') {
+        $where[] = 's.timestamp >= DATE_SUB(NOW(), INTERVAL 7 DAY)';
+    } elseif ($timeRange === 'month') {
+        $where[] = 's.timestamp >= DATE_SUB(NOW(), INTERVAL 1 MONTH)';
+    } elseif ($timeRange === 'custom' && $startDate && $endDate) {
+        $where[] = 'DATE(s.timestamp) BETWEEN :startDate AND :endDate';
+        $params[':startDate'] = $startDate;
+        $params[':endDate'] = $endDate;
+    }
+    
+    $whereClause = implode(' AND ', $where);
+    
+    // Get total count
+    $countSql = "SELECT COUNT(*) as total 
+                 FROM store_status_log s 
+                 WHERE $whereClause";
+    $countStmt = $pdo->prepare($countSql);
+    $countStmt->execute($params);
+    $total = $countStmt->fetch()['total'];
+    
+    // Get sessions with user info
+    $sql = "SELECT 
+                s.id,
+                s.user_id,
+                s.user_email,
+                s.timestamp as login_time,
+                s.branch,
+                u.username,
+                u.email
+            FROM store_status_log s
+            LEFT JOIN users u ON s.user_id = u.id
+            WHERE $whereClause
+            ORDER BY s.timestamp DESC
+            LIMIT :limit OFFSET :offset";
+    
+    $stmt = $pdo->prepare($sql);
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
+    
+    $sessions = $stmt->fetchAll();
+    
+    // For each session, compute sales data
+    foreach ($sessions as &$session) {
+        $sessionData = computeSessionData($pdo, $session);
+        $session = array_merge($session, $sessionData);
+    }
+    
+    echo json_encode([
+        'success' => true,
+        'data' => $sessions,
+        'pagination' => [
+            'total' => (int)$total,
+            'page' => $page,
+            'limit' => $limit,
+            'pages' => ceil($total / $limit)
+        ]
+    ]);
+}
+
+// ============================================
+// COMPUTE SESSION DATA
+// ============================================
+function computeSessionData($pdo, $session) {
+    $userId = $session['user_id'];
+    $loginTime = $session['login_time'];
+    $branch = $session['branch'];
+    
+    // Find logout time (next close action)
+    $logoutSql = "SELECT timestamp as logout_time 
+                  FROM store_status_log 
+                  WHERE user_id = :userId 
+                  AND action = 'close' 
+                  AND branch = :branch
+                  AND timestamp > :loginTime
+                  ORDER BY timestamp ASC 
+                  LIMIT 1";
+    $logoutStmt = $pdo->prepare($logoutSql);
+    $logoutStmt->execute([
+        ':userId' => $userId,
+        ':branch' => $branch,
+        ':loginTime' => $loginTime
+    ]);
+    $logoutRow = $logoutStmt->fetch();
+    $logoutTime = $logoutRow ? $logoutRow['logout_time'] : null;
+    
+    // Calculate session duration
+    if ($logoutTime) {
+        $login = new DateTime($loginTime);
+        $logout = new DateTime($logoutTime);
+        $interval = $login->diff($logout);
+        $sessionDuration = $interval->h . 'h ' . $interval->i . 'm';
+    } else {
+        $sessionDuration = 'Still Active';
+    }
+    
+    // Get starting gross sales (before login)
+    $startSalesSql = "SELECT IFNULL(SUM(total), 0) as start_sales 
+                      FROM orders 
+                      WHERE created_at < :loginTime 
+                      AND branch = :branch 
+                      AND is_void = 0";
+    $startStmt = $pdo->prepare($startSalesSql);
+    $startStmt->execute([
+        ':loginTime' => $loginTime,
+        ':branch' => $branch
+    ]);
+    $startGrossSales = floatval($startStmt->fetch()['start_sales']);
+    
+    // Get session sales (during shift, non-voided)
+    $sessionSalesSql = "SELECT 
+                            o.*,
+                            u.username as cashier_name
+                        FROM orders o
+                        LEFT JOIN users u ON o.userId = u.id
+                        WHERE o.userId = :userId 
+                        AND o.created_at >= :loginTime 
+                        AND (:logoutTime IS NULL OR o.created_at <= :logoutTime)
+                        AND o.branch = :branch 
+                        AND o.is_void = 0
+                        ORDER BY o.created_at ASC";
+    $sessionStmt = $pdo->prepare($sessionSalesSql);
+    $sessionStmt->execute([
+        ':userId' => $userId,
+        ':loginTime' => $loginTime,
+        ':logoutTime' => $logoutTime,
+        ':branch' => $branch
+    ]);
+    $sessionOrders = $sessionStmt->fetchAll();
+    
+    // Calculate totals
+    $sessionSalesTotal = 0;
+    $totalDiscount = 0;
+    $paymentMethods = [];
+    
+    foreach ($sessionOrders as $order) {
+        $amount = floatval($order['total']);
+        $sessionSalesTotal += $amount;
+        
+        // Calculate discount (20% discount logic)
+        if ($order['discountApplied']) {
+            $totalDiscount += ($amount / 0.8) * 0.2;
+        }
+        
+        // Payment methods breakdown
+        $method = $order['payment_method'] ?: 'Cash';
+        if (!isset($paymentMethods[$method])) {
+            $paymentMethods[$method] = [
+                'count' => 0,
+                'total' => 0
+            ];
+        }
+        $paymentMethods[$method]['count']++;
+        $paymentMethods[$method]['total'] += $amount;
+    }
+    
+    $endGrossSales = $startGrossSales + $sessionSalesTotal;
+    
+    // Get voided orders during session
+    $voidSql = "SELECT IFNULL(SUM(total), 0) as void_total,
+                       COUNT(*) as void_count
+                FROM orders 
+                WHERE userId = :userId 
+                AND created_at >= :loginTime 
+                AND (:logoutTime IS NULL OR created_at <= :logoutTime)
+                AND branch = :branch 
+                AND is_void = 1";
+    $voidStmt = $pdo->prepare($voidSql);
+    $voidStmt->execute([
+        ':userId' => $userId,
+        ':loginTime' => $loginTime,
+        ':logoutTime' => $logoutTime,
+        ':branch' => $branch
+    ]);
+    $voidData = $voidStmt->fetch();
+    
+    return [
+        'logout_time' => $logoutTime,
+        'session_duration' => $sessionDuration,
+        'start_gross_sales' => $startGrossSales,
+        'end_gross_sales' => $endGrossSales,
+        'session_sales' => $sessionSalesTotal,
+        'total_discount' => $totalDiscount,
+        'total_void' => floatval($voidData['void_total']),
+        'void_count' => intval($voidData['void_count']),
+        'transaction_count' => count($sessionOrders),
+        'payment_methods' => $paymentMethods
+    ];
+}
+
+// ============================================
+// GET CASHIER SESSION DETAILS
+// ============================================
+function getCashierDetails($pdo, $sessionId, $user) {
+    // Get session info
+   // Get session info
+$sql = "SELECT 
+            s.id,
+            s.user_id,
+            s.user_email,
+            s.timestamp as login_time,
+            s.branch,
+            s.action,
+            u.username,
+            u.email
+        FROM store_status_log s
+        LEFT JOIN users u ON s.user_id = u.id
+        WHERE s.id = :id";
+    
+    // Add branch restriction for non-admin
+    if ($user['role'] !== 'admin' && $user['role'] !== 'owner') {
+        $sql .= " AND s.branch = :branch";
+    }
+    
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindValue(':id', $sessionId, PDO::PARAM_INT);
+    if ($user['role'] !== 'admin' && $user['role'] !== 'owner') {
+        $stmt->bindValue(':branch', $user['branch']);
+    }
+    $stmt->execute();
+    
+    $session = $stmt->fetch();
+    
+    if (!$session) {
+        throw new Exception('Session not found');
+    }
+    
+    // Compute session data
+    $sessionData = computeSessionData($pdo, $session);
+    $session = array_merge($session, $sessionData);
+    
+    // Get all orders during session
+    $loginTime = $session['login_time'];
+    $logoutTime = $session['logout_time'];
+    $userId = $session['user_id'];
+    $branch = $session['branch'];
+    
+    $ordersSql = "SELECT o.* 
+                  FROM orders o
+                  WHERE o.userId = :userId 
+                  AND o.created_at >= :loginTime 
+                  AND (:logoutTime IS NULL OR o.created_at <= :logoutTime)
+                  AND o.branch = :branch 
+                  AND o.is_void = 0
+                  ORDER BY o.created_at ASC";
+    $ordersStmt = $pdo->prepare($ordersSql);
+    $ordersStmt->execute([
+        ':userId' => $userId,
+        ':loginTime' => $loginTime,
+        ':logoutTime' => $logoutTime,
+        ':branch' => $branch
+    ]);
+    
+    $session['orders'] = $ordersStmt->fetchAll();
+    
+    echo json_encode([
+        'success' => true,
+        'data' => $session
+    ]);
+}
+
+// ============================================
+// GET VOID ORDERS
+// ============================================
+function getVoidOrders($pdo, $user) {
+    $branch = isset($_GET['branch']) ? $_GET['branch'] : 'all';
+    $timeRange = isset($_GET['timeRange']) ? $_GET['timeRange'] : 'all';
+    $startDate = isset($_GET['startDate']) ? $_GET['startDate'] : null;
+    $endDate = isset($_GET['endDate']) ? $_GET['endDate'] : null;
+    $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+    $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+    $offset = ($page - 1) * $limit;
+    
+    // Build WHERE clause
+    $where = ['o.is_void = 1']; // Only voided orders
+    $params = [];
+    
+    // Branch filter
+    if ($user['role'] === 'admin' || $user['role'] === 'owner') {
+        if ($branch !== 'all') {
+            $where[] = 'o.branch = :branch';
+            $params[':branch'] = $branch;
+        }
+    } else {
+        $where[] = 'o.branch = :branch';
+        $params[':branch'] = $user['branch'];
+    }
+    
+    // Time range filter
+    if ($timeRange === 'today') {
+        $where[] = 'DATE(o.voided_at) = CURDATE()';
+    } elseif ($timeRange === 'yesterday') {
+        $where[] = 'DATE(o.voided_at) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)';
+    } elseif ($timeRange === 'week') {
+        $where[] = 'o.voided_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)';
+    } elseif ($timeRange === 'month') {
+        $where[] = 'o.voided_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)';
+    } elseif ($timeRange === 'custom' && $startDate && $endDate) {
+        $where[] = 'DATE(o.voided_at) BETWEEN :startDate AND :endDate';
+        $params[':startDate'] = $startDate;
+        $params[':endDate'] = $endDate;
+    }
+    
+    $whereClause = implode(' AND ', $where);
+    
+    // Get total count
+    $countSql = "SELECT COUNT(*) as total FROM orders o WHERE $whereClause";
+    $countStmt = $pdo->prepare($countSql);
+    $countStmt->execute($params);
+    $total = $countStmt->fetch()['total'];
+    
+    // Get paginated data
+    $sql = "SELECT 
+                o.*,
+                u.username as cashier_name,
+                u.email as cashier_email
+            FROM orders o
+            LEFT JOIN users u ON o.userId = u.id
+            WHERE $whereClause
+            ORDER BY o.voided_at DESC
+            LIMIT :limit OFFSET :offset";
+    
+    $stmt = $pdo->prepare($sql);
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
+    
+    $voidOrders = $stmt->fetchAll();
+    
+    // Format data
+    foreach ($voidOrders as &$order) {
+        $order['total'] = floatval($order['total']);
+        $order['paidAmount'] = floatval($order['paidAmount']);
+        $order['changeAmount'] = floatval($order['changeAmount']);
+    }
+    
+    echo json_encode([
+        'success' => true,
+        'data' => $voidOrders,
         'pagination' => [
             'total' => (int)$total,
             'page' => $page,

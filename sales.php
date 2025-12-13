@@ -20,6 +20,7 @@ $currentUser = $user;
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="css/sales.css">
 </head>
 <body class="bg-gray-50">
@@ -34,7 +35,7 @@ $currentUser = $user;
             <div class="flex-1">
                 <h1 class="text-3xl font-bold text-gray-900 flex items-center gap-3">
                     <i class="fas fa-chart-line text-red-600"></i>
-                    Sales Reports
+                  Reports
                 </h1>
             </div>
             
@@ -61,7 +62,7 @@ $currentUser = $user;
             <button class="tab-btn-kstreet" data-tab="void">
                 <i class="fas fa-ban"></i>
                 Void Reports
-                <span class="bg-red-600 text-white text-xs px-2 py-1 rounded-full ml-2" id="voidCount">0</span>
+               
             </button>
         </div>
 
@@ -187,10 +188,50 @@ $currentUser = $user;
             <!-- Cashier Report -->
             <div id="cashierReport" class="report-pane hidden">
                 <div class="table-kstreet">
-                    <div class="text-center py-16">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="bg-red-500 text-white">
+                                <?php if ($user['role'] === 'admin' || $user['role'] === 'owner'): ?>
+                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Branch</th>
+                                <?php endif; ?>
+                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Cashier</th>
+                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Login Time</th>
+                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Logout Time</th>
+                                <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Duration</th>
+                                <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Start Sales</th>
+                                <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">End Sales</th>
+                                <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Session Sales</th>
+                                <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Discount</th>
+                                <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Void</th>
+                                <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cashierTableBody">
+                            <!-- Cashier data will be populated here -->
+                        </tbody>
+                    </table>
+
+                    <!-- Empty State -->
+                    <div id="cashierEmptyState" class="hidden text-center py-16">
                         <i class="fas fa-user-tie text-5xl text-gray-300 mb-4"></i>
-                        <h4 class="text-lg font-semibold text-gray-700">Cashier Report</h4>
-                        <p class="text-gray-500">This feature is coming soon</p>
+                        <h4 class="text-lg font-semibold text-gray-700">No cashier sessions found</h4>
+                        <p class="text-gray-500">Cashier sessions will appear here once cashiers use the Open/Close POS function</p>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div id="cashierPagination" class="pagination-kstreet hidden px-6 py-4">
+                        <div class="text-sm text-gray-600">
+                            Showing <span id="cashierStart">1</span> to <span id="cashierEnd">10</span> of <span id="cashierTotal">0</span> records
+                        </div>
+                        <div class="flex gap-2 items-center">
+                            <button id="cashierPrevPage" class="btn-pagination-kstreet">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <span class="font-semibold text-gray-700 px-4">Page <span id="cashierCurrentPage">1</span></span>
+                            <button id="cashierNextPage" class="btn-pagination-kstreet">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -198,10 +239,50 @@ $currentUser = $user;
             <!-- Void Report -->
             <div id="voidReport" class="report-pane hidden">
                 <div class="table-kstreet">
-                    <div class="text-center py-16">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="bg-red-500 text-white">
+                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Order ID</th>
+                                <?php if ($user['role'] === 'admin' || $user['role'] === 'owner'): ?>
+                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Branch</th>
+                                <?php endif; ?>
+                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Date Voided</th>
+                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Original Date</th>
+                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Products</th>
+                                <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Amount</th>
+                                <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Order Type</th>
+                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Cashier</th>
+                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Voided By</th>
+                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Reason</th>
+                                <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="voidTableBody">
+                            <!-- Void data will be populated here -->
+                        </tbody>
+                    </table>
+
+                    <!-- Empty State -->
+                    <div id="voidEmptyState" class="hidden text-center py-16">
                         <i class="fas fa-ban text-5xl text-gray-300 mb-4"></i>
-                        <h4 class="text-lg font-semibold text-gray-700">Void Report</h4>
-                        <p class="text-gray-500">This feature is coming soon</p>
+                        <h4 class="text-lg font-semibold text-gray-700">No voided orders found</h4>
+                        <p class="text-gray-500">Voided orders will appear here once transactions are voided</p>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div id="voidPagination" class="pagination-kstreet hidden px-6 py-4">
+                        <div class="text-sm text-gray-600">
+                            Showing <span id="voidStart">1</span> to <span id="voidEnd">10</span> of <span id="voidTotal">0</span> records
+                        </div>
+                        <div class="flex gap-2 items-center">
+                            <button id="voidPrevPage" class="btn-pagination-kstreet">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <span class="font-semibold text-gray-700 px-4">Page <span id="voidCurrentPage">1</span></span>
+                            <button id="voidNextPage" class="btn-pagination-kstreet">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -343,6 +424,89 @@ $currentUser = $user;
             <button class="btn-kstreet-secondary" id="cancelVoid">Cancel</button>
             <button class="btn-kstreet-primary bg-red-600 hover:bg-red-700" id="confirmVoid">
                 <i class="fas fa-ban"></i> Confirm Void
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Cashier Detail Modal -->
+<div id="cashierDetailModal" class="modal-overlay hidden">
+    <div class="modal-content-kstreet max-w-6xl w-full max-h-[90vh] overflow-hidden">
+        <div class="flex justify-between items-center bg-gradient-to-r from-red-600 to-red-700 text-white p-5 rounded-t-2xl">
+            <h3 class="text-lg font-bold">Cashier Session Details</h3>
+            <button type="button" class="modal-close text-white hover:bg-white hover:bg-opacity-20 rounded-lg w-8 h-8 flex items-center justify-center">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <div class="p-6 overflow-y-auto max-h-[70vh]">
+            <!-- Header -->
+            <div class="text-center mb-6">
+                <h1 class="text-2xl font-bold text-red-600 mb-2">K - STREET</h1>
+                <p class="text-gray-600">Mc Arthur Highway, Magaspac, Gerona, Tarlac</p>
+                <div class="border-t-2 border-b-2 border-dashed border-gray-400 py-3 my-3">
+                    <h2 class="text-xl font-bold text-black">CASHIER SESSION REPORT</h2>
+                </div>
+                <p class="text-sm text-gray-500">Branch: <span id="cashierDetailBranch">-</span></p>
+            </div>
+
+            <!-- Two-Column Layout -->
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <!-- Cashier Information -->
+                <div class="bg-red-100 p-4 rounded-lg" id="cashierInfoSection">
+                    <!-- Content will be populated by JavaScript -->
+                </div>
+
+                <!-- Sales Summary -->
+                <div class="bg-green-50 p-4 rounded-lg" id="salesSummarySection">
+                    <!-- Content will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Orders Table -->
+            <div class="mb-6">
+                <h3 class="font-bold text-gray-800 mb-3 text-lg">ORDERS DURING SESSION</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse border border-gray-300">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="border border-gray-300 px-3 py-2 text-left text-sm font-semibold">Order ID</th>
+                                <?php if ($user['role'] === 'admin' || $user['role'] === 'owner'): ?>
+                                <th class="border border-gray-300 px-3 py-2 text-left text-sm font-semibold">Branch</th>
+                                <?php endif; ?>
+                                <th class="border border-gray-300 px-3 py-2 text-left text-sm font-semibold">Products</th>
+                                <th class="border border-gray-300 px-3 py-2 text-right text-sm font-semibold">Total</th>
+                                <th class="border border-gray-300 px-3 py-2 text-left text-sm font-semibold">Order Type</th>
+                                <th class="border border-gray-300 px-3 py-2 text-left text-sm font-semibold">Payment</th>
+                                <th class="border border-gray-300 px-3 py-2 text-left text-sm font-semibold">Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cashierOrdersTableBody">
+                            <!-- Orders will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-center border-t-2 border-dashed border-gray-400 pt-4">
+                <p class="text-gray-600 font-semibold">Report Generated: <span id="cashierReportDate"><?php echo date('F d, Y h:i A'); ?></span></p>
+                <p class="text-gray-500 text-sm">K-Street POS System</p>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="p-5 flex justify-end gap-3 border-t border-gray-100 bg-gray-50">
+            <button id="closeCashierDetail" class="btn-kstreet-secondary">
+                Close
+            </button>
+            <button id="exportCashierSession" class="btn-kstreet-primary bg-green-600 hover:bg-green-700">
+                <i class="fas fa-file-excel"></i> Export Excel
+            </button>
+            <button id="printCashierReport" class="btn-kstreet-primary bg-blue-600 hover:bg-blue-700">
+                <i class="fas fa-print"></i> Print Report
             </button>
         </div>
     </div>

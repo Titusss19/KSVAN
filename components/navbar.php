@@ -86,7 +86,7 @@ $isManager = $user['role'] === 'manager';
                         <path d="M8 11h.01"/>
                         <path d="M8 16h.01"/>
                     </svg>
-                    <span class="text-sm font-medium">Sales Reports</span>
+                    <span class="text-sm font-medium">Reports</span>
                 </a>
                 <?php endif; ?>
 

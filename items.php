@@ -38,6 +38,7 @@ $currentUser = $user;
                
             </div>
             
+<?php if ($user['role'] === 'admin' || $user['role'] === 'owner'): ?>
             <div class="branch-selector">
                 <select id="branchFilter" class="form-select-kstreet w-48">
                     <option value="all">All Branches</option>
@@ -46,6 +47,14 @@ $currentUser = $user;
                     <option value="south">South Branch</option>
                 </select>
             </div>
+            <?php else: ?>
+            <div class="branch-display">
+                <span class="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg border border-blue-200 font-medium">
+                    <i class="fas fa-building mr-2"></i>
+                    <?php echo ucfirst($user['branch']); ?> Branch
+                </span>
+            </div>
+            <?php endif; ?>
         </div>
 
         <!-- Report Tabs -->
@@ -812,16 +821,19 @@ getUserFromPHP() {
     };
 }
 
-            setupUser() {
-                this.isAdmin = this.user.role === 'admin' || this.user.role === 'owner';
-                if (this.isAdmin) {
-                    this.selectedBranch = 'all';
-                } else {
-                    this.selectedBranch = this.user.branch;
-                    document.getElementById('branchFilter').value = this.user.branch;
-                    document.getElementById('branchFilter').disabled = true;
-                }
-            }
+setupUser() {
+    this.isAdmin = this.user.role === 'admin' || this.user.role === 'owner';
+    if (this.isAdmin) {
+        this.selectedBranch = 'all';
+    } else {
+        this.selectedBranch = this.user.branch;
+        const branchFilter = document.getElementById('branchFilter');
+        if (branchFilter) {
+            branchFilter.value = this.user.branch;
+            branchFilter.disabled = true;
+        }
+    }
+}
 
             bindEvents() {
                 // Tab switching
@@ -836,11 +848,14 @@ getUserFromPHP() {
                 });
 
                 // Branch filter
-                document.getElementById('branchFilter').addEventListener('change', (e) => {
-                    this.selectedBranch = e.target.value;
-                    this.renderCurrentTable();
-                    // this.updateLowStockCount();
-                });
+const branchFilter = document.getElementById('branchFilter');
+if (branchFilter) {
+    branchFilter.addEventListener('change', (e) => {
+        this.selectedBranch = e.target.value;
+        this.renderCurrentTable();
+        this.updateLowStockCount();
+    });
+}
 
                 // Product search
                 document.getElementById('productSearch').addEventListener('input', (e) => {

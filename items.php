@@ -100,10 +100,10 @@ $currentUser = $user;
                     <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
                     <select id="categoryFilter" class="form-select-kstreet">
                         <option value="all">All Categories</option>
-                        <option value="Food">Food</option>
-                        <option value="Beverage">Beverage</option>
-                        <option value="Dessert">Dessert</option>
-                        <option value="Snack">Snack</option>
+                        <option value="Main">Main</option>
+                        <option value="Bundle">Bundle</option>
+                        <option value="Drinks">Drinks</option>
+                        <option value="Sides">Sides</option>
                     </select>
                 </div>
 

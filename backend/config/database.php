@@ -1,11 +1,10 @@
 <?php
 // backend/config/database.php - Database Connection
 
-// Database configuration for XAMPP
 $host = 'localhost';
-$dbname = 'db';         // PALITAN MO ITO SA "db"
-$username = 'root';     // Default XAMPP username
-$password = '';         // Default XAMPP password (empty)
+$dbname = 'db';
+$username = 'root';
+$password = '';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);

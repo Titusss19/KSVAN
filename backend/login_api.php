@@ -13,13 +13,8 @@ if (empty($email) || empty($password)) {
 }
 
 try {
-    $host = 'localhost';
-    $dbname = 'db';
-    $username = 'root';
-    $password_db = '';
-    
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $username, $password_db);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    // Include database connection
+    require_once __DIR__ . '/config/database.php';
     
     $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
     $stmt->execute([$email]);

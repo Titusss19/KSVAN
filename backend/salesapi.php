@@ -26,33 +26,41 @@ $request = isset($_GET['action']) ? $_GET['action'] : '';
 
 try {
     switch ($method) {
-        case 'GET':
-            if ($request === 'sales') {
-                getSales($pdo, $user);
-            } elseif ($request === 'branches') {
-                getBranches($pdo);
-            } elseif ($request === 'order' && isset($_GET['id'])) {
-                getOrder($pdo, $_GET['id'], $user);
-            } elseif ($request === 'cashier-sessions') {
-                getCashierSessions($pdo, $user);
-            } elseif ($request === 'cashier-details' && isset($_GET['id'])) {
-                getCashierDetails($pdo, $_GET['id'], $user);
-            } elseif ($request === 'void-orders') {
-                getVoidOrders($pdo, $user);
-            } else {
-                throw new Exception('Invalid request');
-            }
-            break;
+case 'GET':
+    if ($request === 'sales') {
+        getSales($pdo, $user);
+    } elseif ($request === 'branches') {
+        getBranches($pdo);
+    } elseif ($request === 'order' && isset($_GET['id'])) {
+        getOrder($pdo, $_GET['id'], $user);
+    } elseif ($request === 'cashier-sessions') {
+        getCashierSessions($pdo, $user);
+    } elseif ($request === 'cashier-details' && isset($_GET['id'])) {
+        getCashierDetails($pdo, $_GET['id'], $user);
+    } elseif ($request === 'void-orders') {
+        getVoidOrders($pdo, $user);
+    } elseif ($request === 'cashout') {
+        getCashoutRecords($pdo, $user);
+    } else {
+        throw new Exception('Invalid request');
+    }
+    break;
             
-        case 'POST':
-            if ($request === 'void') {
-                voidOrder($pdo, $user);
-            } elseif ($request === 'verify-pin') {
-                verifyManagerPin($pdo);
-            } else {
-                throw new Exception('Invalid request');
-            }
-            break;
+case 'POST':
+    if ($request === 'void') {
+        voidOrder($pdo, $user);
+    } elseif ($request === 'verify-pin') {
+        verifyManagerPin($pdo);
+    } elseif ($request === 'verify-owner-pin') {
+        verifyOwnerPin($pdo);
+    } elseif ($request === 'cashout') {
+        recordCashout($pdo, $user);
+    } elseif ($request === 'edit-cashout') {
+        editCashout($pdo, $user);
+    } else {
+        throw new Exception('Invalid request');
+    }
+    break;
             
         default:
             throw new Exception('Method not allowed');
@@ -716,6 +724,286 @@ function voidOrder($pdo, $user) {
         'success' => true,
         'message' => 'Order voided successfully',
         'orderId' => $orderId
+    ]);
+}
+
+// ============================================
+// GET CASH-OUT RECORDS
+// ============================================
+function getCashoutRecords($pdo, $user) {
+    $branch = isset($_GET['branch']) ? $_GET['branch'] : 'all';
+    $timeRange = isset($_GET['timeRange']) ? $_GET['timeRange'] : 'all';
+    $startDate = isset($_GET['startDate']) ? $_GET['startDate'] : null;
+    $endDate = isset($_GET['endDate']) ? $_GET['endDate'] : null;
+    $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+    $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+    $offset = ($page - 1) * $limit;
+    
+    // Build WHERE clause
+    $where = ['1=1'];
+    $params = [];
+    
+    // Branch filter
+    if ($user['role'] === 'admin' || $user['role'] === 'owner') {
+        if ($branch !== 'all') {
+            $where[] = 'c.branch = :branch';
+            $params[':branch'] = $branch;
+        }
+    } else {
+        $where[] = 'c.branch = :branch';
+        $params[':branch'] = $user['branch'];
+    }
+    
+    // Time range filter
+    if ($timeRange === 'today') {
+        $where[] = 'DATE(c.created_at) = CURDATE()';
+    } elseif ($timeRange === 'yesterday') {
+        $where[] = 'DATE(c.created_at) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)';
+    } elseif ($timeRange === 'week') {
+        $where[] = 'c.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)';
+    } elseif ($timeRange === 'month') {
+        $where[] = 'c.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)';
+    } elseif ($timeRange === 'custom' && $startDate && $endDate) {
+        $where[] = 'DATE(c.created_at) BETWEEN :startDate AND :endDate';
+        $params[':startDate'] = $startDate;
+        $params[':endDate'] = $endDate;
+    }
+    
+    $whereClause = implode(' AND ', $where);
+    
+    // Get total count
+    $countSql = "SELECT COUNT(*) as total FROM cashout c WHERE $whereClause";
+    $countStmt = $pdo->prepare($countSql);
+    $countStmt->execute($params);
+    $total = $countStmt->fetch()['total'];
+    
+    // Get cashout records
+    $sql = "SELECT 
+                c.*,
+                u.username as cashier_name,
+                u.email as cashier_email,
+                s.timestamp as session_login_time,
+                (SELECT timestamp FROM store_status_log 
+                 WHERE user_id = s.user_id 
+                 AND action = 'close' 
+                 AND branch = s.branch
+                 AND timestamp > s.timestamp
+                 ORDER BY timestamp ASC 
+                 LIMIT 1) as session_logout_time
+            FROM cashout c
+            LEFT JOIN users u ON c.user_id = u.id
+            LEFT JOIN store_status_log s ON c.cashier_session_id = s.id
+            WHERE $whereClause
+            ORDER BY c.created_at DESC
+            LIMIT :limit OFFSET :offset";
+    
+    $stmt = $pdo->prepare($sql);
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
+    
+    $cashouts = $stmt->fetchAll();
+    
+    // Format data
+    foreach ($cashouts as &$cashout) {
+        $cashout['amount'] = floatval($cashout['amount']);
+    }
+    
+    echo json_encode([
+        'success' => true,
+        'data' => $cashouts,
+        'pagination' => [
+            'total' => (int)$total,
+            'page' => $page,
+            'limit' => $limit,
+            'pages' => ceil($total / $limit)
+        ]
+    ]);
+}
+
+// ============================================
+// RECORD CASH-OUT (POST)
+// ============================================
+function recordCashout($pdo, $user) {
+    $input = json_decode(file_get_contents('php://input'), true);
+    
+    $type = $input['type'] ?? null;
+    $amount = $input['amount'] ?? null;
+    $reason = $input['reason'] ?? '';
+    
+    if (!$type || !$amount) {
+        throw new Exception('Type and amount are required');
+    }
+    
+    if (!in_array($type, ['withdrawal', 'deposit'])) {
+        throw new Exception('Invalid type. Must be withdrawal or deposit');
+    }
+    
+    if ($amount <= 0) {
+        throw new Exception('Amount must be greater than 0');
+    }
+    
+    // Get current active session for this user
+    $sessionSql = "SELECT s.id 
+                   FROM store_status_log s
+                   WHERE s.user_id = :userId 
+                   AND s.action = 'open'
+                   AND s.branch = :branch
+                   AND NOT EXISTS (
+                       SELECT 1 FROM store_status_log s2 
+                       WHERE s2.user_id = s.user_id 
+                       AND s2.action = 'close' 
+                       AND s2.branch = s.branch
+                       AND s2.timestamp > s.timestamp
+                   )
+                   ORDER BY s.timestamp DESC 
+                   LIMIT 1";
+    
+    $sessionStmt = $pdo->prepare($sessionSql);
+    $sessionStmt->execute([
+        ':userId' => $user['id'],
+        ':branch' => $user['branch']
+    ]);
+    
+    $session = $sessionStmt->fetch();
+    
+    if (!$session) {
+        throw new Exception('No active cashier session found. Please open POS first.');
+    }
+    
+    // Insert cashout record
+    $insertSql = "INSERT INTO cashout 
+                  (cashier_session_id, user_id, branch, amount, type, reason, created_at) 
+                  VALUES 
+                  (:sessionId, :userId, :branch, :amount, :type, :reason, NOW())";
+    
+    $insertStmt = $pdo->prepare($insertSql);
+    $insertStmt->execute([
+        ':sessionId' => $session['id'],
+        ':userId' => $user['id'],
+        ':branch' => $user['branch'],
+        ':amount' => $amount,
+        ':type' => $type,
+        ':reason' => $reason
+    ]);
+    
+    $cashoutId = $pdo->lastInsertId();
+    
+    echo json_encode([
+        'success' => true,
+        'message' => 'Cash-out recorded successfully',
+        'id' => $cashoutId,
+        'type' => $type,
+        'amount' => floatval($amount)
+    ]);
+}
+
+// ============================================
+// VERIFY OWNER PIN
+// ============================================
+function verifyOwnerPin($pdo) {
+    $input = json_decode(file_get_contents('php://input'), true);
+    $pin = $input['pin'] ?? null;
+    
+    if (!$pin) {
+        throw new Exception('PIN is required');
+    }
+    
+    // Find owner with void_pin
+    $sql = "SELECT id, username, email, role, void_pin 
+            FROM users 
+            WHERE role = 'owner' 
+            AND void_pin IS NOT NULL";
+    $stmt = $pdo->query($sql);
+    $owners = $stmt->fetchAll();
+    
+    if (empty($owners)) {
+        throw new Exception('No owner with PIN found');
+    }
+    
+    // Verify PIN against all owners
+    foreach ($owners as $owner) {
+        if (password_verify($pin, $owner['void_pin'])) {
+            echo json_encode([
+                'success' => true,
+                'owner' => [
+                    'id' => $owner['id'],
+                    'username' => $owner['username'],
+                    'email' => $owner['email'],
+                    'role' => $owner['role']
+                ]
+            ]);
+            return;
+        }
+    }
+    
+    throw new Exception('Invalid owner PIN');
+}
+
+// ============================================
+// EDIT CASH-OUT
+// ============================================
+function editCashout($pdo, $user) {
+    $input = json_decode(file_get_contents('php://input'), true);
+    
+    $cashoutId = $input['cashoutId'] ?? null;
+    $type = $input['type'] ?? null;
+    $amount = $input['amount'] ?? null;
+    $reason = $input['reason'] ?? null;
+    $editReason = $input['editReason'] ?? null;
+    $ownerInfo = $input['owner'] ?? null;
+    
+    if (!$cashoutId || !$type || !$amount || !$reason || !$editReason || !$ownerInfo) {
+        throw new Exception('All fields are required');
+    }
+    
+    if (!in_array($type, ['withdrawal', 'deposit'])) {
+        throw new Exception('Invalid type');
+    }
+    
+    if ($amount <= 0) {
+        throw new Exception('Amount must be greater than 0');
+    }
+    
+    // Check if cashout exists
+    $checkSql = "SELECT * FROM cashout WHERE id = :id";
+    $checkStmt = $pdo->prepare($checkSql);
+    $checkStmt->execute([':id' => $cashoutId]);
+    $existingCashout = $checkStmt->fetch();
+    
+    if (!$existingCashout) {
+        throw new Exception('Cash-out record not found');
+    }
+    
+    // Update cashout
+    $updateSql = "UPDATE cashout 
+                  SET type = :type,
+                      amount = :amount,
+                      reason = :reason,
+                      edited_by = :editedBy,
+                      edited_at = NOW(),
+                      edit_reason = :editReason
+                  WHERE id = :id";
+    
+    $editedBy = ($ownerInfo['username'] ?? $ownerInfo['email']) . ' (Owner)';
+    
+    $updateStmt = $pdo->prepare($updateSql);
+    $updateStmt->execute([
+        ':type' => $type,
+        ':amount' => $amount,
+        ':reason' => $reason,
+        ':editedBy' => $editedBy,
+        ':editReason' => $editReason,
+        ':id' => $cashoutId
+    ]);
+    
+    echo json_encode([
+        'success' => true,
+        'message' => 'Cash-out record updated successfully',
+        'id' => $cashoutId
     ]);
 }
 ?>

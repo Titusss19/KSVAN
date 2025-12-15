@@ -58,11 +58,15 @@ $currentUser = $user;
                 <i class="fas fa-user-tie"></i>
                 Cashier Report
             </button>
+            <button class="tab-btn-kstreet" data-tab="cashout">
+               <i class="fas fa-money-bill-wave"></i>
+                Cash-Out
+            </button>
             <button class="tab-btn-kstreet" data-tab="void">
                 <i class="fas fa-ban"></i>
                 Void Reports
-               
             </button>
+
         </div>
 
         <!-- Filter Controls -->
@@ -285,6 +289,54 @@ $currentUser = $user;
                     </div>
                 </div>
             </div>
+
+            <!-- Cash-Out Report -->
+<div id="cashoutReport" class="report-pane hidden">
+    <div class="table-kstreet">
+        <table class="w-full">
+            <thead>
+                <tr class="bg-red-500 text-white">
+                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">#</th>
+                    <?php if ($user['role'] === 'admin' || $user['role'] === 'owner'): ?>
+                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Branch</th>
+                    <?php endif; ?>
+                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Date & Time</th>
+                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Cashier</th>
+                    <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Type</th>
+                    <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Amount</th>
+                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Reason</th>
+                    <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Session</th>
+                </tr>
+            </thead>
+            <tbody id="cashoutTableBody">
+                <!-- Cash-out data will be populated here -->
+            </tbody>
+        </table>
+
+        <!-- Empty State -->
+        <div id="cashoutEmptyState" class="hidden text-center py-16">
+            <i class="fas fa-money-bill-wave text-5xl text-gray-300 mb-4"></i>
+            <h4 class="text-lg font-semibold text-gray-700">No cash-out records found</h4>
+            <p class="text-gray-500">Cash withdrawals and deposits will appear here</p>
+        </div>
+
+        <!-- Pagination -->
+        <div id="cashoutPagination" class="pagination-kstreet hidden px-6 py-4">
+            <div class="text-sm text-gray-600">
+                Showing <span id="cashoutStart">1</span> to <span id="cashoutEnd">10</span> of <span id="cashoutTotal">0</span> records
+            </div>
+            <div class="flex gap-2 items-center">
+                <button id="cashoutPrevPage" class="btn-pagination-kstreet">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <span class="font-semibold text-gray-700 px-4">Page <span id="cashoutCurrentPage">1</span></span>
+                <button id="cashoutNextPage" class="btn-pagination-kstreet">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
             
         </div>
     </div>
@@ -529,6 +581,77 @@ $currentUser = $user;
                     OK
                 </button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Cash-Out Modal -->
+<div id="editCashoutModal" class="modal-overlay hidden">
+    <div class="modal-content-kstreet max-w-md w-full">
+        <div class="flex justify-between items-center p-6 border-b bg-blue-50">
+            <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <i class="fas fa-edit text-blue-600"></i>
+                Edit Cash-Out Record
+            </h3>
+            <button type="button" class="modal-close">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="p-6">
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <i class="fas fa-info-circle text-blue-600"></i>
+                    <span class="font-bold text-blue-800">Owner Authorization Required</span>
+                </div>
+                <p class="text-blue-700 text-sm">Only the owner can edit cash-out records.</p>
+            </div>
+            
+            <div id="editCashoutInfo" class="bg-gray-50 p-4 rounded-lg mb-4">
+                <!-- Will be populated by JavaScript -->
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Type *</label>
+                <select id="editCashoutType" class="form-select-kstreet w-full">
+                    <option value="withdrawal">Withdrawal (Money Out)</option>
+                    <option value="deposit">Deposit (Money In)</option>
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Amount *</label>
+                <input type="number" id="editCashoutAmount" class="form-input-kstreet w-full" 
+                       placeholder="0.00" step="0.01" min="0">
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Reason *</label>
+                <textarea id="editCashoutReason" class="form-input-kstreet w-full" rows="3" 
+                          placeholder="Enter reason..."></textarea>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Edit Reason *</label>
+                <textarea id="editCashoutEditReason" class="form-input-kstreet w-full" rows="2" 
+                          placeholder="Why are you editing this record?"></textarea>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Owner PIN *</label>
+                <input type="password" id="editCashoutPin" class="form-input-kstreet w-full" 
+                       placeholder="Enter owner PIN" maxlength="6">
+                <div id="editPinError" class="text-red-600 text-sm mt-2 hidden"></div>
+            </div>
+        </div>
+        
+        <div class="p-6 border-t flex justify-end gap-3">
+            <button class="btn-kstreet-secondary" id="cancelEditCashout">Cancel</button>
+            <button class="btn-kstreet-primary bg-blue-600 hover:bg-blue-700" id="confirmEditCashout">
+                <i class="fas fa-save"></i> Save Changes
+            </button>
         </div>
     </div>
 </div>

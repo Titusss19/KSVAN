@@ -9,7 +9,7 @@ if (!isset($_SESSION['user'])) {
 }
 
 // Include database connection
-require_once __DIR__ . 'config/database.php';
+require_once __DIR__ . '/config/database.php';
 
 try {
     // Fetch all categories

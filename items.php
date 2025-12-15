@@ -693,6 +693,7 @@ $currentUser = $user;
                 
                 this.products = [];
                 this.inventory = [];
+                this.categories = [];
                 
                 this.init();
             }
@@ -1301,42 +1302,45 @@ if (branchFilter) {
                 }
             }
 
-            showProductModal(product = null) {
-                this.editingItem = product;
-                const modal = document.getElementById('productModal');
-                const title = document.getElementById('productModalTitle');
-                const branchInfo = document.getElementById('branchInfoSection');
+showProductModal(product = null) {
+    this.editingItem = product;
+    const modal = document.getElementById('productModal');
+    const title = document.getElementById('productModalTitle');
+    const branchInfo = document.getElementById('branchInfoSection');
 
-                if (product) {
-                    title.textContent = 'Edit Product';
-                    this.fillProductForm(product);
-                } else {
-                    title.textContent = 'Add New Product';
-                    this.resetProductForm();
-                }
+    // Repopulate categories dropdown to ensure it's loaded
+    this.populateCategoryDropdowns();
 
-                // Update branch info
-                if (this.isAdmin) {
-                    branchInfo.innerHTML = `
-                        <label class="block text-sm font-medium text-blue-700 mb-2">Select Branch for this Product *</label>
-                        <select id="productBranch" class="border border-gray-300 p-2 rounded-lg w-full focus:ring-2 focus:ring-red-500 focus:border-transparent">
-                            ${['main', 'north', 'south'].map(branch => `
-                                <option value="${branch}" ${branch === (product?.branch || this.user.branch) ? 'selected' : ''}>
-                                    ${branch} ${branch === this.user.branch ? '(Your Branch)' : ''}
-                                </option>
-                            `).join('')}
-                        </select>
-                    `;
-                } else {
-                    branchInfo.innerHTML = `
-                        <p class="text-sm text-blue-700 font-medium">
-                            This product will be added to: <span class="font-bold">${this.user.branch}</span> branch
-                        </p>
-                    `;
-                }
+    if (product) {
+        title.textContent = 'Edit Product';
+        this.fillProductForm(product);
+    } else {
+        title.textContent = 'Add New Product';
+        this.resetProductForm();
+    }
 
-                modal.classList.remove('hidden');
-            }
+    // Update branch info
+    if (this.isAdmin) {
+        branchInfo.innerHTML = `
+            <label class="block text-sm font-medium text-blue-700 mb-2">Select Branch for this Product *</label>
+            <select id="productBranch" class="border border-gray-300 p-2 rounded-lg w-full focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                ${['main', 'north', 'south'].map(branch => `
+                    <option value="${branch}" ${branch === (product?.branch || this.user.branch) ? 'selected' : ''}>
+                        ${branch} ${branch === this.user.branch ? '(Your Branch)' : ''}
+                    </option>
+                `).join('')}
+            </select>
+        `;
+    } else {
+        branchInfo.innerHTML = `
+            <p class="text-sm text-blue-700 font-medium">
+                This product will be added to: <span class="font-bold">${this.user.branch}</span> branch
+            </p>
+        `;
+    }
+
+    modal.classList.remove('hidden');
+}
 
             showInventoryModal(inventory = null) {
     console.log('🔵 showInventoryModal called', inventory);
@@ -1444,21 +1448,32 @@ if (branchFilter) {
                 modal.classList.remove('hidden');
             }
 
-            fillProductForm(product) {
-                document.getElementById('productCode').value = product.product_code;
-                document.getElementById('productName').value = product.name;
-                document.getElementById('productCategory').value = product.category;
-                document.getElementById('productDescType').value = product.description_type;
-                document.getElementById('productPrice').value = product.price;
-                document.getElementById('productImage').value = product.image;
-                
-                if (this.isAdmin) {
-                    document.getElementById('productBranch').value = product.branch;
-                }
+fillProductForm(product) {
+    document.getElementById('productCode').value = product.product_code;
+    document.getElementById('productName').value = product.name;
+    document.getElementById('productDescType').value = product.description_type;
+    document.getElementById('productPrice').value = product.price;
+    document.getElementById('productImage').value = product.image;
+    
+    // Set category AFTER ensuring dropdown is populated
+    const productCategory = document.getElementById('productCategory');
+    if (productCategory && this.categories && this.categories.length > 0) {
+        // Use setTimeout to ensure DOM is updated
+        setTimeout(() => {
+            productCategory.value = product.category;
+        }, 50);
+    }
+    
+    if (this.isAdmin) {
+        const productBranch = document.getElementById('productBranch');
+        if (productBranch) {
+            productBranch.value = product.branch;
+        }
+    }
 
-                this.handleDescTypeChange(product.description_type);
-                this.updateImagePreview(product.image);
-            }
+    this.handleDescTypeChange(product.description_type);
+    this.updateImagePreview(product.image);
+}
 
             fillInventoryForm(inventory) {
     console.log('Filling inventory form with:', inventory);

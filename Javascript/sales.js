@@ -22,6 +22,12 @@ class SalesReport {
     this.voidTotalRecords = 0;
     this.voidData = [];
 
+      // Cash-out report properties
+  this.cashoutCurrentPage = 1;
+  this.cashoutTotalPages = 1;
+  this.cashoutTotalRecords = 0;
+  this.cashoutData = [];
+
     console.log("🔍 Checking modals...");
     console.log(
       "receiptModal exists:",
@@ -88,7 +94,10 @@ class SalesReport {
       } else if (this.activeTab === "void") {
         this.voidCurrentPage = 1;
         this.loadVoidOrders();
-      }
+      } else if (this.activeTab === 'cashout') {
+    this.cashoutCurrentPage = 1;
+    this.loadCashoutRecords();
+  }
     });
 
     // Export Excel
@@ -99,7 +108,9 @@ class SalesReport {
         this.exportCashierToExcel();
       } else if (this.activeTab === "void") {
         this.exportVoidToExcel();
-      }
+      } else if (this.activeTab === 'cashout') {  // ADD THIS
+    this.exportCashoutToExcel();
+  }
     });
 
     // Sales Pagination
@@ -229,6 +240,40 @@ class SalesReport {
         e.target.classList.add("hidden");
       }
     });
+
+    const cashoutPrevBtn = document.getElementById('cashoutPrevPage');
+  const cashoutNextBtn = document.getElementById('cashoutNextPage');
+   if (cashoutPrevBtn) {
+    cashoutPrevBtn.addEventListener('click', () => {
+      if (this.cashoutCurrentPage > 1) {
+        this.cashoutCurrentPage--;
+        this.loadCashoutRecords();
+      }
+    });
+  }
+
+  if (cashoutNextBtn) {
+    cashoutNextBtn.addEventListener('click', () => {
+      if (this.cashoutCurrentPage < this.cashoutTotalPages) {
+        this.cashoutCurrentPage++;
+        this.loadCashoutRecords();
+      }
+    });
+  }
+
+  const cancelEditCashoutBtn = document.getElementById('cancelEditCashout');
+  if (cancelEditCashoutBtn) {
+    cancelEditCashoutBtn.addEventListener('click', () => {
+      this.closeModal('editCashoutModal');
+    });
+  }
+
+  const confirmEditCashoutBtn = document.getElementById('confirmEditCashout');
+  if (confirmEditCashoutBtn) {
+    confirmEditCashoutBtn.addEventListener('click', () => {
+      this.confirmEditCashout();
+    });
+  }
   }
 
   // ============================================
@@ -267,7 +312,12 @@ class SalesReport {
       if (this.voidData.length === 0) {
         this.loadVoidOrders();
       }
+    } else if (tab === 'cashout') {
+    document.getElementById('cashoutReport').classList.remove('hidden');
+    if (this.cashoutData.length === 0) {
+      this.loadCashoutRecords();
     }
+  }
   }
 
   // Helper method
@@ -2822,6 +2872,481 @@ applyCashierSessionExactDesign(ws, totalRows, session, isAdmin) {
       loading.classList.remove("flex");
     }
   }
+ async loadCashoutRecords() {
+    this.showLoading(true);
+
+    const params = new URLSearchParams({
+      action: 'cashout',
+      page: this.cashoutCurrentPage,
+      limit: this.itemsPerPage,
+      branch: document.getElementById('branchFilter') ? document.getElementById('branchFilter').value : 'all',
+      timeRange: document.getElementById('timeRange').value
+    });
+
+    if (document.getElementById('timeRange').value === 'custom') {
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      if (startDate && endDate) {
+        params.append('startDate', startDate);
+        params.append('endDate', endDate);
+      }
+    }
+
+    try {
+      const response = await fetch(`backend/salesapi.php?${params.toString()}`);
+      const responseText = await response.text();
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (e) {
+        console.error('JSON Parse Error:', e);
+        console.error('Response was:', responseText);
+        throw new Error('Server returned invalid response');
+      }
+
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to load cash-out records');
+      }
+
+      this.cashoutData = result.data;
+      this.cashoutTotalRecords = result.pagination.total;
+      this.cashoutTotalPages = result.pagination.pages;
+
+      this.renderCashoutTable();
+      this.updateCashoutPagination();
+    } catch (error) {
+      console.error('Error loading cash-out records:', error);
+      this.showNotification('error', 'Failed to load cash-out records: ' + error.message);
+    } finally {
+      this.showLoading(false);
+    }
+  }
+
+  renderCashoutTable() {
+    const tbody = document.getElementById('cashoutTableBody');
+    const emptyState = document.getElementById('cashoutEmptyState');
+
+    if (this.cashoutData.length === 0) {
+      tbody.innerHTML = '';
+      emptyState.classList.remove('hidden');
+      document.getElementById('cashoutPagination').classList.add('hidden');
+      return;
+    }
+
+    emptyState.classList.add('hidden');
+    document.getElementById('cashoutPagination').classList.remove('hidden');
+
+    tbody.innerHTML = this.cashoutData.map(record => `
+      <tr class="hover:bg-red-50 transition-colors duration-150">
+        <td class="px-6 py-4 text-sm font-medium text-gray-900">
+          #${record.id}
+        </td>
+        ${this.isAdmin() ? `
+        <td class="px-6 py-4 text-sm font-medium text-blue-700">
+          ${record.branch || 'Unknown'}
+        </td>
+        ` : ''}
+        <td class="px-6 py-4 text-sm text-gray-600">
+          ${this.formatDateTime(record.created_at)}
+        </td>
+        <td class="px-6 py-4 text-sm font-medium text-gray-700">
+          ${record.cashier_name || record.cashier_email || 'Unknown'}
+        </td>
+        <td class="px-6 py-4 text-center">
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+            record.type === 'withdrawal' 
+              ? 'bg-red-100 text-red-800' 
+              : 'bg-green-100 text-green-800'
+          }">
+            <i class="fas fa-${record.type === 'withdrawal' ? 'arrow-down' : 'arrow-up'} mr-1"></i>
+            ${record.type.charAt(0).toUpperCase() + record.type.slice(1)}
+          </span>
+        </td>
+        <td class="px-6 py-4 text-sm font-bold text-right ${
+          record.type === 'withdrawal' ? 'text-red-600' : 'text-green-600'
+        }">
+          ${record.type === 'withdrawal' ? '-' : '+'}₱${parseFloat(record.amount).toFixed(2)}
+        </td>
+        <td class="px-6 py-4 text-sm text-gray-700">
+          <div class="max-w-xs truncate" title="${record.reason || 'No reason provided'}">
+            ${record.reason || '<span class="text-gray-400 italic">No reason provided</span>'}
+          </div>
+        </td>
+        <td class="px-6 py-4 text-center">
+          <button onclick="salesReport.viewCashierDetails(${record.cashier_session_id})" 
+                  class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+            <i class="fas fa-external-link-alt"></i> View Session
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  updateCashoutPagination() {
+    const start = (this.cashoutCurrentPage - 1) * this.itemsPerPage + 1;
+    const end = Math.min(this.cashoutCurrentPage * this.itemsPerPage, this.cashoutTotalRecords);
+
+    const cashoutStartEl = document.getElementById('cashoutStart');
+    const cashoutEndEl = document.getElementById('cashoutEnd');
+    const cashoutTotalEl = document.getElementById('cashoutTotal');
+    const cashoutCurrentPageEl = document.getElementById('cashoutCurrentPage');
+
+    if (cashoutStartEl) cashoutStartEl.textContent = start;
+    if (cashoutEndEl) cashoutEndEl.textContent = end;
+    if (cashoutTotalEl) cashoutTotalEl.textContent = this.cashoutTotalRecords;
+    if (cashoutCurrentPageEl) cashoutCurrentPageEl.textContent = this.cashoutCurrentPage;
+
+    const prevBtn = document.getElementById('cashoutPrevPage');
+    const nextBtn = document.getElementById('cashoutNextPage');
+
+    if (prevBtn) prevBtn.disabled = this.cashoutCurrentPage === 1;
+    if (nextBtn) nextBtn.disabled = this.cashoutCurrentPage === this.cashoutTotalPages;
+  }
+
+  exportCashoutToExcel() {
+    if (this.cashoutData.length === 0) {
+      this.showNotification('warning', 'No data to export');
+      return;
+    }
+
+    const totalWithdrawals = this.cashoutData
+      .filter(r => r.type === 'withdrawal')
+      .reduce((sum, r) => sum + parseFloat(r.amount), 0);
+    
+    const totalDeposits = this.cashoutData
+      .filter(r => r.type === 'deposit')
+      .reduce((sum, r) => sum + parseFloat(r.amount), 0);
+
+    const netAmount = totalDeposits - totalWithdrawals;
+
+    const branchFilter = document.getElementById('branchFilter');
+    const currentBranch = branchFilter ? branchFilter.value : 'all';
+    const branchText = currentBranch === 'all' ? 'All Branches' : currentBranch;
+
+    const timeRange = document.getElementById('timeRange').value;
+    const timeRangeText = this.getTimeRangeText(timeRange);
+
+    const ws_data = [];
+
+    ws_data.push(['K - STREET']);
+    ws_data.push([`BRANCH: ${branchText}`]);
+    ws_data.push([`Cash-Out Report - Period: ${timeRangeText}`]);
+    ws_data.push([]);
+
+    ws_data.push(['CASH-OUT SUMMARY']);
+    ws_data.push([`Total Records: ${this.cashoutData.length}`]);
+    ws_data.push([`Total Withdrawals: ₱${totalWithdrawals.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`]);
+    ws_data.push([`Total Deposits: ₱${totalDeposits.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`]);
+    ws_data.push([`Net Amount: ₱${netAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`]);
+    ws_data.push([]);
+
+    const headers = this.isAdmin()
+      ? ['ID', 'Branch', 'Date & Time', 'Cashier', 'Type', 'Amount', 'Reason']
+      : ['ID', 'Date & Time', 'Cashier', 'Type', 'Amount', 'Reason'];
+    ws_data.push(headers);
+
+    this.cashoutData.forEach(record => {
+      const row = this.isAdmin()
+        ? [
+            record.id,
+            record.branch || 'Unknown',
+            this.formatDateTime(record.created_at),
+            record.cashier_name || record.cashier_email || 'Unknown',
+            record.type.charAt(0).toUpperCase() + record.type.slice(1),
+            parseFloat(record.amount),
+            record.reason || 'No reason provided'
+          ]
+        : [
+            record.id,
+            this.formatDateTime(record.created_at),
+            record.cashier_name || record.cashier_email || 'Unknown',
+            record.type.charAt(0).toUpperCase() + record.type.slice(1),
+            parseFloat(record.amount),
+            record.reason || 'No reason provided'
+          ];
+      ws_data.push(row);
+    });
+
+    ws_data.push([]);
+    ws_data.push([`Generated: ${new Date().toLocaleString('en-PH')}`]);
+
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    this.applyCashoutExcelStyles(ws, ws_data.length);
+
+    ws['!cols'] = this.isAdmin()
+      ? [
+          { wch: 8 }, { wch: 15 }, { wch: 22 }, { wch: 25 }, 
+          { wch: 12 }, { wch: 15 }, { wch: 40 }
+        ]
+      : [
+          { wch: 8 }, { wch: 22 }, { wch: 25 }, 
+          { wch: 12 }, { wch: 15 }, { wch: 40 }
+        ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Cash-Out Report');
+
+    const filename = `K-Street-CashOut_Report_${currentBranch}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, filename);
+
+    this.showNotification('success', 'Cash-out report exported successfully!');
+  }
+
+  applyCashoutExcelStyles(ws, totalRows) {
+    if (ws['A1']) {
+      ws['A1'].s = {
+        font: { bold: true, color: { rgb: 'FFFFFFFF' }, size: 14 },
+        fill: { fgColor: { rgb: 'FFDC2626' } },
+        alignment: { horizontal: 'center', vertical: 'center' }
+      };
+    }
+
+    if (ws['A5']) {
+      ws['A5'].s = {
+        font: { bold: true, size: 11 },
+        fill: { fgColor: { rgb: 'FFFFCDD2' } },
+        alignment: { horizontal: 'left' }
+      };
+    }
+
+    const headerRow = 11;
+    const numCols = this.isAdmin() ? 7 : 6;
+    for (let col = 0; col < numCols; col++) {
+      const cellRef = XLSX.utils.encode_cell({ r: headerRow - 1, c: col });
+      if (ws[cellRef]) {
+        ws[cellRef].s = {
+          font: { bold: true, color: { rgb: 'FFFFFFFF' }, size: 10 },
+          fill: { fgColor: { rgb: 'FFD32F2F' } },
+          alignment: { horizontal: 'center', vertical: 'center' }
+        };
+      }
+    }
+  }
+
+  showEditCashoutModal(cashoutId) {
+  const record = this.cashoutData.find(r => r.id === cashoutId);
+  if (!record) {
+    this.showNotification('error', 'Cash-out record not found');
+    return;
+  }
+
+  this.selectedCashout = record;
+
+  // Populate form
+  const editCashoutInfo = document.getElementById('editCashoutInfo');
+  if (editCashoutInfo) {
+    editCashoutInfo.innerHTML = `
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between">
+          <span class="font-semibold">Record #:</span>
+          <span>${record.id}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="font-semibold">Date:</span>
+          <span>${this.formatDateTime(record.created_at)}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="font-semibold">Cashier:</span>
+          <span>${record.cashier_name || record.cashier_email || 'Unknown'}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="font-semibold">Branch:</span>
+          <span>${record.branch || 'Unknown'}</span>
+        </div>
+        ${record.edited_by ? `
+        <div class="mt-2 pt-2 border-t border-gray-200">
+          <p class="text-xs text-gray-500">Last edited by: ${record.edited_by}</p>
+          <p class="text-xs text-gray-500">Edit date: ${this.formatDateTime(record.edited_at)}</p>
+          <p class="text-xs text-gray-500">Edit reason: ${record.edit_reason}</p>
+        </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  // Fill in current values
+  const typeSelect = document.getElementById('editCashoutType');
+  const amountInput = document.getElementById('editCashoutAmount');
+  const reasonInput = document.getElementById('editCashoutReason');
+  const editReasonInput = document.getElementById('editCashoutEditReason');
+  const pinInput = document.getElementById('editCashoutPin');
+  const pinError = document.getElementById('editPinError');
+
+  if (typeSelect) typeSelect.value = record.type;
+  if (amountInput) amountInput.value = parseFloat(record.amount).toFixed(2);
+  if (reasonInput) reasonInput.value = record.reason || '';
+  if (editReasonInput) editReasonInput.value = '';
+  if (pinInput) pinInput.value = '';
+  if (pinError) pinError.classList.add('hidden');
+
+  // Show modal
+  const modal = document.getElementById('editCashoutModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+  }
+}
+
+// ============================================
+// CONFIRM EDIT CASHOUT
+// ============================================
+async confirmEditCashout() {
+  const type = document.getElementById('editCashoutType').value;
+  const amount = document.getElementById('editCashoutAmount').value;
+  const reason = document.getElementById('editCashoutReason').value.trim();
+  const editReason = document.getElementById('editCashoutEditReason').value.trim();
+  const pin = document.getElementById('editCashoutPin').value.trim();
+
+  // Validation
+  if (!type || !amount || !reason || !editReason) {
+    this.showNotification('warning', 'Please fill in all required fields');
+    return;
+  }
+
+  if (!pin) {
+    this.showNotification('warning', 'Please enter owner PIN');
+    return;
+  }
+
+  if (parseFloat(amount) <= 0) {
+    this.showNotification('warning', 'Amount must be greater than 0');
+    return;
+  }
+
+  this.showLoading(true);
+
+  try {
+    // Verify owner PIN first
+    const verifyResponse = await fetch('backend/salesapi.php?action=verify-owner-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: pin })
+    });
+
+    const verifyResult = await verifyResponse.json();
+
+    if (!verifyResult.success) {
+      const pinError = document.getElementById('editPinError');
+      if (pinError) {
+        pinError.textContent = verifyResult.message || 'Invalid owner PIN';
+        pinError.classList.remove('hidden');
+      }
+      this.showLoading(false);
+      return;
+    }
+
+    const ownerInfo = verifyResult.owner;
+
+    // Proceed with edit
+    const editResponse = await fetch('backend/salesapi.php?action=edit-cashout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cashoutId: this.selectedCashout.id,
+        type: type,
+        amount: parseFloat(amount),
+        reason: reason,
+        editReason: editReason,
+        owner: ownerInfo
+      })
+    });
+
+    const editResult = await editResponse.json();
+
+    if (!editResult.success) {
+      throw new Error(editResult.message);
+    }
+
+    // Close modal
+    this.closeModal('editCashoutModal');
+
+    // Show success notification
+    this.showNotification('success', `Cash-out record #${this.selectedCashout.id} has been updated successfully`);
+
+    // Reload data
+    this.loadCashoutRecords();
+  } catch (error) {
+    console.error('Edit cashout error:', error);
+    this.showNotification('error', 'Failed to edit cash-out: ' + error.message);
+  } finally {
+    this.showLoading(false);
+  }
+}
+
+// ============================================
+// UPDATE RENDER CASHOUT TABLE - ADD EDIT BUTTON
+// ============================================
+renderCashoutTable() {
+  const tbody = document.getElementById('cashoutTableBody');
+  const emptyState = document.getElementById('cashoutEmptyState');
+
+  if (this.cashoutData.length === 0) {
+    tbody.innerHTML = '';
+    emptyState.classList.remove('hidden');
+    document.getElementById('cashoutPagination').classList.add('hidden');
+    return;
+  }
+
+  emptyState.classList.add('hidden');
+  document.getElementById('cashoutPagination').classList.remove('hidden');
+
+  tbody.innerHTML = this.cashoutData.map(record => `
+    <tr class="hover:bg-red-50 transition-colors duration-150">
+      <td class="px-6 py-4 text-sm font-medium text-gray-900">
+        #${record.id}
+        ${record.edited_by ? '<span class="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800" title="Edited by ' + record.edited_by + '"><i class="fas fa-edit mr-1"></i>EDITED</span>' : ''}
+      </td>
+      ${this.isAdmin() ? `
+      <td class="px-6 py-4 text-sm font-medium text-blue-700">
+        ${record.branch || 'Unknown'}
+      </td>
+      ` : ''}
+      <td class="px-6 py-4 text-sm text-gray-600">
+        ${this.formatDateTime(record.created_at)}
+      </td>
+      <td class="px-6 py-4 text-sm font-medium text-gray-700">
+        ${record.cashier_name || record.cashier_email || 'Unknown'}
+      </td>
+      <td class="px-6 py-4 text-center">
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+          record.type === 'withdrawal' 
+            ? 'bg-red-100 text-red-800' 
+            : 'bg-green-100 text-green-800'
+        }">
+          <i class="fas fa-${record.type === 'withdrawal' ? 'arrow-down' : 'arrow-up'} mr-1"></i>
+          ${record.type.charAt(0).toUpperCase() + record.type.slice(1)}
+        </span>
+      </td>
+      <td class="px-6 py-4 text-sm font-bold text-right ${
+        record.type === 'withdrawal' ? 'text-red-600' : 'text-green-600'
+      }">
+        ${record.type === 'withdrawal' ? '-' : '+'}₱${parseFloat(record.amount).toFixed(2)}
+      </td>
+      <td class="px-6 py-4 text-sm text-gray-700">
+        <div class="max-w-xs">
+          <div class="truncate" title="${record.reason || 'No reason provided'}">
+            ${record.reason || '<span class="text-gray-400 italic">No reason provided</span>'}
+          </div>
+          ${record.edited_by ? `<div class="text-xs text-blue-600 mt-1" title="${record.edit_reason}"><i class="fas fa-info-circle"></i> ${record.edit_reason}</div>` : ''}
+        </div>
+      </td>
+      <td class="px-6 py-4 text-center">
+        <div class="flex gap-2 justify-center">
+          <button onclick="salesReport.viewCashierDetails(${record.cashier_session_id})" 
+                  class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  title="View Session">
+            <i class="fas fa-external-link-alt"></i>
+          </button>
+          <button onclick="salesReport.showEditCashoutModal(${record.id})" 
+                  class="text-green-600 hover:text-green-800 text-sm font-medium"
+                  title="Edit Record">
+            <i class="fas fa-edit"></i>
+          </button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
 }
 
 // Initialize when page loads

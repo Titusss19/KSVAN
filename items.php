@@ -96,16 +96,13 @@ $currentUser = $user;
                 </div>
 
                 <!-- Category Filter -->
-                <div id="productCategoryFilter" class="w-48">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                    <select id="categoryFilter" class="form-select-kstreet">
-                        <option value="all">All Categories</option>
-                        <option value="Main">Main</option>
-                        <option value="Bundle">Bundle</option>
-                        <option value="Drinks">Drinks</option>
-                        <option value="Sides">Sides</option>
-                    </select>
-                </div>
+<!-- Category Filter - will be populated dynamically -->
+<div id="productCategoryFilter" class="w-48">
+    <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+    <select id="categoryFilter" class="form-select-kstreet">
+        <option value="all">Loading...</option>
+    </select>
+</div>
 
                 <!-- Description Type Filter -->
                 <div id="productDescFilter" class="w-48">
@@ -292,17 +289,12 @@ $currentUser = $user;
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                            <select id="productCategory" class="form-select-kstreet">
-                                
-                                <option value="Main">Main</option>
-                                <option value="Bundle">Bundle</option>
-                                <option value="Drinks">Drinks</option>
-                                <option value="Sides">Sides</option>
-                            </select>
-                        </div>
-
+<div>
+    <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+    <select id="productCategory" class="form-select-kstreet">
+        <option value="">Loading...</option>
+    </select>
+</div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Description Type</label>
                             <select id="productDescType" class="form-select-kstreet">

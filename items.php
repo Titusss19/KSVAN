@@ -96,16 +96,13 @@ $currentUser = $user;
                 </div>
 
                 <!-- Category Filter -->
-                <div id="productCategoryFilter" class="w-48">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                    <select id="categoryFilter" class="form-select-kstreet">
-                        <option value="all">All Categories</option>
-                        <option value="Main">Main</option>
-                        <option value="Bundle">Bundle</option>
-                        <option value="Drinks">Drinks</option>
-                        <option value="Sides">Sides</option>
-                    </select>
-                </div>
+<!-- Category Filter - will be populated dynamically -->
+<div id="productCategoryFilter" class="w-48">
+    <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+    <select id="categoryFilter" class="form-select-kstreet">
+        <option value="all">Loading...</option>
+    </select>
+</div>
 
                 <!-- Description Type Filter -->
                 <div id="productDescFilter" class="w-48">
@@ -292,17 +289,13 @@ $currentUser = $user;
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                            <select id="productCategory" class="form-select-kstreet">
-                                
-                                <option value="Main">Main</option>
-                                <option value="Bundle">Bundle</option>
-                                <option value="Drinks">Drinks</option>
-                                <option value="Sides">Sides</option>
-                            </select>
-                        </div>
 
+<div>
+    <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+    <select id="productCategory" class="form-select-kstreet">
+        <option value="">Loading...</option>
+    </select>
+</div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Description Type</label>
                             <select id="productDescType" class="form-select-kstreet">
@@ -705,8 +698,6 @@ $currentUser = $user;
             }
 
 async init() {
-    console.log('=== INIT STARTED ===');
-    console.log('User:', this.user);
     
     this.setupUser();
     this.bindEvents();
@@ -714,6 +705,7 @@ async init() {
     console.log('About to call loadData()...');
     
     try {
+     await this.loadCategories();
         await this.loadData();
         console.log('loadData() completed');
         console.log('Products:', this.products.length);
@@ -726,6 +718,46 @@ async init() {
     // this.updateLowStockCount();
     
     console.log('=== INIT COMPLETED ===');
+}
+
+async loadCategories() {
+    try {
+        const response = await fetch('backend/fetch_categories.php');
+        const data = await response.json();
+        
+        if (data.success) {
+            this.categories = data.categories;
+            console.log('✓ Loaded categories:', this.categories.length);
+            this.populateCategoryDropdowns();
+        } else {
+            console.error('Error loading categories:', data.error);
+            this.categories = [];
+            this.populateCategoryDropdowns();
+        }
+    } catch (error) {
+        console.error('Error fetching categories:', error);
+        this.categories = [];
+        this.populateCategoryDropdowns();
+    }
+}
+
+populateCategoryDropdowns() {
+    // Update filter dropdown
+    const categoryFilter = document.getElementById('categoryFilter');
+    if (categoryFilter) {
+        categoryFilter.innerHTML = '<option value="all">All Categories</option>' +
+            this.categories.map(cat => 
+                `<option value="${cat.category_name}">${cat.category_name}</option>`
+            ).join('');
+    }
+    
+    // Update product modal dropdown
+    const productCategory = document.getElementById('productCategory');
+    if (productCategory) {
+        productCategory.innerHTML = this.categories.map(cat => 
+            `<option value="${cat.category_name}">${cat.category_name}</option>`
+        ).join('');
+    }
 }
 
 async loadData() {

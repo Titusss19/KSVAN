@@ -91,6 +91,10 @@ try {
         case 'testConnection':
             testConnection($pdo);
             break;
+        case 'checkPin':
+            checkPin($pdo);
+            break;
+
             
             
         default:
@@ -111,6 +115,44 @@ function testConnection($pdo) {
     ]);
 }
 
+
+// Add this function:
+function checkPin($pdo) {
+    $pin = $_POST['pin'] ?? '';
+    
+    if (empty($pin) || strlen($pin) !== 4 || !is_numeric($pin)) {
+        echo json_encode(['success' => false, 'message' => 'Invalid PIN format']);
+        return;
+    }
+    
+    // Check all active employees
+    $stmt = $pdo->prepare("SELECT * FROM employees WHERE status = 'active'");
+    $stmt->execute();
+    $employees = $stmt->fetchAll();
+    
+    $found = false;
+    $employeeData = null;
+    
+    foreach ($employees as $employee) {
+        // Verify PIN (assuming PIN is hashed)
+        if (password_verify($pin, $employee['pin'])) {
+            $found = true;
+            $employeeData = $employee;
+            break;
+        }
+    }
+    
+    if ($found && $employeeData) {
+        echo json_encode([
+            'success' => true,
+            'employeeId' => $employeeData['employee_id'],
+            'employeeName' => $employeeData['full_name'],
+            'employeeRole' => $employeeData['role'] ?? 'Employee'
+        ]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Invalid PIN or employee not found']);
+    }
+}
 // Add new employee
 function addEmployee($pdo) {
     // Get POST data
@@ -771,5 +813,8 @@ function getSystemSettings($pdo) {
         'currentTime' => date('Y-m-d H:i:s'),
         'timezone' => date_default_timezone_get()
     ]);
+    
 }
+
+
 ?>

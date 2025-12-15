@@ -167,17 +167,19 @@ $currentUser = $user;
                         <!-- Payment Amount -->
                         <h1 class="text-black font-bold text-lg mb-2">Payment Amount</h1>
                         <div class="space-y-4">
-                            <div class="grid grid-cols-3 gap-3">
-                                <button onclick="setPaymentAmount(100)" class="py-3.5 bg-red-500 text-white rounded-xl font-bold shadow-md hover:bg-red-600 hover:shadow-lg transition-all">
-                                    ₱100
-                                </button>
-                                <button onclick="setPaymentAmount(500)" class="py-3.5 bg-red-500 text-white rounded-xl font-bold shadow-md hover:bg-red-600 hover:shadow-lg transition-all">
-                                    ₱500
-                                </button>
-                                <button onclick="setPaymentAmount(1000)" class="py-3.5 bg-red-500 text-white rounded-xl font-bold shadow-md hover:bg-red-600 hover:shadow-lg transition-all">
-                                    ₱1000
-                                </button>
-                            </div>
+           <!-- Palitan ang current ₱100 button sa loob ng Payment Amount section -->
+            <div class="grid grid-cols-3 gap-3">
+    <!-- EXACT AMOUNT BUTTON - BAGO -->
+             <button id="exactAmountBtn" onclick="setPaymentExact()" class="py-3.5 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-xl font-bold shadow-md hover:shadow-lg transition-all">
+             Exact Amount
+             </button>
+                 <button   button onclick="setPaymentAmount(500)" class="py-3.5 bg-red-500 text-white rounded-xl font-bold shadow-md hover:bg-red-600 hover:shadow-lg transition-all">
+                 ₱500
+             </button>
+             <button onclick="setPaymentAmount(1000)" class="py-3.5 bg-red-500 text-white rounded-xl font-bold shadow-md hover:bg-red-600 hover:shadow-lg transition-all">
+              ₱1000
+              </button>
+            </div>
 
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 mb-2">Enter Payment Amount</label>

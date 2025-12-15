@@ -1,4 +1,4 @@
-// pos.js - UPDATED WITH DATABASE IMAGE DISPLAY AND PAGINATION - FIXED VERSION
+// pos.js - MAIN CATEGORY PRIORITY WITHOUT CHANGING UI
 // ============================
 // GLOBAL VARIABLES
 // ============================
@@ -335,9 +335,34 @@ async function fetchProducts() {
 
     const data = await response.json();
     console.log("Products fetched:", data.length);
-    console.log("Sample product with image data:", data[0]); // Check the image field
 
+    // Filter k-street food
     products = data.filter((item) => item.description_type === "k-street food");
+
+    // ============ DITO ANG SORTING ============
+    // SORT BY: 1. Main Category First, 2. Alphabetical
+    products.sort((a, b) => {
+      const aIsMain = a.category && a.category.toLowerCase() === "main";
+      const bIsMain = b.category && b.category.toLowerCase() === "main";
+
+      // If both are main or both are not main, sort alphabetically
+      if ((aIsMain && bIsMain) || (!aIsMain && !bIsMain)) {
+        return a.name.localeCompare(b.name);
+      }
+
+      // If a is main and b is not, a comes first
+      if (aIsMain && !bIsMain) return -1;
+
+      // If b is main and a is not, b comes first
+      if (!aIsMain && bIsMain) return 1;
+
+      return 0;
+    });
+
+    console.log(
+      "First 9 products after sorting:",
+      products.slice(0, 9).map((p) => ({ name: p.name, category: p.category }))
+    );
 
     // Extract unique categories
     const uniqueCategories = [
@@ -413,7 +438,7 @@ async function fetchUpgrades() {
 }
 
 // ============================
-// RENDER FUNCTIONS - UPDATED IMAGE DISPLAY WITH PAGINATION
+// RENDER CATEGORY BUTTONS
 // ============================
 function renderCategoryButtons() {
   const container = document.getElementById("categoryButtons");
@@ -433,6 +458,9 @@ function renderCategoryButtons() {
     .join("");
 }
 
+// ============================
+// RENDER PRODUCTS - ORIGINAL UI WITH MAIN CATEGORY PRIORITY
+// ============================
 function renderProducts() {
   const grid = document.getElementById("productGrid");
   const paginationContainer = document.getElementById("paginationContainer");
@@ -482,7 +510,7 @@ function renderProducts() {
   grid.innerHTML = paginatedItems
     .map(
       (product) => `
-        <div class="group border-2 rounded-2xl p-4 transition-all duration-300 ${
+        <div class=" group border-2 rounded-2xl p-4 transition-all duration-300 ${
           storeOpen
             ? "border-gray-100 hover:shadow-2xl hover:border-red-200 hover:scale-105"
             : "border-gray-200 opacity-80"
@@ -532,11 +560,37 @@ function renderProducts() {
   );
 }
 
-// Function to render pagination controls - FIXED: Added startIndex and endIndex parameters
+// ============================
+// SIMPLE EXACT AMOUNT FUNCTION
+// ============================
+function setPaymentExact() {
+  if (!storeOpen) {
+    alert("Store is closed. Please open the store first.");
+    return;
+  }
+
+  if (cart.length === 0) {
+    alert("Cart is empty. Add items first.");
+    return;
+  }
+
+  // Kunin ang total amount
+  const total = calculateTotal();
+
+  // I-set ang payment input
+  document.getElementById("paymentInput").value = total.toFixed(2);
+
+  // Update the paymentAmount variable
+  paymentAmount = total.toString();
+
+  // I-trigger ang update ng change amount
+  updateTotals();
+}
+
+// Function to render pagination controls
 function renderPagination(totalItems, totalPages, startIndex, endIndex) {
   const paginationContainer = document.getElementById("paginationContainer");
   if (!paginationContainer) {
-    // Create pagination container if it doesn't exist
     const productGrid = document.getElementById("productGrid");
     const parent = productGrid.parentElement;
 
@@ -544,9 +598,6 @@ function renderPagination(totalItems, totalPages, startIndex, endIndex) {
     newPaginationContainer.id = "paginationContainer";
     newPaginationContainer.className = "mt-6 flex justify-center";
     parent.appendChild(newPaginationContainer);
-
-    // Update the variable
-    const paginationContainer = newPaginationContainer;
   }
 
   let paginationHTML = `
@@ -663,51 +714,38 @@ function goToPage(page) {
   }
 }
 
-// UPDATED: Function to get product image HTML - FIXED VERSION
+// UPDATED: Function to get product image HTML
 function getProductImageHtml(product) {
-  // Check if product has image field in database
-  console.log(`Product ${product.name} image data:`, product.image);
-
   if (
     product.image &&
     product.image.trim() !== "" &&
     product.image !== "null"
   ) {
-    // Clean the image URL
     let imageUrl = product.image.trim();
-
-    // Remove any quotes or unwanted characters
     imageUrl = imageUrl.replace(/["']/g, "");
 
-    // Check if it's a valid image URL
     if (
       imageUrl.match(/\.(jpg|jpeg|png|gif|bmp|webp)$/i) ||
       imageUrl.includes("http")
     ) {
-      // If it's a relative path that doesn't start with http
       if (!imageUrl.startsWith("http") && !imageUrl.startsWith("/")) {
-        // Try different possible paths
         if (imageUrl.startsWith("img/")) {
-          // Already has img/ prefix
           return `<img src="${imageUrl}" 
                   alt="${product.name}" 
                   onerror="this.onerror=null; this.src='img/kslogo.png';"
                   class="object-cover h-full w-full group-hover:scale-110 transition-transform duration-300">`;
         } else if (imageUrl.startsWith("uploads/")) {
-          // Already has uploads/ prefix
           return `<img src="${imageUrl}" 
                   alt="${product.name}" 
                   onerror="this.onerror=null; this.src='img/kslogo.png';"
                   class="object-cover h-full w-full group-hover:scale-110 transition-transform duration-300">`;
         } else {
-          // Try with img/ prefix first
           return `<img src="img/${imageUrl}" 
                   alt="${product.name}" 
                   onerror="this.onerror=null; this.src='uploads/${imageUrl}'; this.onerror=function(){this.onerror=null; this.src='img/kslogo.png';};"
                   class="object-cover h-full w-full group-hover:scale-110 transition-transform duration-300">`;
         }
       } else {
-        // Full URL (http/https) or absolute path
         return `<img src="${imageUrl}" 
                 alt="${product.name}" 
                 onerror="this.onerror=null; this.src='img/kslogo.png';"
@@ -716,7 +754,6 @@ function getProductImageHtml(product) {
     }
   }
 
-  // Default logo if no image found or invalid
   return `<img src="img/kslogo.png" 
           alt="${product.name}" 
           class="object-contain h-32 w-32 opacity-70">`;
@@ -832,14 +869,14 @@ function renderCart() {
 // ============================
 function filterCategory(category) {
   activeCategory = category;
-  currentPage = 1; // Reset to first page when changing category
+  currentPage = 1;
   renderCategoryButtons();
   renderProducts();
 }
 
 function handleSearch(e) {
   searchTerm = e.target.value;
-  currentPage = 1; // Reset to first page when searching
+  currentPage = 1;
   renderProducts();
 }
 

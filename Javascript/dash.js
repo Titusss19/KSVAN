@@ -1,73 +1,4 @@
-// ===== LOAD BRANCHES =====
-async function loadBranches() {
-  appState.loading.branches = true;
-
-  try {
-    console.log("Loading branches for user role:", appState.user.role);
-    const result = await apiCall("getBranches", {});
-
-    if (result.success) {
-      appState.branches = result.data || [];
-      console.log("Branches loaded:", result.data);
-      updateBranchDropdown();
-    } else {
-      console.error("Failed to load branches:", result.message);
-      appState.branches = [];
-    }
-  } catch (error) {
-    console.error("Error loading branches:", error);
-    appState.branches = [];
-  } finally {
-    appState.loading.branches = false;
-  }
-}
-
-function updateBranchDropdown() {
-  const dropdown = document.getElementById("branchDropdown");
-  if (!dropdown) return;
-
-  const branchList = dropdown.querySelector(".py-2");
-  if (!branchList) return;
-
-  // Keep the "All Branches" option
-  const allBranchesBtn = branchList.querySelector("button:first-child");
-  const divider = branchList.querySelector(".border-t");
-
-  // Remove old branches
-  const oldBranches = branchList.querySelectorAll("button:not(:first-child)");
-  oldBranches.forEach((btn) => {
-    if (btn !== divider && !btn.classList.contains("border-t")) {
-      btn.remove();
-    }
-  });
-
-  // Add new branches
-  appState.branches.forEach((branch) => {
-    const button = document.createElement("button");
-    button.onclick = () => {
-      selectBranch(branch);
-      return false;
-    };
-    button.className = `w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${
-      appState.selectedBranch === branch
-        ? "bg-red-50 text-red-600 font-medium"
-        : "text-gray-700"
-    }`;
-    button.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-400">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-        <polyline points="9 22 9 12 15 12 15 22"></polyline>
-      </svg>
-      ${branch}
-      ${
-        appState.selectedBranch === branch
-          ? '<span class="ml-auto text-red-500">✓</span>'
-          : ""
-      }
-    `;
-    branchList.appendChild(button);
-  });
-} // dash.js - COMPLETE FIXED VERSION WITH FULL FUNCTIONALITY
+// dash.js - SIMPLE CLEAN VERSION MATCHING SCREENSHOT
 
 // ===== STATE MANAGEMENT =====
 const appState = {
@@ -91,6 +22,18 @@ const appState = {
     type: "success",
   },
 };
+
+// ===== ATTENDANCE STATE =====
+let attendanceData = {
+  action: "",
+  pin: "",
+  employeeId: null,
+  employeeName: "",
+  employeeRole: "",
+};
+
+// ===== LIVE CLOCK VARIABLE =====
+let liveClockInterval = null;
 
 // ===== UTILITY FUNCTIONS =====
 function formatNumber(num) {
@@ -148,8 +91,44 @@ function formatDate(dateString) {
   });
 }
 
+// ===== LIVE CLOCK FUNCTIONS =====
+function startLiveClock() {
+  if (liveClockInterval) {
+    clearInterval(liveClockInterval);
+  }
+  updateLiveClock();
+  liveClockInterval = setInterval(updateLiveClock, 1000);
+}
+
+function stopLiveClock() {
+  if (liveClockInterval) {
+    clearInterval(liveClockInterval);
+    liveClockInterval = null;
+  }
+}
+
+function updateLiveClock() {
+  const now = new Date();
+
+  const timeStr = now.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+
+  const timeEl = document.getElementById("attendanceCurrentTime");
+  if (timeEl) {
+    timeEl.textContent = timeStr;
+  }
+}
+
 // ===== API CALL FUNCTION =====
-async function apiCall(action, data = {}) {
+async function apiCall(action, data = {}, useAttendanceAPI = false) {
+  const apiUrl = useAttendanceAPI
+    ? "backend/attendance_api.php"
+    : "backend/dashboard_api.php";
+
   const formData = new FormData();
   formData.append("action", action);
 
@@ -158,7 +137,7 @@ async function apiCall(action, data = {}) {
   }
 
   try {
-    const response = await fetch("backend/dashboard_api.php", {
+    const response = await fetch(apiUrl, {
       method: "POST",
       body: formData,
     });
@@ -357,7 +336,6 @@ function updateUsersDisplay() {
     return;
   }
 
-  // Check if current user has permission to edit/delete
   const currentUserRole = appState.user.role || "cashier";
   const canEditDelete = ["admin", "owner", "manager"].includes(currentUserRole);
 
@@ -430,14 +408,13 @@ function updateUsersDisplay() {
     .join("");
 }
 
-// Add this function to dash.js
 function handleRoleChange() {
   const roleSelect = document.getElementById("addUserRole");
   const voidPinContainer = document.getElementById("voidPinContainer");
   const voidPinInput = document.getElementById("addVoidPin");
-  
+
   if (roleSelect && voidPinContainer && voidPinInput) {
-    roleSelect.addEventListener("change", function() {
+    roleSelect.addEventListener("change", function () {
       if (this.value === "manager" || this.value === "admin") {
         voidPinContainer.style.display = "block";
         voidPinInput.required = true;
@@ -447,8 +424,7 @@ function handleRoleChange() {
         voidPinInput.value = "";
       }
     });
-    
-    // Initial check
+
     if (roleSelect.value === "manager" || roleSelect.value === "admin") {
       voidPinContainer.style.display = "block";
       voidPinInput.required = true;
@@ -556,7 +532,6 @@ function openEditModal(userId) {
 
   appState.selectedEmployee = { ...user };
 
-  // Populate edit form
   const editUsername = document.getElementById("editUsername");
   const editEmail = document.getElementById("editEmail");
   const editUserRole = document.getElementById("editUserRole");
@@ -649,7 +624,6 @@ async function addUser() {
   const status = document.getElementById("addUserStatus")?.value || "Active";
   const void_pin = document.getElementById("addVoidPin")?.value || "";
 
-  // IMPORTANT: Validate required fields
   if (!email || !username || !password || !confirmPassword || !branch) {
     showFeedback(
       "Warning",
@@ -659,20 +633,17 @@ async function addUser() {
     return;
   }
 
-  // Email validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
     showFeedback("Error", "Please enter a valid email address", "error");
     return;
   }
 
-  // Username validation
   if (username.length < 3) {
     showFeedback("Error", "Username must be at least 3 characters", "error");
     return;
   }
 
-  // Password validation
   if (password.length < 6) {
     showFeedback("Error", "Password must be at least 6 characters", "error");
     return;
@@ -683,7 +654,6 @@ async function addUser() {
     return;
   }
 
-  // Void PIN validation for Manager/Owner
   if ((role === "manager" || role === "admin") && !void_pin) {
     showFeedback(
       "Error",
@@ -717,7 +687,6 @@ async function addUser() {
     });
 
     if (result.success) {
-      // Clear all fields
       document.getElementById("addUserEmail").value = "";
       document.getElementById("addUsername").value = "";
       document.getElementById("addPassword").value = "";
@@ -738,7 +707,6 @@ async function addUser() {
   }
 }
 
-// ===== EXISTING updateUser FUNCTION - JUST ADD void_pin =====
 async function updateUser() {
   if (!appState.selectedEmployee) {
     showFeedback("Error", "No user selected", "error");
@@ -750,9 +718,8 @@ async function updateUser() {
   const role = document.getElementById("editUserRole")?.value || "cashier";
   const branch = document.getElementById("editUserBranch")?.value || "main";
   const status = document.getElementById("editUserStatus")?.value || "Active";
-  const void_pin = document.getElementById("editVoidPin")?.value || ""; // ADD THIS LINE
+  const void_pin = document.getElementById("editVoidPin")?.value || "";
 
-  // ADD VOID PIN VALIDATION
   if (void_pin) {
     if (role === "cashier") {
       showFeedback("Error", "Cashier accounts cannot have Void PIN", "error");
@@ -776,7 +743,7 @@ async function updateUser() {
       role: role,
       branch: branch,
       status: status,
-      void_pin: void_pin, // ADD THIS LINE
+      void_pin: void_pin,
     });
 
     if (result.success) {
@@ -820,6 +787,7 @@ function refreshAll() {
   loadStats();
   loadUsers();
   loadAnnouncements();
+  loadEmployeeStatus();
 }
 
 function refreshAnnouncements() {
@@ -849,6 +817,400 @@ function updateLoadingIndicators() {
   }
 }
 
+// ===== LOAD BRANCHES =====
+async function loadBranches() {
+  appState.loading.branches = true;
+
+  try {
+    console.log("Loading branches for user role:", appState.user.role);
+    const result = await apiCall("getBranches", {});
+
+    if (result.success) {
+      appState.branches = result.data || [];
+      console.log("Branches loaded:", result.data);
+      updateBranchDropdown();
+    } else {
+      console.error("Failed to load branches:", result.message);
+      appState.branches = [];
+    }
+  } catch (error) {
+    console.error("Error loading branches:", error);
+    appState.branches = [];
+  } finally {
+    appState.loading.branches = false;
+  }
+}
+
+// ===== LOAD EMPLOYEE STATUS =====
+async function loadEmployeeStatus() {
+  try {
+    console.log("Loading employee status...");
+    const result = await apiCall("getEmployees", {}, true); // Use attendance API
+
+    if (result.success) {
+      updateEmployeeStatusDisplay(result.employees || []);
+      console.log("Employee status loaded:", result.employees);
+    } else {
+      console.error("Failed to load employee status:", result.message);
+      updateEmployeeStatusDisplay([]);
+    }
+  } catch (error) {
+    console.error("Error loading employee status:", error);
+    updateEmployeeStatusDisplay([]);
+  }
+}
+
+function updateEmployeeStatusDisplay(employees) {
+  const container = document.getElementById("employeeStatusList");
+  if (!container) return;
+
+  if (employees.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-4 text-gray-500 text-sm">
+        No employees found
+      </div>
+    `;
+    return;
+  }
+
+  // Sort: on duty first, then alphabetically
+  employees.sort((a, b) => {
+    if (a.is_on_duty && !b.is_on_duty) return -1;
+    if (!a.is_on_duty && b.is_on_duty) return 1;
+    return a.full_name.localeCompare(b.full_name);
+  });
+
+  container.innerHTML = employees
+    .map((emp) => {
+      const statusColor = emp.is_on_duty
+        ? "bg-green-100 text-green-600"
+        : "bg-gray-100 text-gray-600";
+      const statusText = emp.is_on_duty ? "On Duty" : "Off Duty";
+      const statusIcon = emp.is_on_duty
+        ? '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"></circle></svg>'
+        : '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg>';
+
+      return `
+        <div class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors">
+          <div class="flex items-center gap-2 flex-1 min-w-0">
+            
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-gray-800 truncate">${
+                emp.full_name
+              }</p>
+              ${
+                emp.is_on_duty
+                  ? `<p class="text-xs text-gray-500">Working ${
+                      emp.current_hours || 0
+                    }h</p>`
+                  : ""
+              }
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${statusColor} flex-shrink-0">
+            ${statusIcon}
+            <span>${statusText}</span>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function updateBranchDropdown() {
+  const dropdown = document.getElementById("branchDropdown");
+  if (!dropdown) return;
+
+  const branchList = dropdown.querySelector(".py-2");
+  if (!branchList) return;
+
+  const allBranchesBtn = branchList.querySelector("button:first-child");
+  const divider = branchList.querySelector(".border-t");
+
+  const oldBranches = branchList.querySelectorAll("button:not(:first-child)");
+  oldBranches.forEach((btn) => {
+    if (btn !== divider && !btn.classList.contains("border-t")) {
+      btn.remove();
+    }
+  });
+
+  appState.branches.forEach((branch) => {
+    const button = document.createElement("button");
+    button.onclick = () => {
+      selectBranch(branch);
+      return false;
+    };
+    button.className = `w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${
+      appState.selectedBranch === branch
+        ? "bg-red-50 text-red-600 font-medium"
+        : "text-gray-700"
+    }`;
+    button.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-400">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      ${branch}
+      ${
+        appState.selectedBranch === branch
+          ? '<span class="ml-auto text-red-500">✓</span>'
+          : ""
+      }
+    `;
+    branchList.appendChild(button);
+  });
+}
+
+// ============================================
+// ATTENDANCE QUICK ACTIONS - SIMPLE VERSION
+// ============================================
+
+function quickTimeIn() {
+  console.log("quickTimeIn() called");
+
+  attendanceData.action = "timeIn";
+  attendanceData.pin = "";
+  attendanceData.employeeId = null;
+
+  document.getElementById("pinModalTitle").textContent = "Clock In";
+  document.getElementById("pinModalSubtitle").textContent =
+    appState.user.username || "Employee";
+
+  const actionBtn = document.getElementById("pinActionButton");
+  actionBtn.textContent = "Clock In";
+  actionBtn.className = "btn-primary red";
+
+  const pinInput = document.getElementById("attendancePinInput");
+  if (pinInput) pinInput.value = "";
+
+  const pinError = document.getElementById("pinError");
+  if (pinError) pinError.classList.add("hidden");
+
+  startLiveClock();
+  showModal("attendancePinModal");
+
+  setTimeout(() => {
+    if (pinInput) pinInput.focus();
+  }, 100);
+}
+
+function quickTimeOut() {
+  console.log("quickTimeOut() called");
+
+  attendanceData.action = "timeOut";
+  attendanceData.pin = "";
+  attendanceData.employeeId = null;
+
+  document.getElementById("pinModalTitle").textContent = "Clock Out";
+  document.getElementById("pinModalSubtitle").textContent =
+    appState.user.username || "Employee";
+
+  const actionBtn = document.getElementById("pinActionButton");
+  actionBtn.textContent = "Clock Out";
+  actionBtn.className = "btn-primary";
+
+  const pinInput = document.getElementById("attendancePinInput");
+  if (pinInput) pinInput.value = "";
+
+  const pinError = document.getElementById("pinError");
+  if (pinError) pinError.classList.add("hidden");
+
+  startLiveClock();
+  showModal("attendancePinModal");
+
+  setTimeout(() => {
+    if (pinInput) pinInput.focus();
+  }, 100);
+}
+
+async function verifyPin() {
+  const pinInput = document.getElementById("attendancePinInput");
+  if (!pinInput) return;
+
+  attendanceData.pin = pinInput.value.trim();
+
+  if (attendanceData.pin.length !== 4) {
+    showPinError("Please enter 4-digit PIN");
+    return;
+  }
+
+  if (!/^\d{4}$/.test(attendanceData.pin)) {
+    showPinError("PIN must be numbers only");
+    return;
+  }
+
+  try {
+    const checkResult = await apiCall(
+      "checkPin",
+      { pin: attendanceData.pin },
+      true
+    );
+
+    if (checkResult.success) {
+      attendanceData.employeeId = checkResult.employeeId;
+      attendanceData.employeeName = checkResult.employeeName;
+      attendanceData.employeeRole = checkResult.employeeRole || "Employee";
+
+      showConfirmationModal();
+    } else {
+      showPinError(checkResult.message || "Invalid PIN");
+    }
+  } catch (error) {
+    console.error("PIN Verification Error:", error);
+    showPinError("System error. Please try again.");
+  }
+}
+
+function showConfirmationModal() {
+  const action = attendanceData.action === "timeIn" ? "Clock In" : "Clock Out";
+
+  document.getElementById(
+    "confirmModalTitle"
+  ).textContent = `Confirm ${action}`;
+  document.getElementById(
+    "confirmMessage"
+  ).textContent = `Are you sure you want to ${action.toLowerCase()}?`;
+  document.getElementById(
+    "confirmDetails"
+  ).innerHTML = `<strong>${attendanceData.employeeName}</strong><br>${attendanceData.employeeRole}`;
+
+  const actionBtn = document.getElementById("confirmActionButton");
+  actionBtn.textContent = `Yes, ${action}`;
+  actionBtn.className =
+    attendanceData.action === "timeIn" ? "btn-primary red" : "btn-primary";
+
+  closeModal("attendancePinModal");
+  showModal("attendanceConfirmModal");
+}
+
+async function processAttendanceAction() {
+  try {
+    const action = attendanceData.action;
+    const result = await apiCall(
+      action,
+      {
+        employeeId: attendanceData.employeeId,
+        pin: attendanceData.pin,
+      },
+      true
+    );
+
+    if (result.success) {
+      showResultModal(
+        "success",
+        result.message ||
+          `${action === "timeIn" ? "Clocked in" : "Clocked out"} successfully`,
+        result
+      );
+    } else {
+      showResultModal("error", result.message || `Failed to ${action}`);
+    }
+  } catch (error) {
+    console.error("Attendance Action Error:", error);
+    showResultModal("error", error.message || "System error");
+  }
+}
+
+function showResultModal(type, message, data = null) {
+  const icon = document.getElementById("resultIcon");
+  const titleEl = document.getElementById("resultModalTitle");
+  const messageEl = document.getElementById("resultMessage");
+  const detailsEl = document.getElementById("resultDetails");
+
+  if (type === "success") {
+    icon.style.background = "#10b981";
+    icon.innerHTML =
+      '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+  } else {
+    icon.style.background = "#ef4444";
+    icon.innerHTML =
+      '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+  }
+
+  titleEl.textContent = type === "success" ? "Success" : "Error";
+  messageEl.textContent = message;
+
+  if (data && data.summary) {
+    detailsEl.innerHTML = `
+      <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin-top: 16px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 14px;">
+          <div>Total Hours:</div>
+          <div style="font-weight: 600;">${data.summary.totalHours || 0}h</div>
+          <div>Regular:</div>
+          <div style="font-weight: 600;">${
+            data.summary.regularHours || 0
+          }h</div>
+          <div>Overtime:</div>
+          <div style="font-weight: 600;">${
+            data.summary.overtimeHours || 0
+          }h</div>
+        </div>
+      </div>
+    `;
+  } else {
+    detailsEl.innerHTML = "";
+  }
+
+  closeModal("attendanceConfirmModal");
+  showModal("attendanceResultModal");
+}
+
+function showPinError(message) {
+  const errorEl = document.getElementById("pinError");
+  if (errorEl) {
+    errorEl.textContent = message;
+    errorEl.classList.remove("hidden");
+    setTimeout(() => errorEl.classList.add("hidden"), 3000);
+  }
+}
+
+function closeAttendanceModal() {
+  closeModal("attendancePinModal");
+  stopLiveClock();
+}
+
+function closeConfirmModal() {
+  closeModal("attendanceConfirmModal");
+  showModal("attendancePinModal");
+}
+
+function closeResultModal() {
+  closeModal("attendanceResultModal");
+  attendanceData.pin = "";
+  attendanceData.employeeId = null;
+  stopLiveClock();
+}
+
+function showModal(modalId) {
+  console.log("showModal:", modalId);
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.add("show", "active");
+    document.body.style.overflow = "hidden";
+
+    if (modalId === "attendancePinModal") {
+      startLiveClock();
+    }
+  }
+}
+
+function closeModal(modalId) {
+  console.log("closeModal:", modalId);
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.remove("show", "active");
+    document.body.style.overflow = "auto";
+
+    if (
+      modalId === "attendancePinModal" ||
+      modalId === "attendanceConfirmModal" ||
+      modalId === "attendanceResultModal"
+    ) {
+      stopLiveClock();
+    }
+  }
+}
+
 // ===== INITIALIZATION =====
 document.addEventListener("DOMContentLoaded", function () {
   console.log("Dashboard initializing...");
@@ -857,7 +1219,6 @@ document.addEventListener("DOMContentLoaded", function () {
     appState.user = currentUser;
     console.log("Current user:", currentUser);
 
-    // Hide branch filter for non-admin users
     const branchFilterContainer = document.querySelector(
       ".relative:has(#branchDropdown)"
     );
@@ -865,24 +1226,62 @@ document.addEventListener("DOMContentLoaded", function () {
       if (currentUser.role !== "admin" && currentUser.role !== "owner") {
         branchFilterContainer.style.display = "none";
       } else {
-        // Load branches only for admin/owner
         loadBranches();
       }
     }
 
-    // Hide "Add User" button for cashiers
-    const addUserBtn = document.querySelector('button[onclick="openAddUserModal()"]');
-    if (addUserBtn && !['admin', 'owner', 'manager'].includes(currentUser.role)) {
+    const addUserBtn = document.querySelector(
+      'button[onclick="openAddUserModal()"]'
+    );
+    if (
+      addUserBtn &&
+      !["admin", "owner", "manager"].includes(currentUser.role)
+    ) {
       addUserBtn.style.display = "none";
     }
   }
 
-  // Initialize role change listener for void PIN
   handleRoleChange();
+  startLiveClock();
 
   setTimeout(() => {
     loadStats();
     loadUsers();
     loadAnnouncements();
+    loadEmployeeStatus();
   }, 500);
 });
+
+// ===== EXPORT FUNCTIONS =====
+window.quickTimeIn = quickTimeIn;
+window.quickTimeOut = quickTimeOut;
+window.verifyPin = verifyPin;
+window.closeAttendanceModal = closeAttendanceModal;
+window.processAttendanceAction = processAttendanceAction;
+window.closeConfirmModal = closeConfirmModal;
+window.closeResultModal = closeResultModal;
+window.showModal = showModal;
+window.closeModal = closeModal;
+window.refreshAll = refreshAll;
+window.refreshAnnouncements = refreshAnnouncements;
+window.refreshUsers = refreshUsers;
+window.goToAttendance = goToAttendance;
+window.toggleBranchDropdown = toggleBranchDropdown;
+window.selectBranch = selectBranch;
+window.openAnnouncementModal = openAnnouncementModal;
+window.closeAnnouncementModal = closeAnnouncementModal;
+window.postAnnouncement = postAnnouncement;
+window.openAddUserModal = openAddUserModal;
+window.closeAddUserModal = closeAddUserModal;
+window.openEditModal = openEditModal;
+window.closeEditModal = closeEditModal;
+window.updateUser = updateUser;
+window.openDeleteModal = openDeleteModal;
+window.closeDeleteModal = closeDeleteModal;
+window.confirmDelete = confirmDelete;
+window.addUser = addUser;
+window.startLiveClock = startLiveClock;
+window.stopLiveClock = stopLiveClock;
+window.updateLiveClock = updateLiveClock;
+window.loadEmployeeStatus = loadEmployeeStatus;
+

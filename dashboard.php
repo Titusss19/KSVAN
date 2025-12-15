@@ -219,50 +219,27 @@ $currentUser = $user;
                 </div>
 
                 <!-- Quick Actions -->
-                <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">Quick Actions</h3>
-                    <div class="flex flex-wrap gap-3 mb-6">
-                        <a href="pos.php" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition font-medium text-sm">Open POS</a>
-                        <a href="sales_report.php" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition font-medium text-sm">View Sales Report</a>
-                        <a href="inventory.php" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition font-medium text-sm">Manage Inventory</a>
-                        <a href="reports.php" class="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition font-medium text-sm">Generate Reports</a>
-                    </div>
+<div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+    <h3 class="text-lg font-bold text-gray-800 mb-4">Quick Actions</h3>
+    <div class="flex flex-wrap gap-3 mb-6">
+        <a href="pos.php" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition font-medium text-sm">Open POS</a>
+        <a href="sales_report.php" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition font-medium text-sm">View Sales Report</a>
+        <a href="inventory.php" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition font-medium text-sm">Manage Inventory</a>
+        <a href="reports.php" class="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition font-medium text-sm">Generate Reports</a>
+        <button onclick="quickTimeIn()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition font-medium text-sm">Time In</button>
+        <button onclick="quickTimeOut()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition font-medium text-sm">Time Out</button>
+    </div>
 
-                    <div class="pt-6 border-t border-gray-200">
-                        <h4 class="font-semibold text-gray-700 mb-3">System Info</h4>
-                        <div class="space-y-3">
-                            <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-blue-600">
-                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                                    </svg>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-gray-800">Your Role: <span class="font-semibold"><?php echo htmlspecialchars(ucfirst($user['role'] ?? 'cashier')); ?></span></p>
-                                    <p class="text-xs text-gray-500">Access Level: 
-                                        <?php 
-                                        $roleLevel = ['cashier' => 'Basic', 'manager' => 'Manager', 'admin' => 'Admin', 'owner' => 'Owner'];
-                                        echo $roleLevel[$user['role'] ?? 'cashier'] ?? 'Basic';
-                                        ?>
-                                    </p>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-green-600">
-                                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                                        <line x1="8" y1="21" x2="16" y2="21"></line>
-                                        <line x1="12" y1="17" x2="12" y2="21"></line>
-                                    </svg>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-gray-800">Last Login: <?php echo date('M d, Y h:i A'); ?></p>
-                                    <p class="text-xs text-gray-500">Session active</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <div class="pt-6 border-t border-gray-200">
+        <h4 class="font-semibold text-gray-700 mb-3">Employee Status</h4>
+        <div class="space-y-2 max-h-64 overflow-y-auto custom-scrollbar" id="employeeStatusList">
+            <div class="text-center py-4 text-gray-500 text-sm">
+                Loading employees...
+            </div>
+        </div>
+    </div>
+</div>
+                        
             </div>
 
            <!-- Employee List -->
@@ -591,6 +568,110 @@ $currentUser = $user;
 
         
     </script>
+
+<!-- ATTENDANCE PIN MODAL - SIMPLIFIED VERSION -->
+    <div id="attendancePinModal" class="modal">
+        <div class="modal-content">
+            <!-- Close Button -->
+            <button class="close-btn" onclick="closeAttendanceModal()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+
+            <!-- Header -->
+            <h2 class="modal-title" id="pinModalTitle">Clock Out</h2>
+            <p class="modal-subtitle" id="pinModalSubtitle">Jay mark Barbacena Melivo</p>
+
+            <!-- Current Time Section -->
+            <div class="time-section">
+                <p class="time-label">Current Time</p>
+                <p class="time-value" id="attendanceCurrentTime">02:01:38 AM</p>
+            </div>
+
+            <!-- PIN Input Section -->
+            <div class="pin-section">
+                <label class="pin-label">Enter PIN</label>
+                <input 
+                    type="password" 
+                    id="attendancePinInput"
+                    class="pin-input"
+                    inputmode="numeric"
+                    maxlength="4"
+                    placeholder="• • • •"
+                    onkeypress="if(event.key==='Enter') verifyPin()"
+                />
+                <div id="pinError" class="pin-error hidden"></div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="modal-buttons">
+                <button id="pinActionButton" class="btn-primary" onclick="verifyPin()">Clock Out</button>
+                <button class="btn-secondary" onclick="closeAttendanceModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ATTENDANCE CONFIRMATION MODAL -->
+    <div id="attendanceConfirmModal" class="modal">
+        <div class="modal-content">
+            <!-- Close Button -->
+            <button class="close-btn" onclick="closeConfirmModal()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+
+            <!-- Header -->
+            <h2 class="modal-title" id="confirmModalTitle">Confirm Clock Out</h2>
+            <p class="modal-subtitle" id="confirmMessage">Are you sure you want to clock out?</p>
+
+            <!-- Employee Details -->
+            <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
+                <p id="confirmDetails" style="margin: 0; font-size: 14px; color: #333; text-align: center;"></p>
+            </div>
+
+            <!-- Buttons -->
+            <div class="modal-buttons">
+                <button id="confirmActionButton" class="btn-primary" onclick="processAttendanceAction()">Yes, Clock Out</button>
+                <button class="btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ATTENDANCE RESULT MODAL -->
+    <div id="attendanceResultModal" class="modal">
+        <div class="modal-content">
+            <!-- Close Button -->
+            <button class="close-btn" onclick="closeResultModal()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+
+            <!-- Icon -->
+            <div style="text-align: center; margin-bottom: 16px;">
+                <div id="resultIcon" style="width: 64px; height: 64px; margin: 0 auto; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Header -->
+            <h2 class="modal-title" id="resultModalTitle" style="text-align: center;">Success</h2>
+            <p id="resultMessage" style="font-size: 14px; color: #666; text-align: center; margin: 8px 0 16px 0;"></p>
+
+            <!-- Details -->
+            <div id="resultDetails"></div>
+
+            <!-- Button -->
+            <button class="btn-primary" onclick="closeResultModal()" style="width: 100%; margin-top: 16px;">Done</button>
+        </div>
+    </div>
 
     <!-- Include the dash.js file -->
     <script src="Javascript/dash.js"></script>

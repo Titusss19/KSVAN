@@ -1,4 +1,6 @@
-/* css/dashboard.css */
+/* css/dashboard.css - SIMPLE CLEAN VERSION MATCHING SCREENSHOT */
+
+/* ===== STAT CARDS ===== */
 .stat-card {
     border-radius: 16px;
     padding: 24px;
@@ -13,35 +15,186 @@
     box-shadow: 0 15px 30px rgba(0,0,0,0.15);
 }
 
+/* ===== MODAL OVERLAY ===== */
 .modal {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0,0,0,0.5);
-    display: none;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
-    padding: 20px;
+    z-index: 9999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
-.modal.active {
-    display: flex;
+.modal.active,
+.modal.show {
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 
+/* ===== MODAL CONTENT ===== */
 .modal-content {
     background: white;
-    border-radius: 20px;
-    padding: 32px;
-    max-width: 500px;
-    width: 100%;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    position: relative;
 }
 
+/* ===== MODAL HEADER ===== */
+.modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 4px 0;
+}
+
+.modal-subtitle {
+    font-size: 14px;
+    color: #666;
+    margin: 0 0 24px 0;
+}
+
+/* ===== CLOSE BUTTON ===== */
+.close-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: #666;
+    transition: color 0.2s;
+}
+
+.close-btn:hover {
+    color: #000;
+}
+
+/* ===== TIME DISPLAY ===== */
+.time-section {
+    margin-bottom: 24px;
+}
+
+.time-label {
+    font-size: 13px;
+    color: #666;
+    margin: 0 0 8px 0;
+    font-weight: 500;
+}
+
+.time-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #ef4444;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* ===== PIN INPUT ===== */
+.pin-section {
+    margin-bottom: 24px;
+}
+
+.pin-label {
+    font-size: 13px;
+    color: #1a1a1a;
+    margin: 0 0 8px 0;
+    font-weight: 500;
+}
+
+.pin-input {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 24px;
+    text-align: center;
+    letter-spacing: 8px;
+    border: 2px solid #e5e5e5;
+    border-radius: 8px;
+    background: white;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.pin-input:focus {
+    border-color: #3b82f6;
+}
+
+.pin-input::placeholder {
+    letter-spacing: 8px;
+}
+
+/* ===== BUTTONS ===== */
+.modal-buttons {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-primary {
+    flex: 1;
+    padding: 12px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-primary:hover {
+    background: #2563eb;
+}
+
+.btn-primary.red {
+    background: #ef4444;
+}
+
+.btn-primary.red:hover {
+    background: #dc2626;
+}
+
+.btn-secondary {
+    flex: 1;
+    padding: 12px;
+    background: #f5f5f5;
+    color: #666;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+    background: #e5e5e5;
+}
+
+/* ===== ERROR MESSAGE ===== */
+.pin-error {
+    font-size: 12px;
+    color: #ef4444;
+    text-align: center;
+    margin-top: 8px;
+    min-height: 18px;
+}
+
+.pin-error.hidden {
+    display: none;
+}
+
+/* ===== SCROLLBAR ===== */
 .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
 }
@@ -56,6 +209,11 @@
     border-radius: 10px;
 }
 
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* ===== ANIMATIONS ===== */
 .animate-spin {
     animation: spin 1s linear infinite;
 }
@@ -65,26 +223,59 @@
     to { transform: rotate(360deg); }
 }
 
-/* Add to existing dashboard.css */
-input:required:invalid, select:required:invalid {
+/* ===== FORM VALIDATION ===== */
+input:required:invalid, 
+select:required:invalid {
     border-color: #fca5a5;
 }
 
-input:required:valid, select:required:valid {
+input:required:valid, 
+select:required:valid {
     border-color: #86efac;
 }
 
-.required-star {
-    color: #ef4444;
-    font-weight: bold;
-}
-
-/* Disabled action buttons */
+/* ===== DISABLED STATES ===== */
 .actions-disabled {
     opacity: 0.5;
     cursor: not-allowed;
     pointer-events: none;
 }
+
+/* ===== CONTENT WRAPPER ===== */
 .content-wrapper {
-            opacity: 0;
-        }
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+/* ===== BUTTON HOVER EFFECTS ===== */
+button {
+    transition: all 0.2s ease;
+}
+
+button:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ===== INPUT FOCUS STATES ===== */
+input:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 640px) {
+    .modal-content {
+        max-width: 95%;
+        padding: 20px;
+    }
+}

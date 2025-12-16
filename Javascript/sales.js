@@ -534,7 +534,7 @@ class SalesReport {
   // ============================================
   // RENDER SALES TABLE
   // ============================================
-  renderSalesTable() {
+renderSalesTable() {
     const tbody = document.getElementById("salesTableBody");
     const emptyState = document.getElementById("salesEmptyState");
 
@@ -560,18 +560,21 @@ class SalesReport {
                         : ""
                     }
                 </td>
-                <td class="px-3 py-1 text-sm text-gray-600">
+                <td class="px-6 py-4 text-sm text-gray-600">
                     ${this.formatDateTime(order.created_at)}
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-700 max-w-xs">
-                    <div class="line-clamp-2" title="${this.formatProductNames(
-                      order
-                    )}">
-                        ${this.formatProductNames(order)}
+                <td class="px-6 py-4 order-details-cell">
+                    <div class="space-y-1">
+                        <div class="products-list">
+                            ${this.formatProductNames(order)}
+                        </div>
+                        <div class="order-meta">
+                            <span class="amount">₱${parseFloat(order.total).toFixed(2)}</span>
+                            <span class="order-type-badge ${this.getOrderTypeClass(order.orderType)}">
+                                ${order.orderType}
+                            </span>
+                        </div>
                     </div>
-                </td>
-                <td class="px-6 py-4 text-sm font-semibold text-gray-900 text-right">
-                    ₱${parseFloat(order.total).toFixed(2)}
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-600 text-right">
                     ₱${parseFloat(order.paidAmount).toFixed(2)}
@@ -583,12 +586,7 @@ class SalesReport {
                     ${order.cashier_name || order.cashier_email || "Unknown"}
                 </td>
                 <td class="px-6 py-4 text-center">
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-small text-black">
-                        ${order.orderType}
-                    </span>
-                </td>
-                <td class="px-6 py-4 text-center">
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-small text-black">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${this.getPaymentMethodClass(order.payment_method)}">
                         ${order.payment_method || "Cash"}
                     </span>
                 </td>
@@ -614,6 +612,22 @@ class SalesReport {
         `
       )
       .join("");
+  }
+
+   getOrderTypeClass(orderType) {
+    if (orderType === "Dine In") return "order-type-dinein";
+    if (orderType === "Take Out") return "order-type-takeout";
+    if (orderType === "Delivery") return "order-type-delivery";
+    return "order-type-dinein"; // default
+  }
+
+  // Helper method to get payment method CSS class
+  getPaymentMethodClass(paymentMethod) {
+    const method = (paymentMethod || "Cash").toLowerCase();
+    if (method.includes("cash")) return "bg-green-100 text-green-800";
+    if (method.includes("gcash")) return "bg-blue-100 text-blue-800";
+    if (method.includes("grab")) return "bg-purple-100 text-purple-800";
+    return "bg-gray-100 text-gray-800";
   }
 
   // ============================================
@@ -3347,8 +3361,57 @@ renderCashoutTable() {
     </tr>
   `).join('');
 }
-}
 
+
+}
+function populateSalesTable(salesData) {
+    const tbody = document.getElementById('salesTableBody');
+    tbody.innerHTML = '';
+    
+    salesData.forEach((sale, index) => {
+        const row = document.createElement('tr');
+        row.className = 'border-b border-gray-200 hover:bg-gray-50';
+        
+        // Format products list
+        const productsText = sale.products.map(p => 
+            `${p.name} (${p.quantity}x)`
+        ).join(', ');
+        
+        // Determine order type class
+        let orderTypeClass = 'order-type-dinein';
+        if (sale.order_type === 'Take Out') orderTypeClass = 'order-type-takeout';
+        if (sale.order_type === 'Delivery') orderTypeClass = 'order-type-delivery';
+        
+        row.innerHTML = `
+            <td class="py-4 px-6 text-sm text-gray-900">${index + 1}</td>
+            <td class="py-4 px-6 text-sm text-gray-900">${sale.date_time}</td>
+            <td class="py-4 px-6 order-details-cell">
+                <div class="space-y-1">
+                    <div class="products-list">${productsText}</div>
+                    <div class="order-meta">
+                        <span class="amount">₱${parseFloat(sale.total).toFixed(2)}</span>
+                        <span class="order-type-badge ${orderTypeClass}">${sale.order_type}</span>
+                    </div>
+                </div>
+            </td>
+            <td class="py-4 px-6 text-sm text-right text-gray-900">₱${parseFloat(sale.paid).toFixed(2)}</td>
+            <td class="py-4 px-6 text-sm text-right text-gray-900">₱${parseFloat(sale.change).toFixed(2)}</td>
+            <td class="py-4 px-6 text-sm text-gray-900">${sale.cashier}</td>
+            <td class="py-4 px-6">
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    ${sale.payment_method}
+                </span>
+            </td>
+            <td class="py-4 px-6 text-center">
+                <button onclick="viewReceipt(${sale.id})" class="text-red-600 hover:text-red-800">
+                    <i class="fas fa-receipt"></i>
+                </button>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+}
 // Initialize when page loads
 document.addEventListener("DOMContentLoaded", () => {
   window.salesReport = new SalesReport();

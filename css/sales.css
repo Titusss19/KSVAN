@@ -330,6 +330,52 @@
     font-weight: 600;
 }
 
+.order-details-cell {
+    min-width: 250px;
+}
+
+.order-details-cell .products-list {
+    font-size: 0.875rem;
+    color: #111827;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.order-details-cell .order-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.order-details-cell .amount {
+    font-weight: 600;
+    color: #dc2626;
+}
+
+.order-details-cell .order-type-badge {
+    display: inline-flex;
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.25rem;
+    font-weight: 500;
+}
+
+.order-type-dinein {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.order-type-takeout {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.order-type-delivery {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
 /* ==================== UTILITY CLASSES ==================== */
 .hidden {
     display: none !important;

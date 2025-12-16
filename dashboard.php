@@ -268,25 +268,27 @@
                 </div>
 
                 <!-- Quick Actions -->
-                <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100">
-                    <h3 class="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4">Quick Actions</h3>
-                    <div class="flex flex-wrap gap-2 mb-4 sm:mb-6">
-                        <a href="pos.php" class="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 transition font-medium text-xs sm:text-sm">Open POS</a>
-                        <a href="sales_report.php" class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition font-medium text-xs sm:text-sm">Sales Report</a>
-                        <a href="items.php" class="bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 transition font-medium text-xs sm:text-sm">Inventory</a>
-                        <button onclick="quickTimeIn()" class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg transition font-medium text-xs sm:text-sm">Time In</button>
-                        <button onclick="quickTimeOut()" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg transition font-medium text-xs sm:text-sm">Time Out</button>
-                    </div>
+<div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100">
+    <h3 class="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4">Quick Actions</h3>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4 sm:mb-6">
+        <a href="pos.php" class="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 transition font-medium text-xs sm:text-sm text-center">Open POS</a>
+        <a href="sales_report.php" class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition font-medium text-xs sm:text-sm text-center">Sales Report</a>
+        <a href="items.php" class="bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 transition font-medium text-xs sm:text-sm text-center">Inventory</a>
+        <button onclick="quickTimeIn()" class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg transition font-medium text-xs sm:text-sm">Time In</button>
+        <button onclick="quickTimeOut()" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg transition font-medium text-xs sm:text-sm">Time Out</button>
+        <button onclick="openCashInModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-2 rounded-lg transition font-medium text-xs sm:text-sm">Cash In</button>
+        <button onclick="openCashOutModal()" class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-lg transition font-medium text-xs sm:text-sm">Cash Out</button>
+    </div>
 
-                    <div class="pt-4 sm:pt-6 border-t border-gray-200">
-                        <h4 class="font-semibold text-gray-700 mb-2 sm:mb-3 text-sm sm:text-base">Employee Status</h4>
-                        <div class="space-y-2 max-h-48 sm:max-h-64 overflow-y-auto custom-scrollbar" id="employeeStatusList">
-                            <div class="text-center py-3 sm:py-4 text-gray-500 text-xs sm:text-sm">
-                                Loading employees...
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <div class="pt-4 sm:pt-6 border-t border-gray-200">
+        <h4 class="font-semibold text-gray-700 mb-2 sm:mb-3 text-sm sm:text-base">Employee Status</h4>
+        <div class="space-y-2 max-h-48 sm:max-h-64 overflow-y-auto custom-scrollbar" id="employeeStatusList">
+            <div class="text-center py-3 sm:py-4 text-gray-500 text-xs sm:text-sm">
+                Loading employees...
+            </div>
+        </div>
+    </div>
+</div>
             </div>
 
             <!-- System Users -->
@@ -683,6 +685,96 @@
             <button class="btn-primary" onclick="closeResultModal()" style="width: 100%; margin-top: 12px;">Done</button>
         </div>
     </div>
+
+    <div id="cashInModal" class="modal">
+    <div class="modal-content">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg sm:text-xl font-bold text-gray-800">Cash In</h2>
+            <button onclick="closeCashInModal()" class="w-7 h-7 sm:w-8 sm:h-8 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <div class="space-y-3 sm:space-y-4">
+            <div>
+                <label class="block text-xs sm:text-sm font-semibold text-gray-700 mb-1 sm:mb-2">
+                    Amount <span class="text-red-500 ml-1">*</span>
+                </label>
+                <div class="relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">₱</span>
+                    <input type="number" id="cashInAmount" placeholder="0.00" step="0.01" min="0" class="w-full pl-8 pr-3 py-2 sm:px-4 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all text-sm">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs sm:text-sm font-semibold text-gray-700 mb-1 sm:mb-2">
+                    Reason <span class="text-red-500 ml-1">*</span>
+                </label>
+                <textarea id="cashInReason" placeholder="e.g., Initial capital, Sales revenue, etc." rows="3" class="w-full px-3 py-2 sm:px-4 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all resize-none text-sm"></textarea>
+            </div>
+
+            <div class="bg-gradient-to-r from-emerald-50 to-emerald-100 p-2 sm:p-3 rounded-lg border-2 border-emerald-200">
+                <p class="text-xs sm:text-sm text-emerald-700 font-bold">
+                    <span class="font-extrabold">CASH IN:</span> Add money to the register
+                </p>
+            </div>
+
+            <div class="flex gap-2 sm:gap-3 pt-2">
+                <button onclick="closeCashInModal()" class="flex-1 px-3 py-2 sm:px-4 sm:py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors text-sm">Cancel</button>
+                <button onclick="processCashIn()" class="flex-1 px-3 py-2 sm:px-4 sm:py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all transform hover:scale-105 text-sm">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cash Out Modal -->
+<div id="cashOutModal" class="modal">
+    <div class="modal-content">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg sm:text-xl font-bold text-gray-800">Cash Out</h2>
+            <button onclick="closeCashOutModal()" class="w-7 h-7 sm:w-8 sm:h-8 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <div class="space-y-3 sm:space-y-4">
+            <div>
+                <label class="block text-xs sm:text-sm font-semibold text-gray-700 mb-1 sm:mb-2">
+                    Amount <span class="text-red-500 ml-1">*</span>
+                </label>
+                <div class="relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">₱</span>
+                    <input type="number" id="cashOutAmount" placeholder="0.00" step="0.01" min="0" class="w-full pl-8 pr-3 py-2 sm:px-4 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all text-sm">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs sm:text-sm font-semibold text-gray-700 mb-1 sm:mb-2">
+                    Reason <span class="text-red-500 ml-1">*</span>
+                </label>
+                <textarea id="cashOutReason" placeholder="e.g., Bank deposit, Expense payment, etc." rows="3" class="w-full px-3 py-2 sm:px-4 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all resize-none text-sm"></textarea>
+            </div>
+
+            <div class="bg-gradient-to-r from-orange-50 to-orange-100 p-2 sm:p-3 rounded-lg border-2 border-orange-200">
+                <p class="text-xs sm:text-sm text-orange-700 font-bold">
+                    <span class="font-extrabold">CASH OUT:</span> Remove money from the register
+                </p>
+            </div>
+
+            <div class="flex gap-2 sm:gap-3 pt-2">
+                <button onclick="closeCashOutModal()" class="flex-1 px-3 py-2 sm:px-4 sm:py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors text-sm">Cancel</button>
+                <button onclick="processCashOut()" class="flex-1 px-3 py-2 sm:px-4 sm:py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all transform hover:scale-105 text-sm">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
     <!-- Pass PHP user data to JavaScript -->
     <script>

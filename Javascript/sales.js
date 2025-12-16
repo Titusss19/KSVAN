@@ -534,7 +534,9 @@ class SalesReport {
   // ============================================
   // RENDER SALES TABLE
   // ============================================
-  renderSalesTable() {
+// Updated renderSalesTable() function with merged Cashier/Payment column
+
+renderSalesTable() {
     const tbody = document.getElementById("salesTableBody");
     const emptyState = document.getElementById("salesEmptyState");
 
@@ -560,35 +562,44 @@ class SalesReport {
                         : ""
                     }
                 </td>
-                <td class="px-3 py-1 text-sm text-gray-600">
-                    ${this.formatDateTime(order.created_at)}
-                </td>
-                <td class="px-6 py-4 text-sm text-gray-700 max-w-xs">
-                    <div class="line-clamp-2" title="${this.formatProductNames(
-                      order
-                    )}">
-                        ${this.formatProductNames(order)}
+                <td class="px-6 py-4 text-sm text-gray-600">
+                    <div class="flex flex-col">
+                        <span class="font-medium text-gray-900">${this.formatDate(order.created_at)}</span>
+                        <span class="text-xs text-gray-500">${this.formatTimeOnly(order.created_at)}</span>
                     </div>
                 </td>
-                <td class="px-6 py-4 text-sm font-semibold text-gray-900 text-right">
-                    ₱${parseFloat(order.total).toFixed(2)}
+                <td class="px-6 py-4 order-details-cell">
+                    <div class="space-y-1">
+                        <div class="products-list">
+                            ${this.formatProductNames(order)}
+                        </div>
+                        <div class="order-meta">
+                            <span class="amount">₱${parseFloat(order.total).toFixed(2)}</span>
+                            <span class="order-type-badge ${this.getOrderTypeClass(order.orderType)}">
+                                ${order.orderType}
+                            </span>
+                        </div>
+                    </div>
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-600 text-right">
-                    ₱${parseFloat(order.paidAmount).toFixed(2)}
-                </td>
-                <td class="px-6 py-4 text-sm text-gray-600 text-right">
-                    ₱${parseFloat(order.changeAmount).toFixed(2)}
-                </td>
-                <td class="px-6 py-4 text-sm font-medium text-gray-700">
-                    ${order.cashier_name || order.cashier_email || "Unknown"}
+                <td class="px-6 py-4">
+                    <div class="space-y-1">
+                        <div class="text-sm font-medium text-gray-700">
+                            ${order.cashier_name || order.cashier_email || "Unknown"}
+                        </div>
+                        <div class="flex items-center gap-3 text-xs text-gray-600">
+                            <div>
+                                <span class="text-gray-500">Paid: <br></span>
+                                <span class="font-semibold text-green-600">₱${parseFloat(order.paidAmount).toFixed(2)}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Change: <br></span>
+                                <span class="font-semibold text-blue-600">₱${parseFloat(order.changeAmount).toFixed(2)}</span>
+                            </div>
+                        </div>
+                    </div>
                 </td>
                 <td class="px-6 py-4 text-center">
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-small text-black">
-                        ${order.orderType}
-                    </span>
-                </td>
-                <td class="px-6 py-4 text-center">
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-small text-black">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${this.getPaymentMethodClass(order.payment_method)}">
                         ${order.payment_method || "Cash"}
                     </span>
                 </td>
@@ -614,12 +625,30 @@ class SalesReport {
         `
       )
       .join("");
+}
+
+  getOrderTypeClass(orderType) {
+    if (orderType === "Dine In") return "order-type-dinein";
+    if (orderType === "Take Out") return "order-type-takeout";
+    if (orderType === "Delivery") return "order-type-delivery";
+    return "order-type-dinein"; // default
+  }
+
+  // Helper method to get payment method CSS class
+  getPaymentMethodClass(paymentMethod) {
+    const method = (paymentMethod || "Cash").toLowerCase();
+    if (method.includes("cash")) return "bg-green-100 text-green-800";
+    if (method.includes("gcash")) return "bg-blue-100 text-blue-800";
+    if (method.includes("grab")) return "bg-purple-100 text-purple-800";
+    return "bg-gray-100 text-gray-800";
   }
 
   // ============================================
   // RENDER CASHIER TABLE
   // ============================================
-  renderCashierTable() {
+ // Replace your renderCashierTable() method with this merged version:
+
+renderCashierTable() {
     const tbody = document.getElementById("cashierTableBody");
     const emptyState = document.getElementById("cashierEmptyState");
 
@@ -649,39 +678,54 @@ class SalesReport {
                 <td class="px-6 py-4 text-sm font-medium text-gray-900">
                     ${session.username || session.user_email || "Unknown"}
                 </td>
+                
+                <!-- MERGED: Session Period (Login + Logout Time) -->
                 <td class="px-6 py-4 text-sm text-gray-600">
-                    ${this.formatDateTime(session.login_time)}
+                    <div class="flex flex-col space-y-1">
+                        <span class="font-medium text-gray-900">${this.formatDate(session.login_time)}</span>
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="text-green-600 font-semibold">${this.formatTimeOnly(session.login_time)}</span>
+                            <span class="text-gray-400">→</span>
+                            <span class="${session.logout_time ? 'text-red-600 font-semibold' : 'text-orange-500 font-medium'}">
+                                ${session.logout_time ? this.formatTimeOnly(session.logout_time) : 'Still Active'}
+                            </span>
+                        </div>
+                    </div>
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-600">
-                    ${
-                      session.logout_time
-                        ? this.formatDateTime(session.logout_time)
-                        : '<span class="text-orange-500 font-medium">Still Active</span>'
-                    }
-                </td>
+                
                 <td class="px-6 py-4 text-sm text-gray-700 text-center">
                     ${session.session_duration}
                 </td>
-                <td class="px-6 py-4 text-sm font-semibold text-gray-900 text-right">
-                    ₱${parseFloat(session.start_gross_sales).toFixed(2)}
+                
+                <!-- MERGED: Sales Summary (Start + End + Session + Discount + Void) -->
+                <td class="px-6 py-4">
+                    <div class="space-y-1 text-xs">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-500">Start:</span>
+                            <span class="font-semibold text-gray-700">₱${parseFloat(session.start_gross_sales).toFixed(2)}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-500">End:</span>
+                            <span class="font-semibold text-gray-700">₱${parseFloat(session.end_gross_sales).toFixed(2)}</span>
+                        </div>
+                        <div class="flex justify-between items-center pt-1 border-t border-gray-200">
+                            <span class="text-green-700 font-medium">Session:</span>
+                            <span class="font-bold text-green-600">₱${parseFloat(session.session_sales).toFixed(2)}</span>
+                        </div>
+                        <div class="flex justify-between items-center pt-1 border-t border-gray-200">
+                            <span class="text-blue-600">Discount:</span>
+                            <span class="font-semibold text-blue-600">₱${parseFloat(session.total_discount).toFixed(2)}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-red-600">Void:</span>
+                            <span class="font-semibold text-red-600">
+                                ₱${parseFloat(session.total_void).toFixed(2)}
+                                ${session.void_count > 0 ? `<span class="text-xs ml-1">(${session.void_count})</span>` : ''}
+                            </span>
+                        </div>
+                    </div>
                 </td>
-                <td class="px-6 py-4 text-sm font-semibold text-gray-900 text-right">
-                    ₱${parseFloat(session.end_gross_sales).toFixed(2)}
-                </td>
-                <td class="px-6 py-4 text-sm font-semibold text-green-600 text-right">
-                    ₱${parseFloat(session.session_sales).toFixed(2)}
-                </td>
-                <td class="px-6 py-4 text-sm font-semibold text-blue-600 text-right">
-                    ₱${parseFloat(session.total_discount).toFixed(2)}
-                </td>
-                <td class="px-6 py-4 text-sm font-semibold text-red-600 text-right">
-                    ₱${parseFloat(session.total_void).toFixed(2)}
-                    ${
-                      session.void_count > 0
-                        ? `<br><span class="text-xs">(${session.void_count})</span>`
-                        : ""
-                    }
-                </td>
+                
                 <td class="px-4 py-2 text-center">
                     <button onclick="salesReport.viewCashierDetails(${
                       session.id
@@ -693,12 +737,14 @@ class SalesReport {
         `
       )
       .join("");
-  }
+}
 
   // ============================================
   // RENDER VOID TABLE
   // ============================================
-  renderVoidTable() {
+// Replace your renderVoidTable() method with this merged version:
+
+renderVoidTable() {
     const tbody = document.getElementById("voidTableBody");
     const emptyState = document.getElementById("voidEmptyState");
 
@@ -729,37 +775,64 @@ class SalesReport {
                 `
                     : ""
                 }
-                <td class="px-6 py-4 text-sm text-gray-600">
-                    ${
-                      order.voided_at
-                        ? this.formatDateTime(order.voided_at)
-                        : "N/A"
-                    }
-                </td>
-                <td class="px-6 py-4 text-sm text-gray-600">
-                    ${this.formatDateTime(order.created_at)}
-                </td>
-                <td class="px-6 py-4 text-sm text-gray-700 max-w-xs">
-                    <div class="line-clamp-2" title="${this.formatProductNames(
-                      order
-                    )}">
-                        ${this.formatProductNames(order)}
+                
+                <!-- MERGED: Transaction Dates (Void Date + Original Date) -->
+                <td class="px-6 py-4">
+                    <div class="space-y-1 text-xs">
+                        <div class="flex flex-col">
+                            <span class="text-red-600 font-semibold">Voided:</span>
+                            <span class="text-gray-700">${
+                              order.voided_at
+                                ? this.formatDate(order.voided_at)
+                                : "N/A"
+                            }</span>
+                            <span class="text-gray-500">${
+                              order.voided_at
+                                ? this.formatTimeOnly(order.voided_at)
+                                : ""
+                            }</span>
+                        </div>
+                        <div class="flex flex-col pt-2 border-t border-gray-200">
+                            <span class="text-gray-600 font-semibold">Original:</span>
+                            <span class="text-gray-700">${this.formatDate(order.created_at)}</span>
+                            <span class="text-gray-500">${this.formatTimeOnly(order.created_at)}</span>
+                        </div>
                     </div>
                 </td>
-                <td class="px-6 py-4 text-sm font-semibold text-gray-900 text-right">
-                    ₱${parseFloat(order.total).toFixed(2)}
+                
+                <!-- MERGED: Order Details (Products + Amount + Order Type) -->
+                <td class="px-6 py-4">
+                    <div class="space-y-1">
+                        <div class="text-sm text-gray-700 max-w-xs">
+                            <div class="line-clamp-2" title="${this.formatProductNames(order)}">
+                                ${this.formatProductNames(order)}
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 text-xs pt-1">
+                            <span class="font-bold text-red-600">₱${parseFloat(order.total).toFixed(2)}</span>
+                            <span class="text-gray-400">•</span>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                                ${order.orderType}
+                            </span>
+                        </div>
+                    </div>
                 </td>
-                <td class="px-6 py-4 text-center">
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-black">
-                        ${order.orderType}
-                    </span>
+                
+                <!-- MERGED: Personnel (Cashier + Voided By) -->
+                <td class="px-6 py-4">
+                    <div class="space-y-1 text-xs">
+                        <div class="flex flex-col">
+                            <span class="text-gray-500">Cashier:</span>
+                            <span class="text-gray-900 font-medium">${order.cashier_name || order.cashier_email || "Unknown"}</span>
+                        </div>
+                        <div class="flex flex-col pt-2 border-t border-gray-200">
+                            <span class="text-gray-500">Voided by:</span>
+                            <span class="text-red-600 font-medium">${order.voided_by || "Admin"}</span>
+                        </div>
+                    </div>
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-700">
-                    ${order.cashier_name || order.cashier_email || "Unknown"}
-                </td>
-                <td class="px-6 py-4 text-sm text-gray-700">
-                    ${order.voided_by || "Admin"}
-                </td>
+                
+                <!-- Void Reason -->
                 <td class="px-6 py-4 text-sm text-gray-700">
                     <div class="max-w-xs">
                         ${
@@ -769,6 +842,7 @@ class SalesReport {
                         }
                     </div>
                 </td>
+                
                 <td class="px-4 py-2 text-center">
                     <button onclick="salesReport.viewReceipt(${
                       order.id
@@ -780,7 +854,7 @@ class SalesReport {
         `
       )
       .join("");
-  }
+}
 
   // ============================================
   // UPDATE PAGINATION
@@ -3332,11 +3406,7 @@ renderCashoutTable() {
       </td>
       <td class="px-6 py-4 text-center">
         <div class="flex gap-2 justify-center">
-          <button onclick="salesReport.viewCashierDetails(${record.cashier_session_id})" 
-                  class="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                  title="View Session">
-            <i class="fas fa-external-link-alt"></i>
-          </button>
+          
           <button onclick="salesReport.showEditCashoutModal(${record.id})" 
                   class="text-green-600 hover:text-green-800 text-sm font-medium"
                   title="Edit Record">
@@ -3347,6 +3417,73 @@ renderCashoutTable() {
     </tr>
   `).join('');
 }
+
+formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-PH", {
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+    });
+}
+
+formatTimeOnly(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("en-PH", {
+        hour: "2-digit",
+        minute: "2-digit"
+    });
+}
+
+}
+
+function populateSalesTable(salesData) {
+    const tbody = document.getElementById('salesTableBody');
+    tbody.innerHTML = '';
+    
+    salesData.forEach((sale, index) => {
+        const row = document.createElement('tr');
+        row.className = 'border-b border-gray-200 hover:bg-gray-50';
+        
+        // Format products list
+        const productsText = sale.products.map(p => 
+            `${p.name} (${p.quantity}x)`
+        ).join(', ');
+        
+        // Determine order type class
+        let orderTypeClass = 'order-type-dinein';
+        if (sale.order_type === 'Take Out') orderTypeClass = 'order-type-takeout';
+        if (sale.order_type === 'Delivery') orderTypeClass = 'order-type-delivery';
+        
+        row.innerHTML = `
+            <td class="py-4 px-6 text-sm text-gray-900">${index + 1}</td>
+            <td class="py-4 px-6 text-sm text-gray-900">${sale.date_time}</td>
+            <td class="py-4 px-6 order-details-cell">
+                <div class="space-y-1">
+                    <div class="products-list">${productsText}</div>
+                    <div class="order-meta">
+                        <span class="amount">₱${parseFloat(sale.total).toFixed(2)}</span>
+                        <span class="order-type-badge ${orderTypeClass}">${sale.order_type}</span>
+                    </div>
+                </div>
+            </td>
+            <td class="py-4 px-6 text-sm text-right text-gray-900">₱${parseFloat(sale.paid).toFixed(2)}</td>
+            <td class="py-4 px-6 text-sm text-right text-gray-900">₱${parseFloat(sale.change).toFixed(2)}</td>
+            <td class="py-4 px-6 text-sm text-gray-900">${sale.cashier}</td>
+            <td class="py-4 px-6">
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    ${sale.payment_method}
+                </span>
+            </td>
+            <td class="py-4 px-6 text-center">
+                <button onclick="viewReceipt(${sale.id})" class="text-red-600 hover:text-red-800">
+                    <i class="fas fa-receipt"></i>
+                </button>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+    });
 }
 
 // Initialize when page loads

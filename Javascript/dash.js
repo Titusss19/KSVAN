@@ -123,6 +123,288 @@ function updateLiveClock() {
   }
 }
 
+// ===== CASH IN/OUT MODAL FUNCTIONS =====
+
+/**
+ * Opens the Cash In modal and resets form fields
+ */
+function openCashInModal() {
+    const modal = document.getElementById('cashInModal');
+    if (modal) {
+        modal.classList.add('active');
+        
+        // Reset form fields
+        const amountInput = document.getElementById('cashInAmount');
+        const reasonInput = document.getElementById('cashInReason');
+        
+        if (amountInput) amountInput.value = '';
+        if (reasonInput) reasonInput.value = '';
+        
+        // Focus on amount input after a short delay
+        setTimeout(() => {
+            if (amountInput) amountInput.focus();
+        }, 100);
+    }
+}
+
+/**
+ * Closes the Cash In modal
+ */
+function closeCashInModal() {
+    const modal = document.getElementById('cashInModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+/**
+ * Processes the Cash In transaction
+ * Validates input and sends to backend API
+ */
+async function processCashIn() {
+    const amountInput = document.getElementById('cashInAmount');
+    const reasonInput = document.getElementById('cashInReason');
+    
+    if (!amountInput || !reasonInput) {
+        showFeedback('Error', 'Form elements not found', 'error');
+        return;
+    }
+    
+    const amount = parseFloat(amountInput.value);
+    const reason = reasonInput.value.trim();
+
+    // Validation
+    if (!amount || amount <= 0) {
+        showFeedback('Error', 'Please enter a valid amount', 'error');
+        return;
+    }
+
+    if (!reason) {
+        showFeedback('Error', 'Please enter a reason for cash in', 'error');
+        return;
+    }
+
+    try {
+        // Call the API using your existing apiCall function
+        const result = await apiCall('cashIn', {
+            amount: amount,
+            type: 'deposit',
+            reason: reason,
+            branch: appState.user.branch || 'main',
+            user_id: appState.user.id
+        });
+
+        if (result.success) {
+            showFeedback(
+                'Cash In Successful', 
+                `₱${amount.toFixed(2)} has been added to the register.`,
+                'success'
+            );
+            
+            closeCashInModal();
+            
+            // Refresh dashboard data to reflect new cash transaction
+            refreshAll();
+            
+            // Optional: Log the transaction for debugging
+            console.log('Cash In Transaction:', {
+                amount: amount,
+                reason: reason,
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            showFeedback(
+                'Error', 
+                result.message || 'Failed to process cash in',
+                'error'
+            );
+        }
+    } catch (error) {
+        console.error('Cash In Error:', error);
+        showFeedback(
+            'Error', 
+            'Network error. Please try again.',
+            'error'
+        );
+    }
+}
+
+/**
+ * Opens the Cash Out modal and resets form fields
+ */
+function openCashOutModal() {
+    const modal = document.getElementById('cashOutModal');
+    if (modal) {
+        modal.classList.add('active');
+        
+        // Reset form fields
+        const amountInput = document.getElementById('cashOutAmount');
+        const reasonInput = document.getElementById('cashOutReason');
+        
+        if (amountInput) amountInput.value = '';
+        if (reasonInput) reasonInput.value = '';
+        
+        // Focus on amount input after a short delay
+        setTimeout(() => {
+            if (amountInput) amountInput.focus();
+        }, 100);
+    }
+}
+
+/**
+ * Closes the Cash Out modal
+ */
+function closeCashOutModal() {
+    const modal = document.getElementById('cashOutModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+/**
+ * Processes the Cash Out transaction
+ * Validates input and sends to backend API
+ */
+async function processCashOut() {
+    const amountInput = document.getElementById('cashOutAmount');
+    const reasonInput = document.getElementById('cashOutReason');
+    
+    if (!amountInput || !reasonInput) {
+        showFeedback('Error', 'Form elements not found', 'error');
+        return;
+    }
+    
+    const amount = parseFloat(amountInput.value);
+    const reason = reasonInput.value.trim();
+
+    // Validation
+    if (!amount || amount <= 0) {
+        showFeedback('Error', 'Please enter a valid amount', 'error');
+        return;
+    }
+
+    if (!reason) {
+        showFeedback('Error', 'Please enter a reason for cash out', 'error');
+        return;
+    }
+
+    try {
+        // Call the API using your existing apiCall function
+        const result = await apiCall('cashOut', {
+            amount: amount,
+            type: 'withdrawal',
+            reason: reason,
+            branch: appState.user.branch || 'main',
+            user_id: appState.user.id
+        });
+
+        if (result.success) {
+            showFeedback(
+                'Cash Out Successful', 
+                `₱${amount.toFixed(2)} has been removed from the register.`,
+                'success'
+            );
+            
+            closeCashOutModal();
+            
+            // Refresh dashboard data to reflect new cash transaction
+            refreshAll();
+            
+            // Optional: Log the transaction for debugging
+            console.log('Cash Out Transaction:', {
+                amount: amount,
+                reason: reason,
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            showFeedback(
+                'Error', 
+                result.message || 'Failed to process cash out',
+                'error'
+            );
+        }
+    } catch (error) {
+        console.error('Cash Out Error:', error);
+        showFeedback(
+            'Error', 
+            'Network error. Please try again.',
+            'error'
+        );
+    }
+}
+
+/**
+ * Optional: Get cash transactions list with filters
+ * @param {Object} filters - Filter options (branch, start_date, end_date, type)
+ * @returns {Promise<Object|null>} Transaction data or null if failed
+ */
+async function getCashTransactions(filters = {}) {
+    try {
+        const result = await apiCall('getCashTransactions', {
+            branch: filters.branch || appState.selectedBranch,
+            start_date: filters.start_date || new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0],
+            end_date: filters.end_date || new Date().toISOString().split('T')[0],
+            type: filters.type || 'all' // 'all', 'deposit', 'withdrawal'
+        });
+
+        if (result.success) {
+            console.log('Cash Transactions:', result.data);
+            console.log('Summary:', result.summary);
+            return result;
+        } else {
+            console.error('Failed to get transactions:', result.message);
+            return null;
+        }
+    } catch (error) {
+        console.error('Get Transactions Error:', error);
+        return null;
+    }
+}
+
+/**
+ * Optional: Get cash summary for dashboard display
+ * @param {string} period - 'today', 'week', 'month', 'all'
+ * @param {string} branch - Branch name or 'all'
+ * @returns {Promise<Object|null>} Summary data or null if failed
+ */
+async function getCashSummary(period = 'today', branch = 'all') {
+    try {
+        const result = await apiCall('getCashSummary', {
+            period: period,
+            branch: branch || appState.selectedBranch
+        });
+
+        if (result.success) {
+            console.log('Cash Summary:', result.data);
+            return result.data;
+        } else {
+            console.error('Failed to get summary:', result.message);
+            return null;
+        }
+    } catch (error) {
+        console.error('Get Summary Error:', error);
+        return null;
+    }
+}
+
+// ===== CLOSE MODALS ON OUTSIDE CLICK =====
+// Add this to your existing window click event listener or create a new one
+window.addEventListener('click', function(event) {
+    const cashInModal = document.getElementById('cashInModal');
+    const cashOutModal = document.getElementById('cashOutModal');
+    
+    // Close cash in modal if clicking outside
+    if (event.target === cashInModal) {
+        closeCashInModal();
+    }
+    
+    // Close cash out modal if clicking outside
+    if (event.target === cashOutModal) {
+        closeCashOutModal();
+    }
+});
+
+
 // ===== API CALL FUNCTION =====
 async function apiCall(action, data = {}, useAttendanceAPI = false) {
   const apiUrl = useAttendanceAPI
@@ -1308,3 +1590,11 @@ window.stopLiveClock = stopLiveClock;
 window.updateLiveClock = updateLiveClock;
 window.loadEmployeeStatus = loadEmployeeStatus;
 
+window.openCashInModal = openCashInModal;
+window.closeCashInModal = closeCashInModal;
+window.processCashIn = processCashIn;
+window.openCashOutModal = openCashOutModal;
+window.closeCashOutModal = closeCashOutModal;
+window.processCashOut = processCashOut;
+window.getCashTransactions = getCashTransactions;
+window.getCashSummary = getCashSummary;

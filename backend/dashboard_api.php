@@ -612,6 +612,292 @@ elseif ($action === 'getEmployees') {
     }
 }
 
+// ===== CASH IN HANDLER =====
+elseif ($action === 'cashIn') {
+    $amount = floatval($_POST['amount'] ?? 0);
+    $reason = trim($_POST['reason'] ?? '');
+    $branch = trim($_POST['branch'] ?? getUserBranch($user));
+    $userId = intval($_POST['user_id'] ?? $user['id'] ?? 0);
+    
+    // Validation
+    if ($amount <= 0) {
+        echo formatResponse(false, 'Amount must be greater than 0');
+        exit();
+    }
+    
+    if (empty($reason)) {
+        echo formatResponse(false, 'Reason is required');
+        exit();
+    }
+    
+    try {
+        // Just insert directly - no session needed!
+        $stmt = $pdo->prepare("
+            INSERT INTO cashout (
+                cashier_session_id,
+                user_id, 
+                branch, 
+                amount, 
+                type, 
+                reason, 
+                created_at
+            ) VALUES (NULL, ?, ?, ?, 'deposit', ?, NOW())
+        ");
+        
+        $stmt->execute([
+            $userId,
+            $branch,
+            $amount,
+            $reason
+        ]);
+        
+        if ($stmt->rowCount() > 0) {
+            $insertId = $pdo->lastInsertId();
+            
+            echo formatResponse(true, 'Cash in recorded successfully', [
+                'id' => $insertId,
+                'amount' => $amount,
+                'type' => 'deposit',
+                'reason' => $reason,
+                'branch' => $branch,
+                'user_id' => $userId,
+                'created_at' => date('Y-m-d H:i:s')
+            ]);
+        } else {
+            echo formatResponse(false, 'Failed to record cash in');
+        }
+        
+    } catch (PDOException $e) {
+        error_log("Cash In Error: " . $e->getMessage());
+        echo formatResponse(false, 'Database error: ' . $e->getMessage());
+    }
+}
+
+// ===== CASH OUT HANDLER =====
+elseif ($action === 'cashOut') {
+    $amount = floatval($_POST['amount'] ?? 0);
+    $reason = trim($_POST['reason'] ?? '');
+    $branch = trim($_POST['branch'] ?? getUserBranch($user));
+    $userId = intval($_POST['user_id'] ?? $user['id'] ?? 0);
+    
+    // Validation
+    if ($amount <= 0) {
+        echo formatResponse(false, 'Amount must be greater than 0');
+        exit();
+    }
+    
+    if (empty($reason)) {
+        echo formatResponse(false, 'Reason is required');
+        exit();
+    }
+    
+    try {
+        // Just insert directly - no session needed!
+        $stmt = $pdo->prepare("
+            INSERT INTO cashout (
+                cashier_session_id,
+                user_id, 
+                branch, 
+                amount, 
+                type, 
+                reason, 
+                created_at
+            ) VALUES (NULL, ?, ?, ?, 'withdrawal', ?, NOW())
+        ");
+        
+        $stmt->execute([
+            $userId,
+            $branch,
+            $amount,
+            $reason
+        ]);
+        
+        if ($stmt->rowCount() > 0) {
+            $insertId = $pdo->lastInsertId();
+            
+            echo formatResponse(true, 'Cash out recorded successfully', [
+                'id' => $insertId,
+                'amount' => $amount,
+                'type' => 'withdrawal',
+                'reason' => $reason,
+                'branch' => $branch,
+                'user_id' => $userId,
+                'created_at' => date('Y-m-d H:i:s')
+            ]);
+        } else {
+            echo formatResponse(false, 'Failed to record cash out');
+        }
+        
+    } catch (PDOException $e) {
+        error_log("Cash Out Error: " . $e->getMessage());
+        echo formatResponse(false, 'Database error: ' . $e->getMessage());
+    }
+}
+
+// ===== GET CASH TRANSACTIONS (OPTIONAL - FOR REPORTS) =====
+elseif ($action === 'getCashTransactions') {
+    $selectedBranch = $_POST['branch'] ?? 'all';
+    $startDate = $_POST['start_date'] ?? date('Y-m-d', strtotime('-30 days'));
+    $endDate = $_POST['end_date'] ?? date('Y-m-d');
+    $type = $_POST['type'] ?? 'all'; // 'all', 'deposit', 'withdrawal'
+    $userBranch = getUserBranch($user);
+    $userRole = $user['role'] ?? 'cashier';
+    
+    try {
+        $query = "
+            SELECT 
+                c.*,
+                u.username,
+                u.email
+            FROM cashout c
+            LEFT JOIN users u ON c.user_id = u.id
+            WHERE DATE(c.created_at) BETWEEN ? AND ?
+        ";
+        
+        $params = [$startDate, $endDate];
+        
+        // Apply branch filter
+        if ($userRole === 'admin' || $userRole === 'owner') {
+            if ($selectedBranch !== 'all') {
+                $query .= " AND c.branch = ?";
+                $params[] = $selectedBranch;
+            }
+        } else {
+            $query .= " AND c.branch = ?";
+            $params[] = $userBranch;
+        }
+        
+        // Apply type filter
+        if ($type !== 'all') {
+            $query .= " AND c.type = ?";
+            $params[] = $type;
+        }
+        
+        $query .= " ORDER BY c.created_at DESC LIMIT 100";
+        
+        $stmt = $pdo->prepare($query);
+        $stmt->execute($params);
+        $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Calculate summary
+        $totalDeposits = 0;
+        $totalWithdrawals = 0;
+        
+        foreach ($transactions as $row) {
+            if ($row['type'] === 'deposit') {
+                $totalDeposits += floatval($row['amount']);
+            } else {
+                $totalWithdrawals += floatval($row['amount']);
+            }
+        }
+        
+        echo json_encode([
+            'success' => true,
+            'data' => $transactions,
+            'summary' => [
+                'total_deposits' => $totalDeposits,
+                'total_withdrawals' => $totalWithdrawals,
+                'net_amount' => $totalDeposits - $totalWithdrawals,
+                'count' => count($transactions)
+            ]
+        ]);
+        
+    } catch (PDOException $e) {
+        error_log("Get Cash Transactions Error: " . $e->getMessage());
+        echo formatResponse(false, 'Failed to retrieve transactions: ' . $e->getMessage());
+    }
+}
+
+// ===== GET CASH SUMMARY (OPTIONAL - FOR DASHBOARD STATS) =====
+elseif ($action === 'getCashSummary') {
+    $selectedBranch = $_POST['branch'] ?? 'all';
+    $period = $_POST['period'] ?? 'today'; // 'today', 'week', 'month', 'all'
+    $userBranch = getUserBranch($user);
+    $userRole = $user['role'] ?? 'cashier';
+    
+    try {
+        // Build date condition
+        $dateCondition = "";
+        switch ($period) {
+            case 'today':
+                $dateCondition = "DATE(created_at) = CURDATE()";
+                break;
+            case 'week':
+                $dateCondition = "created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
+                break;
+            case 'month':
+                $dateCondition = "created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
+                break;
+            default:
+                $dateCondition = "1=1";
+        }
+        
+        $query = "
+            SELECT 
+                type,
+                COUNT(*) as count,
+                SUM(amount) as total,
+                AVG(amount) as average
+            FROM cashout
+            WHERE $dateCondition
+        ";
+        
+        $params = [];
+        
+        // Apply branch filter
+        if ($userRole === 'admin' || $userRole === 'owner') {
+            if ($selectedBranch !== 'all') {
+                $query .= " AND branch = ?";
+                $params[] = $selectedBranch;
+            }
+        } else {
+            $query .= " AND branch = ?";
+            $params[] = $userBranch;
+        }
+        
+        $query .= " GROUP BY type";
+        
+        $stmt = $pdo->prepare($query);
+        $stmt->execute($params);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Build summary
+        $summary = [
+            'deposits' => ['count' => 0, 'total' => 0, 'average' => 0],
+            'withdrawals' => ['count' => 0, 'total' => 0, 'average' => 0]
+        ];
+        
+        foreach ($results as $row) {
+            if ($row['type'] === 'deposit') {
+                $summary['deposits'] = [
+                    'count' => intval($row['count']),
+                    'total' => floatval($row['total']),
+                    'average' => floatval($row['average'])
+                ];
+            } else {
+                $summary['withdrawals'] = [
+                    'count' => intval($row['count']),
+                    'total' => floatval($row['total']),
+                    'average' => floatval($row['average'])
+                ];
+            }
+        }
+        
+        $summary['net_cash_flow'] = $summary['deposits']['total'] - $summary['withdrawals']['total'];
+        
+        echo json_encode([
+            'success' => true,
+            'data' => $summary,
+            'period' => $period,
+            'branch' => $selectedBranch !== 'all' ? $selectedBranch : $userBranch
+        ]);
+        
+    } catch (PDOException $e) {
+        error_log("Get Cash Summary Error: " . $e->getMessage());
+        echo formatResponse(false, 'Failed to generate summary: ' . $e->getMessage());
+    }
+}
+
 // ===== DEFAULT RESPONSE =====
 else {
     echo formatResponse(false, 'Invalid action');

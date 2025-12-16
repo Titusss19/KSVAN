@@ -1,3 +1,4 @@
+/* css/pos.css */
 /* Modal Overlay - FIXED CENTER */
 .modal {
     display: none;
@@ -6,7 +7,9 @@
     background-color: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(4px);
     z-index: 50;
-    padding: 1rem;
+    padding: 0.5rem;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .modal.active {
@@ -18,12 +21,13 @@
 /* Modal Content */
 .modal-content {
     background: white;
-    border-radius: 1.5rem;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    border-radius: 1rem;
+    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.25);
     width: 100%;
     max-width: 28rem;
     animation: fadeIn 0.3s ease-out;
     overflow: hidden;
+    margin: auto;
 }
 
 /* Animation */
@@ -40,7 +44,7 @@
 
 /* Size Variants */
 .modal-content.large {
-    max-width: 42rem;
+    max-width: 90%;
     max-height: 90vh;
     overflow-y: auto;
 }
@@ -55,21 +59,22 @@
 
 /* Modal Header */
 .modal-header {
-    padding: 1.5rem;
+    padding: 1.25rem;
 }
 
 /* Modal Body */
 .modal-body {
-    padding: 1.5rem;
-    max-height: 24rem;
+    padding: 1.25rem;
+    max-height: 60vh;
     overflow-y: auto;
 }
 
 /* Modal Footer */
 .modal-footer {
-    padding: 1.25rem;
+    padding: 1rem;
     display: flex;
-    gap: 0.75rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
     border-top: 2px solid #f3f4f6;
 }
 
@@ -99,17 +104,28 @@
 /* Lock Body Scroll */
 body.modal-open {
     overflow: hidden !important;
+    position: fixed;
+    width: 100%;
 }
 
 /* Tablet & Mobile Responsive */
 @media (max-width: 768px) {
     .modal {
-        padding: 0.75rem;
+        padding: 0.5rem;
+        align-items: flex-start;
+        padding-top: 2rem;
     }
     
     .modal-content {
         max-width: 95%;
+        max-height: 85vh;
         font-size: 0.875rem;
+        margin: 0 auto;
+    }
+    
+    .modal-content.large {
+        max-width: 98%;
+        max-height: 90vh;
     }
     
     .modal-header,
@@ -119,29 +135,38 @@ body.modal-open {
     }
     
     .modal-body {
-        max-height: 60vh;
+        max-height: 50vh;
+    }
+    
+    .modal-footer {
+        flex-direction: column;
+    }
+    
+    .modal-footer button {
+        width: 100%;
     }
 }
 
 @media (max-width: 480px) {
     .modal {
-        padding: 0.5rem;
+        padding: 0.25rem;
+        padding-top: 1rem;
     }
     
     .modal-content {
         max-width: 98%;
-        border-radius: 1rem;
+        border-radius: 0.75rem;
         font-size: 0.8rem;
     }
     
     .modal-header,
     .modal-body,
     .modal-footer {
-        padding: 0.875rem;
+        padding: 0.75rem;
     }
     
     .modal-body {
-        max-height: 55vh;
+        max-height: 50vh;
     }
 }
 
@@ -149,14 +174,221 @@ body.modal-open {
     .modal-body {
         max-height: 50vh;
     }
+    
+    .modal-content {
+        max-height: 85vh;
+    }
 }
 
 @media (max-height: 600px) {
     .modal-content {
         max-height: 90vh;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
     }
     
     .modal-body {
-        max-height: 45vh;
+        max-height: 40vh;
     }
 }
+
+/* Responsive table for order items */
+@media (max-width: 640px) {
+    #cartContainer .cart-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        padding: 0.75rem;
+    }
+    
+    #cartContainer .cart-item > div {
+        width: 100%;
+    }
+    
+    #cartContainer .cart-item-controls {
+        justify-content: space-between;
+        width: 100%;
+    }
+}
+
+/* Responsive product cards */
+@media (max-width: 768px) {
+    .product-card {
+        padding: 0.75rem;
+    }
+    
+    .product-card img {
+        height: 120px;
+    }
+}
+
+@media (max-width: 480px) {
+    .product-card {
+        padding: 0.5rem;
+    }
+    
+    .product-card img {
+        height: 100px;
+    }
+}
+
+/* Touch-friendly improvements */
+button, 
+.payment-method-btn,
+#searchInput,
+#paymentInput {
+    min-height: 44px;
+}
+
+@media (max-width: 768px) {
+    button, 
+    .payment-method-btn {
+        min-height: 40px;
+    }
+}
+
+/* Better touch targets for mobile */
+@media (max-width: 640px) {
+    .grid-cols-3 button,
+    .grid-cols-2 button {
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+}
+
+/* Prevent text zoom on iOS */
+@media screen and (max-width: 768px) {
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+        font-size: 16px;
+    }
+}
+
+/* Category buttons scroll improvement */
+#categoryButtons {
+    scrollbar-width: thin;
+    scrollbar-color: #dc2626 #f1f1f1;
+}
+
+#categoryButtons::-webkit-scrollbar {
+    height: 4px;
+}
+
+#categoryButtons::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 2px;
+}
+
+#categoryButtons::-webkit-scrollbar-thumb {
+    background: #dc2626;
+    border-radius: 2px;
+}
+
+/* Fix for iOS input styling */
+input, textarea, select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border-radius: 0.75rem;
+}
+
+/* Fix for iOS modal positioning */
+@supports (-webkit-touch-callout: none) {
+    .modal {
+        align-items: flex-start;
+        padding-top: env(safe-area-inset-top);
+    }
+    
+    .modal-content {
+        margin-top: env(safe-area-inset-top);
+        margin-bottom: env(safe-area-inset-bottom);
+    }
+}
+
+    @media (max-width: 1024px) {
+            .lg\:flex-row {
+                flex-direction: column !important;
+            }
+            .lg\:w-2\/3, .lg\:w-1\/3 {
+                width: 100% !important;
+            }
+            .border-r {
+                border-right: none !important;
+                border-bottom: 1px solid #e5e7eb !important;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .xl\:grid-cols-3 {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+            .grid-cols-2 {
+                grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+            }
+            .text-3xl {
+                font-size: 1.75rem !important;
+            }
+            .text-2xl {
+                font-size: 1.5rem !important;
+            }
+        }
+        
+        @media (max-width: 640px) {
+            .xl\:grid-cols-3, .sm\:grid-cols-2 {
+                grid-template-columns: 1fr !important;
+            }
+            .grid-cols-3 {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+            .flex-col.md\:flex-row {
+                flex-direction: column !important;
+            }
+            .text-3xl {
+                font-size: 1.5rem !important;
+            }
+            .p-6 {
+                padding: 1rem !important;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .grid-cols-3, .grid-cols-2 {
+                grid-template-columns: 1fr !important;
+            }
+            .gap-5 {
+                gap: 0.75rem !important;
+            }
+            .py-3 {
+                padding-top: 0.5rem !important;
+                padding-bottom: 0.5rem !important;
+            }
+            .px-8 {
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+            }
+            .text-lg {
+                font-size: 0.875rem !important;
+            }
+        }
+        
+        /* Prevent horizontal scroll */
+        body, html {
+            overflow-x: hidden !important;
+            max-width: 100vw !important;
+        }
+        
+        /* Better scrolling on mobile */
+        .overflow-y-auto {
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        /* Touch-friendly button sizes */
+        @media (max-width: 768px) {
+            button, .payment-method-btn {
+                min-height: 44px !important;
+            }
+        }
+
+        

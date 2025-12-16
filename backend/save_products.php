@@ -1,71 +1,65 @@
 <?php
-// NO whitespace before this line!
 session_start();
-require_once 'config/database.php'; // FIXED: was 'config/database.php'
-
-// Clean output buffer
-if (ob_get_level()) ob_end_clean();
-ob_start();
+require_once 'config/database.php';  // config is inside backend folder
 
 header('Content-Type: application/json; charset=utf-8');
 
-// Disable error display
-ini_set('display_errors', 0);
-error_reporting(E_ALL);
-
 // Check if user is logged in
 if (!isset($_SESSION['user'])) {
-    ob_clean();
     echo json_encode(['success' => false, 'error' => 'Unauthorized']);
     exit();
 }
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    ob_clean();
-    echo json_encode(['success' => false, 'error' => 'Invalid request method']);
-    exit();
-}
-
 try {
+    $user = $_SESSION['user'];
+    
     // Get form data
-    $product_code = strtoupper(trim($_POST['product_code'] ?? ''));
-    $name = trim($_POST['name'] ?? '');
-    $category = trim($_POST['category'] ?? '');
-    $description_type = trim($_POST['description_type'] ?? 'k-street food');
-    $price = floatval($_POST['price'] ?? 0);
-    $image = trim($_POST['image'] ?? '');
-    $branch = trim($_POST['branch'] ?? 'main');
+    $product_code = trim($_POST['product_code']);
+    $name = trim($_POST['name']);
+    $category = trim($_POST['category']);  // Now a text field
+    $description_type = trim($_POST['description_type']);
+    $price = floatval($_POST['price']);
+    $image = trim($_POST['image']);
+    $branch = trim($_POST['branch']);
     
     // Validate required fields
-    if (empty($product_code)) {
-        throw new Exception("Product code is required");
-    }
-    if (empty($name)) {
-        throw new Exception("Product name is required");
-    }
-    if (empty($category)) {
-        throw new Exception("Category is required");
-    }
-    if (empty($image)) {
-        throw new Exception("Image URL is required");
+    if (empty($product_code) || empty($name) || empty($category) || empty($image)) {
+        echo json_encode(['success' => false, 'error' => 'All required fields must be filled']);
+        exit();
     }
     
-    // Check if editing or adding new
+    // Check if editing existing product
     if (isset($_POST['id']) && !empty($_POST['id'])) {
-        // Update existing product
-        $stmt = $pdo->prepare("
-            UPDATE items 
-            SET product_code = :product_code,
-                name = :name,
-                category = :category,
-                description_type = :description_type,
-                price = :price,
-                image = :image,
-                branch = :branch
-            WHERE id = :id
-        ");
+        $id = intval($_POST['id']);
         
-        $stmt->execute([
+        // Check if user has permission to edit this product
+        $checkStmt = $pdo->prepare("SELECT branch FROM items WHERE id = :id");
+        $checkStmt->execute([':id' => $id]);
+        $existingProduct = $checkStmt->fetch();
+        
+        if (!$existingProduct) {
+            echo json_encode(['success' => false, 'error' => 'Product not found']);
+            exit();
+        }
+        
+        // Check permission
+        if ($user['role'] !== 'admin' && $user['role'] !== 'owner' && $existingProduct['branch'] !== $user['branch']) {
+            echo json_encode(['success' => false, 'error' => 'You do not have permission to edit this product']);
+            exit();
+        }
+        
+        // Update product
+        $stmt = $pdo->prepare("UPDATE items SET 
+            product_code = :product_code,
+            name = :name,
+            category = :category,
+            description_type = :description_type,
+            price = :price,
+            image = :image,
+            branch = :branch
+            WHERE id = :id");
+        
+        $success = $stmt->execute([
             ':product_code' => $product_code,
             ':name' => $name,
             ':category' => $category,
@@ -73,41 +67,21 @@ try {
             ':price' => $price,
             ':image' => $image,
             ':branch' => $branch,
-            ':id' => intval($_POST['id'])
+            ':id' => $id
         ]);
         
-        ob_clean();
-        echo json_encode([
-            'success' => true,
-            'message' => 'Product updated successfully',
-            'id' => intval($_POST['id'])
-        ]);
+        if ($success) {
+            echo json_encode(['success' => true, 'message' => 'Product updated successfully']);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Failed to update product']);
+        }
         
     } else {
         // Insert new product
-        $stmt = $pdo->prepare("
-            INSERT INTO items (
-                product_code,
-                name,
-                category,
-                description_type,
-                price,
-                image,
-                branch,
-                created_at
-            ) VALUES (
-                :product_code,
-                :name,
-                :category,
-                :description_type,
-                :price,
-                :image,
-                :branch,
-                NOW()
-            )
-        ");
+        $stmt = $pdo->prepare("INSERT INTO items (product_code, name, category, description_type, price, image, branch) 
+            VALUES (:product_code, :name, :category, :description_type, :price, :image, :branch)");
         
-        $stmt->execute([
+        $success = $stmt->execute([
             ':product_code' => $product_code,
             ':name' => $name,
             ':category' => $category,
@@ -117,25 +91,16 @@ try {
             ':branch' => $branch
         ]);
         
-        ob_clean();
-        echo json_encode([
-            'success' => true,
-            'message' => 'Product added successfully',
-            'id' => intval($pdo->lastInsertId())
-        ]);
+        if ($success) {
+            echo json_encode(['success' => true, 'message' => 'Product added successfully']);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Failed to add product']);
+        }
     }
     
 } catch (PDOException $e) {
-    ob_clean();
-    if ($e->getCode() == 23000) {
-        echo json_encode(['success' => false, 'error' => 'Product code already exists for this branch']);
-    } else {
-        echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);
-    }
+    echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);
 } catch (Exception $e) {
-    ob_clean();
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
-
-ob_end_flush();
-exit();
+?>

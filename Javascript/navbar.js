@@ -164,13 +164,7 @@ class NavbarManager {
     const cancelBtn = document.getElementById("cancel-btn");
     const saveBtn = document.getElementById("save-settings-btn");
 
-    console.log("Setup Account Settings:", {
-      accountBtn,
-      modal,
-      closeBtn,
-      cancelBtn,
-      saveBtn,
-    });
+ 
 
     if (!accountBtn || !modal) {
       console.error("Account settings elements not found!");
@@ -181,7 +175,7 @@ class NavbarManager {
     accountBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      console.log("Opening account settings...");
+     
       this.openAccountSettings();
       this.closeDropdown();
     });
@@ -191,7 +185,7 @@ class NavbarManager {
       closeBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log("Close button clicked");
+      
         this.closeAccountSettings();
       });
     }
@@ -200,7 +194,7 @@ class NavbarManager {
       cancelBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log("Cancel button clicked");
+       
         this.closeAccountSettings();
       });
     }
@@ -208,7 +202,7 @@ class NavbarManager {
     // Close on outside click
     modal.addEventListener("click", (e) => {
       if (e.target === modal) {
-        console.log("Outside click");
+      
         this.closeAccountSettings();
       }
     });
@@ -218,7 +212,7 @@ class NavbarManager {
       saveBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log("Save button clicked");
+     
         this.saveAccountSettings();
       });
     }
@@ -241,7 +235,7 @@ class NavbarManager {
       return;
     }
 
-    console.log("Populating modal with user data:", this.currentUser);
+    
 
     // Clear all fields first
     document.getElementById("edit-username").value =
@@ -295,7 +289,7 @@ class NavbarManager {
     modal.classList.remove("hidden");
     document.body.classList.add("modal-open");
 
-    console.log("Modal opened successfully");
+   
   }
 
   closeAccountSettings() {
@@ -305,7 +299,7 @@ class NavbarManager {
     modal.classList.add("hidden");
     document.body.classList.remove("modal-open");
 
-    console.log("Modal closed");
+   
   }
 
   async saveAccountSettings() {
@@ -353,7 +347,7 @@ class NavbarManager {
       });
 
       const text = await response.text();
-      console.log("Response:", text);
+      
 
       const data = JSON.parse(text);
 

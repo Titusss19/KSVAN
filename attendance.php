@@ -21,9 +21,10 @@ $canAddEmployee = in_array($user['role'], ['admin', 'owner', 'manager']);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Attendance Portal - K-STREET</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- PDF GENERATION LIBRARIES -->
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

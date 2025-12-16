@@ -143,24 +143,20 @@ async function apiCall(action, data = {}, useAttendanceAPI = false) {
     });
 
     const responseText = await response.text();
-    console.log(`API Response for ${action}:`, responseText.substring(0, 500));
+  
 
     try {
       const result = JSON.parse(responseText);
       return result;
     } catch (jsonError) {
-      console.error(
-        "JSON Parse Error for action:",
-        action,
-        responseText.substring(0, 200)
-      );
+     
       return {
         success: false,
         message: "Server error. Please check backend.",
       };
     }
   } catch (error) {
-    console.error(`API Error (${action}):`, error);
+ 
     return {
       success: false,
       message: "Network error: " + error.message,
@@ -244,7 +240,7 @@ async function loadStats() {
   updateLoadingIndicators();
 
   try {
-    console.log("Loading stats for branch:", appState.selectedBranch);
+   
     const result = await apiCall("getStats", {
       branch: appState.selectedBranch,
     });
@@ -252,13 +248,13 @@ async function loadStats() {
     if (result.success) {
       appState.stats = result.data;
       updateStatsDisplay();
-      console.log("Stats loaded:", result.data);
+    
     } else {
-      console.error("Failed to load stats:", result.message);
+    
       showFeedback("Error", "Failed to load stats", "error");
     }
   } catch (error) {
-    console.error("Error loading stats:", error);
+
     showFeedback("Error", "Error loading stats", "error");
   } finally {
     appState.loading.stats = false;
@@ -305,7 +301,7 @@ async function loadUsers() {
   updateLoadingIndicators();
 
   try {
-    console.log("Loading users for branch:", appState.selectedBranch);
+   
     const result = await apiCall("getUsers", {
       branch: appState.selectedBranch,
     });
@@ -313,13 +309,13 @@ async function loadUsers() {
     if (result.success) {
       appState.users = result.data || [];
       updateUsersDisplay();
-      console.log("Users loaded:", result.data);
+  
     } else {
-      console.error("Failed to load users:", result.message);
+     
       showFeedback("Error", "Failed to load users", "error");
     }
   } catch (error) {
-    console.error("Error loading users:", error);
+ 
     showFeedback("Error", "Error loading users", "error");
   } finally {
     appState.loading.users = false;
@@ -438,7 +434,7 @@ async function loadAnnouncements() {
   updateLoadingIndicators();
 
   try {
-    console.log("Loading announcements for branch:", appState.selectedBranch);
+  
     const result = await apiCall("getAnnouncements", {
       branch: appState.selectedBranch,
     });
@@ -446,7 +442,7 @@ async function loadAnnouncements() {
     if (result.success) {
       appState.announcements = result.data || [];
       updateAnnouncementsDisplay();
-      console.log("Announcements loaded:", result.data);
+    
     } else {
       console.error("Failed to load announcements:", result.message);
       showFeedback("Error", "Failed to load announcements", "error");
@@ -822,12 +818,12 @@ async function loadBranches() {
   appState.loading.branches = true;
 
   try {
-    console.log("Loading branches for user role:", appState.user.role);
+ 
     const result = await apiCall("getBranches", {});
 
     if (result.success) {
       appState.branches = result.data || [];
-      console.log("Branches loaded:", result.data);
+     
       updateBranchDropdown();
     } else {
       console.error("Failed to load branches:", result.message);
@@ -841,18 +837,31 @@ async function loadBranches() {
   }
 }
 
-// ===== LOAD EMPLOYEE STATUS =====
+// ===== LOAD EMPLOYEE STATUS (UPDATED) =====
 async function loadEmployeeStatus() {
   try {
-    console.log("Loading employee status...");
-    const result = await apiCall("getEmployees", {}, true); // Use attendance API
+ 
+    
+    // First check if we should load from dashboard or attendance API
+    const result = await apiCall("getEmployees", {
+      branch: appState.selectedBranch
+    }, false); // Use dashboard API first
 
     if (result.success) {
       updateEmployeeStatusDisplay(result.employees || []);
-      console.log("Employee status loaded:", result.employees);
+    
     } else {
-      console.error("Failed to load employee status:", result.message);
-      updateEmployeeStatusDisplay([]);
+      // Fallback to attendance API if dashboard API fails
+    
+      const fallbackResult = await apiCall("getEmployees", {}, true);
+      
+      if (fallbackResult.success) {
+        updateEmployeeStatusDisplay(fallbackResult.employees || []);
+       
+      } else {
+      
+        updateEmployeeStatusDisplay([]);
+      }
     }
   } catch (error) {
     console.error("Error loading employee status:", error);
@@ -860,6 +869,7 @@ async function loadEmployeeStatus() {
   }
 }
 
+// ===== UPDATE EMPLOYEE STATUS DISPLAY (WITH BRANCH) =====
 function updateEmployeeStatusDisplay(employees) {
   const container = document.getElementById("employeeStatusList");
   if (!container) return;
@@ -867,7 +877,7 @@ function updateEmployeeStatusDisplay(employees) {
   if (employees.length === 0) {
     container.innerHTML = `
       <div class="text-center py-4 text-gray-500 text-sm">
-        No employees found
+        No employees in your branch
       </div>
     `;
     return;
@@ -889,21 +899,25 @@ function updateEmployeeStatusDisplay(employees) {
       const statusIcon = emp.is_on_duty
         ? '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"></circle></svg>'
         : '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg>';
+      
+      // Add branch badge if available
+      const branchBadge = emp.branch ? 
+        `<span class="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded ml-1">${emp.branch}</span>` : '';
 
       return `
         <div class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors">
           <div class="flex items-center gap-2 flex-1 min-w-0">
-            
             <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium text-gray-800 truncate">${
-                emp.full_name
-              }</p>
+              <div class="flex items-center">
+                <p class="text-sm font-medium text-gray-800 truncate">${emp.full_name || 'Employee'}</p>
+                ${branchBadge}
+              </div>
               ${
-                emp.is_on_duty
-                  ? `<p class="text-xs text-gray-500">Working ${
-                      emp.current_hours || 0
-                    }h</p>`
-                  : ""
+                emp.is_on_duty && emp.current_hours
+                  ? `<p class="text-xs text-gray-500">Working ${emp.current_hours}h</p>`
+                  : emp.is_on_duty
+                  ? `<p class="text-xs text-gray-500">Currently on duty</p>`
+                  : ''
               }
             </div>
           </div>
@@ -917,56 +931,65 @@ function updateEmployeeStatusDisplay(employees) {
     .join("");
 }
 
-function updateBranchDropdown() {
-  const dropdown = document.getElementById("branchDropdown");
-  if (!dropdown) return;
+// ===== UPDATE INITIALIZATION =====
+document.addEventListener("DOMContentLoaded", function () {
 
-  const branchList = dropdown.querySelector(".py-2");
-  if (!branchList) return;
 
-  const allBranchesBtn = branchList.querySelector("button:first-child");
-  const divider = branchList.querySelector(".border-t");
+  if (typeof currentUser !== "undefined") {
+    appState.user = currentUser;
+  
 
-  const oldBranches = branchList.querySelectorAll("button:not(:first-child)");
-  oldBranches.forEach((btn) => {
-    if (btn !== divider && !btn.classList.contains("border-t")) {
-      btn.remove();
-    }
-  });
-
-  appState.branches.forEach((branch) => {
-    const button = document.createElement("button");
-    button.onclick = () => {
-      selectBranch(branch);
-      return false;
-    };
-    button.className = `w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${
-      appState.selectedBranch === branch
-        ? "bg-red-50 text-red-600 font-medium"
-        : "text-gray-700"
-    }`;
-    button.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-400">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-        <polyline points="9 22 9 12 15 12 15 22"></polyline>
-      </svg>
-      ${branch}
-      ${
-        appState.selectedBranch === branch
-          ? '<span class="ml-auto text-red-500">✓</span>'
-          : ""
+    const branchFilterContainer = document.querySelector(
+      ".relative:has(#branchDropdown)"
+    );
+    if (branchFilterContainer) {
+      if (currentUser.role !== "admin" && currentUser.role !== "owner") {
+        branchFilterContainer.style.display = "none";
+        // Set selected branch to user's branch
+        appState.selectedBranch = currentUser.branch || "main";
+        const branchText = document.getElementById("branchText");
+        if (branchText) {
+          branchText.textContent = appState.selectedBranch;
+        }
+      } else {
+        loadBranches();
       }
-    `;
-    branchList.appendChild(button);
-  });
-}
+    }
+
+    const addUserBtn = document.querySelector(
+      'button[onclick="openAddUserModal()"]'
+    );
+    if (
+      addUserBtn &&
+      !["admin", "owner", "manager"].includes(currentUser.role)
+    ) {
+      addUserBtn.style.display = "none";
+    }
+    
+    // Add user branch to add user form
+    const addUserBranch = document.getElementById("addUserBranch");
+    if (addUserBranch && currentUser.branch) {
+      addUserBranch.value = currentUser.branch;
+    }
+  }
+
+  handleRoleChange();
+  startLiveClock();
+
+  setTimeout(() => {
+    loadStats();
+    loadUsers();
+    loadAnnouncements();
+    loadEmployeeStatus();
+  }, 500);
+});
 
 // ============================================
 // ATTENDANCE QUICK ACTIONS - SIMPLE VERSION
 // ============================================
 
 function quickTimeIn() {
-  console.log("quickTimeIn() called");
+
 
   attendanceData.action = "timeIn";
   attendanceData.pin = "";
@@ -995,7 +1018,7 @@ function quickTimeIn() {
 }
 
 function quickTimeOut() {
-  console.log("quickTimeOut() called");
+  
 
   attendanceData.action = "timeOut";
   attendanceData.pin = "";
@@ -1182,7 +1205,7 @@ function closeResultModal() {
 }
 
 function showModal(modalId) {
-  console.log("showModal:", modalId);
+
   const modal = document.getElementById(modalId);
   if (modal) {
     modal.classList.add("show", "active");
@@ -1195,7 +1218,7 @@ function showModal(modalId) {
 }
 
 function closeModal(modalId) {
-  console.log("closeModal:", modalId);
+
   const modal = document.getElementById(modalId);
   if (modal) {
     modal.classList.remove("show", "active");
@@ -1213,11 +1236,11 @@ function closeModal(modalId) {
 
 // ===== INITIALIZATION =====
 document.addEventListener("DOMContentLoaded", function () {
-  console.log("Dashboard initializing...");
+
 
   if (typeof currentUser !== "undefined") {
     appState.user = currentUser;
-    console.log("Current user:", currentUser);
+ 
 
     const branchFilterContainer = document.querySelector(
       ".relative:has(#branchDropdown)"

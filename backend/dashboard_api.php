@@ -478,6 +478,140 @@ elseif ($action === 'getBranches') {
     }
 }
 
+// ===== GET EMPLOYEES (FOR DASHBOARD) =====
+elseif ($action === 'getEmployees') {
+    $selectedBranch = $_POST['branch'] ?? 'all';
+    $userBranch = getUserBranch($user);
+    $userRole = $user['role'] ?? 'cashier';
+    
+    try {
+        // Check if employees table exists
+        $tableCheck = $pdo->query("SHOW TABLES LIKE 'employees'");
+        if ($tableCheck->rowCount() === 0) {
+            echo json_encode([
+                'success' => true,
+                'employees' => [],
+                'message' => 'Employees table not found'
+            ]);
+            exit();
+        }
+        
+        // Check if employees table has branch column
+        $columnCheck = $pdo->query("SHOW COLUMNS FROM employees LIKE 'branch'");
+        $hasBranchColumn = $columnCheck->rowCount() > 0;
+        
+        if ($userRole === 'admin' || $userRole === 'owner') {
+            if ($selectedBranch === 'all') {
+                if ($hasBranchColumn) {
+                    $query = "SELECT e.*, 
+                             (SELECT COUNT(*) FROM attendance_logs al 
+                              WHERE al.employee_id = e.employee_id 
+                              AND DATE(al.date) = CURDATE() 
+                              AND al.status = 'on_duty' 
+                              AND al.time_out IS NULL) as is_on_duty
+                             FROM employees e 
+                             WHERE e.status = 'active' 
+                             ORDER BY e.full_name ASC";
+                    $stmt = $pdo->prepare($query);
+                    $stmt->execute();
+                } else {
+                    $query = "SELECT e.*, 
+                             (SELECT COUNT(*) FROM attendance_logs al 
+                              WHERE al.employee_id = e.employee_id 
+                              AND DATE(al.date) = CURDATE() 
+                              AND al.status = 'on_duty' 
+                              AND al.time_out IS NULL) as is_on_duty
+                             FROM employees e 
+                             WHERE e.status = 'active' 
+                             ORDER BY e.full_name ASC";
+                    $stmt = $pdo->prepare($query);
+                    $stmt->execute();
+                }
+            } else {
+                if ($hasBranchColumn) {
+                    $query = "SELECT e.*, 
+                             (SELECT COUNT(*) FROM attendance_logs al 
+                              WHERE al.employee_id = e.employee_id 
+                              AND DATE(al.date) = CURDATE() 
+                              AND al.status = 'on_duty' 
+                              AND al.time_out IS NULL) as is_on_duty
+                             FROM employees e 
+                             WHERE e.status = 'active' 
+                             AND e.branch = ? 
+                             ORDER BY e.full_name ASC";
+                    $stmt = $pdo->prepare($query);
+                    $stmt->execute([$selectedBranch]);
+                } else {
+                    $query = "SELECT e.*, 
+                             (SELECT COUNT(*) FROM attendance_logs al 
+                              WHERE al.employee_id = e.employee_id 
+                              AND DATE(al.date) = CURDATE() 
+                              AND al.status = 'on_duty' 
+                              AND al.time_out IS NULL) as is_on_duty
+                             FROM employees e 
+                             WHERE e.status = 'active' 
+                             ORDER BY e.full_name ASC";
+                    $stmt = $pdo->prepare($query);
+                    $stmt->execute();
+                }
+            }
+        } else {
+            // For non-admin users, only show employees from their branch
+            if ($hasBranchColumn) {
+                $query = "SELECT e.*, 
+                         (SELECT COUNT(*) FROM attendance_logs al 
+                          WHERE al.employee_id = e.employee_id 
+                          AND DATE(al.date) = CURDATE() 
+                          AND al.status = 'on_duty' 
+                          AND al.time_out IS NULL) as is_on_duty
+                         FROM employees e 
+                         WHERE e.status = 'active' 
+                         AND e.branch = ? 
+                         ORDER BY e.full_name ASC";
+                $stmt = $pdo->prepare($query);
+                $stmt->execute([$userBranch]);
+            } else {
+                $query = "SELECT e.*, 
+                         (SELECT COUNT(*) FROM attendance_logs al 
+                          WHERE al.employee_id = e.employee_id 
+                          AND DATE(al.date) = CURDATE() 
+                          AND al.status = 'on_duty' 
+                          AND al.time_out IS NULL) as is_on_duty
+                         FROM employees e 
+                         WHERE e.status = 'active' 
+                         ORDER BY e.full_name ASC";
+                $stmt = $pdo->prepare($query);
+                $stmt->execute();
+            }
+        }
+        
+        $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Process the results
+        foreach ($employees as &$employee) {
+            $employee['is_on_duty'] = $employee['is_on_duty'] > 0;
+            // If no branch column, set default branch
+            if (!$hasBranchColumn) {
+                $employee['branch'] = $userBranch;
+            }
+        }
+        
+        echo json_encode([
+            'success' => true,
+            'employees' => $employees,
+            'branch' => $selectedBranch !== 'all' ? $selectedBranch : $userBranch,
+            'has_branch_column' => $hasBranchColumn
+        ]);
+        
+    } catch (PDOException $e) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Error fetching employees: ' . $e->getMessage(),
+            'employees' => []
+        ]);
+    }
+}
+
 // ===== DEFAULT RESPONSE =====
 else {
     echo formatResponse(false, 'Invalid action');

@@ -31,7 +31,6 @@ let itemsPerPage = 9;
 // INITIALIZATION
 // ============================
 document.addEventListener("DOMContentLoaded", function () {
-  console.log("POS System Initializing...");
   updateCurrentTime();
   setInterval(updateCurrentTime, 1000);
 
@@ -41,8 +40,6 @@ document.addEventListener("DOMContentLoaded", function () {
   fetchUpgrades();
 
   setupEventListeners();
-
-  console.log("✅ POS System Ready!");
 });
 
 // ============================
@@ -104,6 +101,58 @@ function setupEventListeners() {
   document
     .getElementById("processPaymentBtn")
     .addEventListener("click", processPayment);
+
+  // Payment method buttons
+  document.querySelectorAll(".payment-method-btn").forEach((btn) => {
+    btn.addEventListener("click", function () {
+      setPaymentMethod(this.textContent.trim());
+    });
+  });
+
+  // Discount buttons
+  document
+    .getElementById("pwdDiscountBtn")
+    .addEventListener("click", togglePWDDiscount);
+  document
+    .getElementById("employeeDiscountBtn")
+    .addEventListener("click", toggleEmployeeDiscount);
+
+  // Cart buttons
+  document.getElementById("clearCartBtn").addEventListener("click", clearCart);
+
+  // Payment amount buttons
+  document.querySelectorAll(".amount-btn").forEach((btn) => {
+    btn.addEventListener("click", function () {
+      const amount = this.getAttribute("data-amount");
+      if (amount === "exact") {
+        setPaymentExact();
+      } else {
+        setPaymentAmount(amount);
+      }
+    });
+  });
+
+  // Close modal buttons
+  document
+    .getElementById("closeStoreModalBtn")
+    .addEventListener("click", closeStoreModal);
+  document
+    .getElementById("storeModalBtn")
+    .addEventListener("click", closeStoreModal);
+
+  document
+    .getElementById("closePaymentModalBtn")
+    .addEventListener("click", closePaymentModal);
+
+  document
+    .getElementById("closeReceiptModalBtn")
+    .addEventListener("click", closeReceiptModal);
+  document
+    .getElementById("printReceiptBtn")
+    .addEventListener("click", printReceipt);
+  document
+    .getElementById("saveReceiptBtn")
+    .addEventListener("click", saveReceiptAsPNG);
 }
 
 function setOrderType(type) {
@@ -147,7 +196,6 @@ async function checkCurrentStoreStatus() {
     );
 
     const data = await response.json();
-    console.log("Store status:", data);
 
     storeOpen = data.isOpen || false;
     updateStoreToggleButton();
@@ -167,7 +215,6 @@ async function checkCurrentStoreStatus() {
 
 async function handleStoreToggle() {
   if (!currentUser) {
-    alert("Please login first");
     return;
   }
 
@@ -215,7 +262,6 @@ async function handleStoreToggle() {
 
       showStoreSuccessModal(newStatus, actionTime);
     } else {
-      alert("Failed to update store status");
     }
   } catch (error) {
     console.error("Error toggling store status:", error);
@@ -334,7 +380,6 @@ async function fetchProducts() {
     });
 
     const data = await response.json();
-    console.log("Products fetched:", data.length);
 
     // Filter k-street food
     products = data.filter((item) => item.description_type === "k-street food");
@@ -358,11 +403,6 @@ async function fetchProducts() {
 
       return 0;
     });
-
-    console.log(
-      "First 9 products after sorting:",
-      products.slice(0, 9).map((p) => ({ name: p.name, category: p.category }))
-    );
 
     // Extract unique categories
     const uniqueCategories = [
@@ -399,7 +439,6 @@ async function fetchAddons() {
     addons = data.filter(
       (item) => item.description_type === "k-street add sides"
     );
-    console.log("Addons fetched:", addons.length);
   } catch (error) {
     console.error("Error fetching addons:", error);
     addons = [];
@@ -428,8 +467,6 @@ async function fetchUpgrades() {
     flavors = data.filter(
       (item) => item.description_type === "k-street Flavor"
     );
-    console.log("Upgrades fetched:", upgrades.length);
-    console.log("Flavors fetched:", flavors.length);
   } catch (error) {
     console.error("Error fetching upgrades:", error);
     upgrades = [];
@@ -529,12 +566,13 @@ function renderProducts() {
                   product.price
                 ).toFixed(2)}</span>
                 <button onclick="addToCart(${product.id})" 
-                        ${!storeOpen ? 'disabled title="Store is closed"' : ""}
-                        class="px-5 py-2.5 rounded-xl font-semibold transition-all shadow-lg ${
-                          storeOpen
-                            ? "bg-gradient-to-r from-red-600 to-red-600 text-white hover:from-black hover:to-black hover:shadow-xl"
-                            : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        }">
+                        ${
+                          !storeOpen ? 'disabled title="Store is closed"' : ""
+                        } class="px-5 py-2.5 rounded-xl font-semibold transition-all shadow-lg ${
+        storeOpen
+          ? "bg-gradient-to-r from-red-600 to-red-600 text-white hover:from-black hover:to-black hover:shadow-xl"
+          : "bg-gray-300 text-gray-500 cursor-not-allowed"
+      }">
                     ${storeOpen ? "Add" : "Closed"}
                 </button>
             </div>
@@ -554,10 +592,6 @@ function renderProducts() {
       paginationContainer.style.display = "none";
     }
   }
-
-  console.log(
-    `Products rendered. Store status: ${storeOpen ? "OPEN" : "CLOSED"}`
-  );
 }
 
 // ============================
@@ -565,12 +599,10 @@ function renderProducts() {
 // ============================
 function setPaymentExact() {
   if (!storeOpen) {
-    alert("Store is closed. Please open the store first.");
     return;
   }
 
   if (cart.length === 0) {
-    alert("Cart is empty. Add items first.");
     return;
   }
 
@@ -885,9 +917,6 @@ function handleSearch(e) {
 // ============================
 function addToCart(productId) {
   if (!storeOpen) {
-    alert(
-      "Store is currently closed. Please open the store first before adding items to cart."
-    );
     return;
   }
 
@@ -1360,7 +1389,6 @@ function updateChangeAmount() {
 // ============================
 function togglePWDDiscount() {
   if (!storeOpen) {
-    alert("Store is closed");
     return;
   }
 
@@ -1384,7 +1412,6 @@ function togglePWDDiscount() {
 
 function toggleEmployeeDiscount() {
   if (!storeOpen) {
-    alert("Store is closed");
     return;
   }
 
@@ -1434,24 +1461,18 @@ function setPaymentAmount(amount) {
 
 async function processPayment() {
   if (!storeOpen) {
-    alert(
-      "Store is currently closed. Please open the store first before processing payments."
-    );
     return;
   }
 
   if (!currentUser) {
-    alert("Please login first");
     return;
   }
 
   if (cart.length === 0) {
-    alert("Cart is empty");
     return;
   }
 
   if (orderSaved) {
-    console.log("Order already saved, skipping duplicate save");
     return;
   }
 
@@ -1632,7 +1653,7 @@ function closePaymentModal() {
 }
 
 // ============================
-// RECEIPT FUNCTIONS
+// RECEIPT FUNCTIONS (OPTIMIZED FOR THERMAL PRINTER)
 // ============================
 function generateReceiptText() {
   const subtotal = calculateSubtotal();
@@ -1729,58 +1750,508 @@ function closeReceiptModal() {
   clearCart();
 }
 
+// THERMAL PRINTER RECEIPT FUNCTION
 function printReceipt() {
   if (!receiptContent || receiptContent.trim() === "") {
-    alert("No receipt content to print!");
     return;
   }
 
   const printHTML = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>K-Street Receipt</title>
-            <style>
-                @media print {
-                    body {
-                        margin: 0;
-                        padding: 10px;
-                        font-family: 'Courier New', monospace;
-                        font-size: 14px;
-                        line-height: 1.3;
-                        width: 300px;
-                    }
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>K-Street Receipt</title>
+        <style>
+            /* Thermal printer specific styles */
+            @media print {
+                @page {
+                    size: 80mm auto; /* Fixed 80mm width, auto height */
+                    margin: 0; /* No margins for thermal printers */
+                    padding: 0;
                 }
+                
+                html, body {
+                    width: 80mm !important;
+                    min-height: 100vh;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    font-size: 10px !important; /* Smaller font for thermal */
+                    line-height: 1.1 !important;
+                }
+                
+                * {
+                    box-sizing: border-box;
+                    max-width: 80mm !important;
+                }
+                
                 body {
                     font-family: 'Courier New', monospace;
-                    font-size: 14px;
-                    line-height: 1.3;
-                    padding: 20px;
-                    width: 300px;
+                    font-size: 10px;
+                    line-height: 1.1;
+                    width: 80mm;
                     margin: 0 auto;
+                    padding: 2mm;
                     white-space: pre-wrap;
+                    word-wrap: break-word;
+                }
+                
+                /* Receipt container */
+                .receipt-container {
+                    width: 80mm;
+                    padding: 1mm 2mm;
+                    margin: 0;
+                }
+                
+                .header {
+                    text-align: center;
+                    margin-bottom: 1mm;
+                    font-weight: bold;
+                    font-size: 11px;
+                }
+                
+                .store-name {
+                    font-size: 12px;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                }
+                
+                .divider {
+                    text-align: center;
+                    margin: 1mm 0;
+                    border-bottom: 1px dashed #000;
+                }
+                
+                .section {
+                    margin: 1mm 0;
+                }
+                
+                .items-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 1mm 0;
+                }
+                
+                .items-table td {
+                    vertical-align: top;
+                    padding: 0.5mm 0;
+                }
+                
+                .item-name {
+                    width: 70%;
+                    text-align: left;
+                }
+                
+                .item-qty {
+                    width: 15%;
                     text-align: center;
                 }
-            </style>
-        </head>
-        <body>${receiptContent}</body>
-        </html>
-    `;
+                    
+                .item-price {
+                    width: 15%;
+                    text-align: right;
+                }
+                
+                .addon-row {
+                    font-size: 9px;
+                    padding-left: 3mm !important;
+                    font-style: italic;
+                }
+                
+                .instruction-row {
+                    font-size: 9px;
+                    padding-left: 3mm !important;
+                    font-style: italic;
+                    color: #555;
+                }
+                
+                .totals-table {
+                    width: 100%;
+                    margin-top: 2mm;
+                    border-top: 1px solid #000;
+                    padding-top: 1mm;
+                }
+                
+                .totals-table td {
+                    padding: 0.5mm 0;
+                }
+                
+                .total-label {
+                    text-align: left;
+                    width: 70%;
+                }
+                
+                .total-value {
+                    text-align: right;
+                    width: 30%;
+                }
+                
+                .grand-total {
+                    font-weight: bold;
+                    border-top: 2px solid #000;
+                    border-bottom: 2px solid #000;
+                    padding: 1mm 0;
+                }
+                
+                .footer {
+                    text-align: center;
+                    margin-top: 2mm;
+                    font-size: 9px;
+                    font-style: italic;
+                }
+                
+                /* Hide print button during print */
+                .no-print {
+                    display: none !important;
+                }
+                
+                /* Ensure no page breaks */
+                .receipt-container {
+                    page-break-inside: avoid;
+                    page-break-after: avoid;
+                    page-break-before: avoid;
+                }
+            }
+            
+            /* Screen preview */
+            body {
+                font-family: 'Courier New', monospace;
+                font-size: 10px;
+                line-height: 1.1;
+                width: 80mm;
+                margin: 0 auto;
+                padding: 2mm;
+                background: white;
+                color: black;
+            }
+            
+            .receipt-container {
+                width: 80mm;
+                padding: 1mm 2mm;
+                border: 1px dashed #ccc;
+                background: white;
+            }
+            
+            .header {
+                text-align: center;
+                margin-bottom: 1mm;
+                font-weight: bold;
+                font-size: 11px;
+            }
+            
+            .store-name {
+                font-size: 12px;
+                font-weight: bold;
+                text-transform: uppercase;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="receipt-container">
+            <!-- Store Header -->
+            <div class="header">
+                <div class="store-name">K-STREET TARLAC</div>
+                <div>Mc Arthur Highway, Magaspac</div>
+                <div>Gerona, Tarlac</div>
+            </div>
+            
+            <div class="divider">===============================</div>
+            
+            <!-- Transaction Details -->
+            <div class="section">
+                <table width="100%">
+                    <tr>
+                        <td><strong>Cashier:</strong></td>
+                        <td>${
+                          currentUser?.username || currentUser?.email || "N/A"
+                        }</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Order Type:</strong></td>
+                        <td>${orderType}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Payment:</strong></td>
+                        <td>${paymentMethod}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Date:</strong></td>
+                        <td>${new Date().toLocaleString("en-PH", {
+                          year: "numeric",
+                          month: "2-digit",
+                          day: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                        })}</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="divider">-------------------------------</div>
+            
+            <!-- Order Items -->
+            <div class="section">
+                <strong>ORDER ITEMS:</strong>
+                <table class="items-table">
+                    ${generateThermalReceiptItems()}
+                </table>
+            </div>
+            
+            <div class="divider">-------------------------------</div>
+            
+            <!-- Totals -->
+            <div class="section">
+                <table class="totals-table">
+                    ${generateThermalReceiptTotals()}
+                </table>
+            </div>
+            
+            <div class="divider">===============================</div>
+            
+            <!-- Footer -->
+            <div class="footer">
+                <div>Thank you for dining with us!</div>
+                <div>Please come again!</div>
+                <div style="margin-top: 1mm;">*** THIS IS YOUR OFFICIAL RECEIPT ***</div>
+            </div>
+            
+            <div class="footer" style="font-size: 8px;">
+                Transaction ID: ${generateTransactionCode()}<br>
+                Printed: ${new Date().toLocaleString("en-PH", {
+                  year: "numeric",
+                  month: "2-digit",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                })}
+            </div>
+        </div>
+        
+        <!-- Print button for preview -->
+        <div class="no-print" style="margin-top: 10mm; text-align: center;">
+            <button onclick="window.print()" style="
+                padding: 8px 16px;
+                background: #dc2626;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 12px;
+                cursor: pointer;
+                margin: 5px;
+            ">
+                🖨️ Print Receipt
+            </button>
+            <button onclick="window.close()" style="
+                padding: 8px 16px;
+                background: #6b7280;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 12px;
+                cursor: pointer;
+                margin: 5px;
+            ">
+                ✕ Close
+            </button>
+        </div>
+        
+        <script>
+            // Auto-print for thermal printer
+            window.onload = function() {
+                // Small delay to ensure everything is loaded
+                setTimeout(function() {
+                    // For thermal printer, we want direct printing
+                    window.print();
+                    
+                    // Close window after printing (thermal printers usually don't need preview)
+                    setTimeout(function() {
+                        if (!document.querySelector('.no-print')) {
+                            window.close();
+                        }
+                    }, 1000);
+                }, 300);
+            };
+            
+            // Manual print trigger
+            document.addEventListener('keydown', function(e) {
+                // Ctrl+P or Cmd+P for manual print
+                if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+                    e.preventDefault();
+                    window.print();
+                }
+                // Escape to close
+                if (e.key === 'Escape') {
+                    window.close();
+                }
+            });
+        </script>
+    </body>
+    </html>
+  `;
 
-  const printWindow = window.open("", "_blank");
+  const printWindow = window.open("", "_blank", "width=300,height=600");
   printWindow.document.write(printHTML);
   printWindow.document.close();
   printWindow.focus();
+}
 
-  setTimeout(() => {
-    printWindow.print();
-    printWindow.close();
-  }, 500);
+// Helper function para sa thermal receipt items
+function generateThermalReceiptItems() {
+  let html = "";
+
+  cart.forEach((item, index) => {
+    const isFlavor =
+      item.selectedUpgrade &&
+      item.selectedUpgrade.description_type === "k-street Flavor";
+    const isUpgrade =
+      item.selectedUpgrade &&
+      item.selectedUpgrade.description_type !== "k-street Flavor";
+
+    let itemName = item.name;
+    if (isFlavor) {
+      itemName = `[${item.selectedUpgrade.name}] ${item.name}`;
+    } else if (isUpgrade) {
+      itemName = `[${item.selectedUpgrade.name} UPGRADE]`;
+    }
+
+    const itemPrice = parseFloat(item.finalPrice || item.price);
+    const itemTotal = (itemPrice * item.quantity).toFixed(2);
+
+    // Main item row
+    html += `
+      <tr>
+          <td class="item-name">
+              ${itemName}
+          </td>
+          <td class="item-qty">
+              x${item.quantity}
+          </td>
+          <td class="item-price">
+              ${itemTotal}
+          </td>
+      </tr>
+    `;
+
+    // Add-ons
+    if (item.selectedAddons && item.selectedAddons.length > 0) {
+      item.selectedAddons.forEach((addon) => {
+        html += `
+          <tr class="addon-row">
+              <td class="item-name">
+                  + ${addon.name}
+              </td>
+              <td class="item-qty">
+                  &nbsp;
+              </td>
+              <td class="item-price">
+                  +${parseFloat(addon.price).toFixed(2)}
+              </td>
+          </tr>
+        `;
+      });
+    }
+
+    // Special instructions
+    if (item.specialInstructions) {
+      html += `
+        <tr class="instruction-row">
+            <td colspan="3">
+                Note: ${item.specialInstructions}
+            </td>
+        </tr>
+      `;
+    }
+
+    // Separator between items (except last)
+    if (index < cart.length - 1) {
+      html += `
+        <tr>
+            <td colspan="3" style="border-bottom: 1px dotted #ccc; padding: 0.2mm 0;"></td>
+        </tr>
+      `;
+    }
+  });
+
+  return html;
+}
+
+// Helper function para sa thermal receipt totals
+function generateThermalReceiptTotals() {
+  const subtotal = calculateSubtotal();
+  const total = calculateTotal();
+  const paidAmount = parseFloat(paymentAmount) || 0;
+  const change = calculateChange();
+
+  let html = "";
+
+  // Subtotal
+  html += `
+    <tr>
+        <td class="total-label">Subtotal:</td>
+        <td class="total-value">${subtotal.toFixed(2)}</td>
+    </tr>
+  `;
+
+  // Discounts
+  if (discountApplied) {
+    html += `
+      <tr>
+          <td class="total-label">PWD/Senior Disc (20%):</td>
+          <td class="total-value">-${(subtotal * 0.2).toFixed(2)}</td>
+      </tr>
+    `;
+  }
+
+  if (employeeDiscountApplied) {
+    html += `
+      <tr>
+          <td class="total-label">Employee Disc (5%):</td>
+          <td class="total-value">-${(subtotal * 0.05).toFixed(2)}</td>
+      </tr>
+    `;
+  }
+
+  // Grand Total
+  html += `
+    <tr class="grand-total">
+        <td class="total-label">TOTAL:</td>
+        <td class="total-value">${total.toFixed(2)}</td>
+    </tr>
+  `;
+
+  // Payment Details
+  html += `
+    <tr>
+        <td class="total-label">Amount Paid:</td>
+        <td class="total-value">${paidAmount.toFixed(2)}</td>
+    </tr>
+    <tr>
+        <td class="total-label">Change:</td>
+        <td class="total-value">${change > 0 ? change.toFixed(2) : "0.00"}</td>
+    </tr>
+  `;
+
+  return html;
+}
+
+// Generate unique transaction code
+function generateTransactionCode() {
+  const date = new Date();
+  const timestamp = date.getTime().toString().slice(-6);
+  const random = Math.floor(Math.random() * 1000)
+    .toString()
+    .padStart(3, "0");
+  return `KST-${date.getFullYear().toString().slice(-2)}${(date.getMonth() + 1)
+    .toString()
+    .padStart(2, "0")}${date
+    .getDate()
+    .toString()
+    .padStart(2, "0")}-${timestamp}${random}`;
 }
 
 function saveReceiptAsPNG() {
   if (!receiptContent || receiptContent.trim() === "") {
-    alert("No receipt content to save!");
     return;
   }
 
@@ -1835,11 +2306,9 @@ function saveReceiptAsPNG() {
       document.body.removeChild(link);
 
       document.body.removeChild(container);
-
-      console.log("Receipt saved successfully!");
     } catch (error) {
       console.error("Error saving receipt as PNG:", error);
-      alert("Failed to save receipt as PNG. Please try again.");
+
       document.body.removeChild(container);
     }
   }, 100);

@@ -1,4 +1,4 @@
-<?php
+<?php 
 session_start();
 
 // Check if user is logged in
@@ -11,6 +11,7 @@ $user = $_SESSION['user'];
 $activeView = 'sales';
 $currentUser = $user;
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -22,34 +23,32 @@ $currentUser = $user;
     <script src="https://unpkg.com/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     <link rel="stylesheet" href="css/sales.css">
 </head>
-<body class="bg-gray-50">
-
+<body class="bg-gray-50 overflow-x-hidden">
 <?php include 'components/navbar.php'; ?>
 
-<main class="content-wrapper">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+<main class="content-wrapper px-4 sm:px-6 lg:px-8 py-6">
+    <div class="max-w-7xl mx-auto">
         
         <!-- Header -->
-        <div class="flex justify-between items-start mb-8">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <div class="flex-1">
                 <h1 class="text-3xl font-bold text-gray-900 flex items-center gap-3">
                     <i class="fas fa-chart-line text-red-600"></i>
-                  Reports
+                    Reports
                 </h1>
             </div>
             
             <?php if ($user['role'] === 'admin' || $user['role'] === 'owner'): ?>
-            <div class="branch-selector">
-                <select id="branchFilter" class="form-select-kstreet w-48">
+            <div class="w-full sm:w-auto">
+                <select id="branchFilter" class="form-select-kstreet w-full sm:w-48">
                     <option value="all">All Branches</option>
-                    <!-- Branches will be loaded dynamically -->
                 </select>
             </div>
             <?php endif; ?>
         </div>
 
         <!-- Report Tabs -->
-        <div class="flex gap-2 mb-6 pb-2 border-b border-gray-200">
+        <div class="flex flex-wrap gap-2 mb-6 pb-2 border-b border-gray-200">
             <button class="tab-btn-kstreet active" data-tab="sales">
                 <i class="fas fa-shopping-cart"></i>
                 Sales Report
@@ -66,14 +65,13 @@ $currentUser = $user;
                 <i class="fas fa-ban"></i>
                 Void Reports
             </button>
-
         </div>
 
         <!-- Filter Controls -->
         <div class="bg-white rounded-xl p-6 mb-6 shadow-sm">
-            <div class="flex flex-wrap gap-4 items-end">
+            <div class="flex flex-col lg:flex-row flex-wrap gap-4 items-end">
                 <!-- Time Range -->
-                <div class="w-48">
+                <div class="w-full lg:w-48">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Time Range</label>
                     <select id="timeRange" class="form-select-kstreet">
                         <option value="all">All Time</option>
@@ -85,15 +83,15 @@ $currentUser = $user;
                     </select>
                 </div>
 
-                <!-- Custom Date Range (hidden by default) -->
-                <div id="customDateRange" class="hidden">
-                    <div class="flex items-center gap-2">
-                        <div>
+                <!-- Custom Date Range -->
+                <div id="customDateRange" class="hidden w-full lg:flex-1">
+                    <div class="flex flex-col sm:flex-row items-center gap-2">
+                        <div class="w-full sm:w-auto">
                             <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
                             <input type="date" id="startDate" class="form-input-kstreet">
                         </div>
-                        <span class="text-gray-500 mt-6">to</span>
-                        <div>
+                        <span class="text-gray-500 hidden sm:block mt-6">to</span>
+                        <div class="w-full sm:w-auto">
                             <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
                             <input type="date" id="endDate" class="form-input-kstreet">
                         </div>
@@ -101,7 +99,7 @@ $currentUser = $user;
                 </div>
 
                 <!-- Payment Method -->
-                <div class="w-48">
+                <div class="w-full lg:w-48">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
                     <select id="paymentFilter" class="form-select-kstreet">
                         <option value="all">All Methods</option>
@@ -113,7 +111,7 @@ $currentUser = $user;
                 </div>
 
                 <!-- Order Type -->
-                <div class="w-48">
+                <div class="w-full lg:w-48">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Order Type</label>
                     <select id="orderTypeFilter" class="form-select-kstreet">
                         <option value="all">All Types</option>
@@ -124,16 +122,18 @@ $currentUser = $user;
                 </div>
 
                 <!-- Apply Filters Button -->
-                <button id="applyFilters" class="btn-kstreet-primary">
-                    <i class="fas fa-filter"></i>
-                    Apply Filters
-                </button>
+                <div class="flex gap-2 w-full lg:w-auto">
+                    <button id="applyFilters" class="btn-kstreet-primary flex-1 lg:flex-none">
+                        <i class="fas fa-filter"></i>
+                        Apply Filters
+                    </button>
 
-                <!-- Export Button -->
-                <button id="exportExcel" class="btn-kstreet-primary bg-green-600 hover:bg-green-700">
-                    <i class="fas fa-file-export"></i>
-                    Export Excel
-                </button>
+                    <!-- Export Button -->
+                    <button id="exportExcel" class="btn-kstreet-primary bg-green-600 hover:bg-green-700 flex-1 lg:flex-none">
+                        <i class="fas fa-file-export"></i>
+                        Export Excel
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -143,25 +143,27 @@ $currentUser = $user;
             <!-- Sales Report Table -->
             <div id="salesReport" class="report-pane">
                 <div class="table-kstreet">
-                    <table class="w-full">
-                        <thead>
-                            <tr class="bg-red-500 text-white">
-                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">#</th>
-                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Date & Time</th>
-                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Products</th>
-                                <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Total</th>
-                                <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Paid</th>
-                                <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Change</th>
-                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Cashier</th>
-                                <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Order Type</th>
-                                <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Payment Method</th>
-                                <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="salesTableBody">
-                            <!-- Sales data will be populated here -->
-                        </tbody>
-                    </table>
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[1200px]">
+                            <thead>
+                                <tr class="bg-red-500 text-white">
+                                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">#</th>
+                                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Date & Time</th>
+                                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Products</th>
+                                    <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Total</th>
+                                    <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Paid</th>
+                                    <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Change</th>
+                                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Cashier</th>
+                                    <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Order Type</th>
+                                    <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Payment Method</th>
+                                    <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="salesTableBody">
+                                <!-- Sales data will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
 
                     <!-- Empty State -->
                     <div id="salesEmptyState" class="hidden text-center py-16">
@@ -191,28 +193,30 @@ $currentUser = $user;
             <!-- Cashier Report -->
             <div id="cashierReport" class="report-pane hidden">
                 <div class="table-kstreet">
-                    <table class="w-full">
-                        <thead>
-                            <tr class="bg-red-500 text-white">
-                                <?php if ($user['role'] === 'admin' || $user['role'] === 'owner'): ?>
-                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Branch</th>
-                                <?php endif; ?>
-                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Cashier</th>
-                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Login Time</th>
-                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Logout Time</th>
-                                <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Duration</th>
-                                <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Start Sales</th>
-                                <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">End Sales</th>
-                                <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Session Sales</th>
-                                <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Discount</th>
-                                <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Void</th>
-                                <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="cashierTableBody">
-                            <!-- Cashier data will be populated here -->
-                        </tbody>
-                    </table>
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[1400px]">
+                            <thead>
+                                <tr class="bg-red-500 text-white">
+                                    <?php if ($user['role'] === 'admin' || $user['role'] === 'owner'): ?>
+                                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Branch</th>
+                                    <?php endif; ?>
+                                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Cashier</th>
+                                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Login Time</th>
+                                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Logout Time</th>
+                                    <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Duration</th>
+                                    <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Start Sales</th>
+                                    <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">End Sales</th>
+                                    <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Session Sales</th>
+                                    <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Discount</th>
+                                    <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Void</th>
+                                    <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cashierTableBody">
+                                <!-- Cashier data will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
 
                     <!-- Empty State -->
                     <div id="cashierEmptyState" class="hidden text-center py-16">
@@ -242,28 +246,30 @@ $currentUser = $user;
             <!-- Void Report -->
             <div id="voidReport" class="report-pane hidden">
                 <div class="table-kstreet">
-                    <table class="w-full">
-                        <thead>
-                            <tr class="bg-red-500 text-white">
-                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Order ID</th>
-                                <?php if ($user['role'] === 'admin' || $user['role'] === 'owner'): ?>
-                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Branch</th>
-                                <?php endif; ?>
-                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Date Voided</th>
-                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Original Date</th>
-                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Products</th>
-                                <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Amount</th>
-                                <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Order Type</th>
-                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Cashier</th>
-                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Voided By</th>
-                                <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Reason</th>
-                                <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="voidTableBody">
-                            <!-- Void data will be populated here -->
-                        </tbody>
-                    </table>
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[1600px]">
+                            <thead>
+                                <tr class="bg-red-500 text-white">
+                                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Order ID</th>
+                                    <?php if ($user['role'] === 'admin' || $user['role'] === 'owner'): ?>
+                                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Branch</th>
+                                    <?php endif; ?>
+                                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Date Voided</th>
+                                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Original Date</th>
+                                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Products</th>
+                                    <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Amount</th>
+                                    <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Order Type</th>
+                                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Cashier</th>
+                                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Voided By</th>
+                                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Reason</th>
+                                    <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="voidTableBody">
+                                <!-- Void data will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
 
                     <!-- Empty State -->
                     <div id="voidEmptyState" class="hidden text-center py-16">
@@ -291,60 +297,59 @@ $currentUser = $user;
             </div>
 
             <!-- Cash-Out Report -->
-<div id="cashoutReport" class="report-pane hidden">
-    <div class="table-kstreet">
-        <table class="w-full">
-            <thead>
-                <tr class="bg-red-500 text-white">
-                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">#</th>
-                    <?php if ($user['role'] === 'admin' || $user['role'] === 'owner'): ?>
-                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Branch</th>
-                    <?php endif; ?>
-                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Date & Time</th>
-                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Cashier</th>
-                    <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Type</th>
-                    <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Amount</th>
-                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Reason</th>
-                    <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Session</th>
-                </tr>
-            </thead>
-            <tbody id="cashoutTableBody">
-                <!-- Cash-out data will be populated here -->
-            </tbody>
-        </table>
+            <div id="cashoutReport" class="report-pane hidden">
+                <div class="table-kstreet">
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[1200px]">
+                            <thead>
+                                <tr class="bg-red-500 text-white">
+                                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">#</th>
+                                    <?php if ($user['role'] === 'admin' || $user['role'] === 'owner'): ?>
+                                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Branch</th>
+                                    <?php endif; ?>
+                                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Date & Time</th>
+                                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Cashier</th>
+                                    <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Type</th>
+                                    <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Amount</th>
+                                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Reason</th>
+                                    <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Session</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cashoutTableBody">
+                                <!-- Cash-out data will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
 
-        <!-- Empty State -->
-        <div id="cashoutEmptyState" class="hidden text-center py-16">
-            <i class="fas fa-money-bill-wave text-5xl text-gray-300 mb-4"></i>
-            <h4 class="text-lg font-semibold text-gray-700">No cash-out records found</h4>
-            <p class="text-gray-500">Cash withdrawals and deposits will appear here</p>
-        </div>
+                    <!-- Empty State -->
+                    <div id="cashoutEmptyState" class="hidden text-center py-16">
+                        <i class="fas fa-money-bill-wave text-5xl text-gray-300 mb-4"></i>
+                        <h4 class="text-lg font-semibold text-gray-700">No cash-out records found</h4>
+                        <p class="text-gray-500">Cash withdrawals and deposits will appear here</p>
+                    </div>
 
-        <!-- Pagination -->
-        <div id="cashoutPagination" class="pagination-kstreet hidden px-6 py-4">
-            <div class="text-sm text-gray-600">
-                Showing <span id="cashoutStart">1</span> to <span id="cashoutEnd">10</span> of <span id="cashoutTotal">0</span> records
-            </div>
-            <div class="flex gap-2 items-center">
-                <button id="cashoutPrevPage" class="btn-pagination-kstreet">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-                <span class="font-semibold text-gray-700 px-4">Page <span id="cashoutCurrentPage">1</span></span>
-                <button id="cashoutNextPage" class="btn-pagination-kstreet">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
+                    <!-- Pagination -->
+                    <div id="cashoutPagination" class="pagination-kstreet hidden px-6 py-4">
+                        <div class="text-sm text-gray-600">
+                            Showing <span id="cashoutStart">1</span> to <span id="cashoutEnd">10</span> of <span id="cashoutTotal">0</span> records
+                        </div>
+                        <div class="flex gap-2 items-center">
+                            <button id="cashoutPrevPage" class="btn-pagination-kstreet">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <span class="font-semibold text-gray-700 px-4">Page <span id="cashoutCurrentPage">1</span></span>
+                            <button id="cashoutNextPage" class="btn-pagination-kstreet">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-</div>
-            
-        </div>
-    </div>
-
 </main>
 
-<!-- ⚠️ MODALS SHOULD BE HERE - OUTSIDE content-wrapper, BEFORE closing </body> -->
-
+<!-- MODALS -->
 <!-- Receipt Modal -->
 <div id="receiptModal" class="modal-overlay hidden">
     <div class="modal-content-kstreet max-w-2xl w-full">
@@ -493,7 +498,6 @@ $currentUser = $user;
         </div>
 
         <div class="p-6 overflow-y-auto max-h-[70vh]">
-            <!-- Header -->
             <div class="text-center mb-6">
                 <h1 class="text-2xl font-bold text-red-600 mb-2">K - STREET</h1>
                 <p class="text-gray-600">Mc Arthur Highway, Magaspac, Gerona, Tarlac</p>
@@ -503,20 +507,11 @@ $currentUser = $user;
                 <p class="text-sm text-gray-500">Branch: <span id="cashierDetailBranch">-</span></p>
             </div>
 
-            <!-- Two-Column Layout -->
-            <div class="grid grid-cols-2 gap-4 mb-6">
-                <!-- Cashier Information -->
-                <div class="bg-red-100 p-4 rounded-lg" id="cashierInfoSection">
-                    <!-- Content will be populated by JavaScript -->
-                </div>
-
-                <!-- Sales Summary -->
-                <div class="bg-green-50 p-4 rounded-lg" id="salesSummarySection">
-                    <!-- Content will be populated by JavaScript -->
-                </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                <div class="bg-red-100 p-4 rounded-lg" id="cashierInfoSection"></div>
+                <div class="bg-green-50 p-4 rounded-lg" id="salesSummarySection"></div>
             </div>
 
-            <!-- Orders Table -->
             <div class="mb-6">
                 <h3 class="font-bold text-gray-800 mb-3 text-lg">ORDERS DURING SESSION</h3>
                 <div class="overflow-x-auto">
@@ -534,25 +529,19 @@ $currentUser = $user;
                                 <th class="border border-gray-300 px-3 py-2 text-left text-sm font-semibold">Time</th>
                             </tr>
                         </thead>
-                        <tbody id="cashierOrdersTableBody">
-                            <!-- Orders will be populated by JavaScript -->
-                        </tbody>
+                        <tbody id="cashierOrdersTableBody"></tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- Footer -->
             <div class="text-center border-t-2 border-dashed border-gray-400 pt-4">
                 <p class="text-gray-600 font-semibold">Report Generated: <span id="cashierReportDate"><?php echo date('F d, Y h:i A'); ?></span></p>
                 <p class="text-gray-500 text-sm">K-Street POS System</p>
             </div>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="p-5 flex justify-end gap-3 border-t border-gray-100 bg-gray-50">
-            <button id="closeCashierDetail" class="btn-kstreet-secondary">
-                Close
-            </button>
+        <div class="p-5 flex flex-col sm:flex-row justify-end gap-3 border-t border-gray-100 bg-gray-50">
+            <button id="closeCashierDetail" class="btn-kstreet-secondary">Close</button>
             <button id="exportCashierSession" class="btn-kstreet-primary bg-green-600 hover:bg-green-700">
                 <i class="fas fa-file-excel"></i> Export Excel
             </button>
@@ -568,18 +557,14 @@ $currentUser = $user;
     <div class="modal-content-kstreet" style="max-width: 400px;">
         <div class="p-6">
             <div class="flex items-center gap-4 mb-4">
-                <div id="notificationIcon" class="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0">
-                    <!-- Icon will be inserted here -->
-                </div>
+                <div id="notificationIcon" class="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"></div>
                 <div class="flex-1">
                     <h3 id="notificationTitle" class="text-lg font-bold text-gray-900 mb-1">Notification</h3>
                     <p id="notificationMessage" class="text-sm text-gray-600"></p>
                 </div>
             </div>
             <div class="flex justify-end">
-                <button onclick="salesReport.closeNotification()" class="btn-kstreet-primary px-6 py-2">
-                    OK
-                </button>
+                <button onclick="salesReport.closeNotification()" class="btn-kstreet-primary px-6 py-2">OK</button>
             </div>
         </div>
     </div>
@@ -609,9 +594,7 @@ $currentUser = $user;
                 <p class="text-blue-700 text-sm">Only the owner can edit cash-out records.</p>
             </div>
             
-            <div id="editCashoutInfo" class="bg-gray-50 p-4 rounded-lg mb-4">
-                <!-- Will be populated by JavaScript -->
-            </div>
+            <div id="editCashoutInfo" class="bg-gray-50 p-4 rounded-lg mb-4"></div>
             
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Type *</label>
@@ -661,7 +644,6 @@ $currentUser = $user;
     <div class="spinner-kstreet"></div>
 </div>
 
-<!-- Pass PHP session data to JavaScript -->
 <script>
     window.currentUser = <?php echo json_encode($user); ?>;
 </script>

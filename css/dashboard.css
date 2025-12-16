@@ -1,5 +1,4 @@
-/* css/dashboard.css - SIMPLE CLEAN VERSION MATCHING SCREENSHOT */
-
+/* css/dashboard.css */
 /* ===== STAT CARDS ===== */
 .stat-card {
     border-radius: 16px;
@@ -30,6 +29,7 @@
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.2s ease, visibility 0.2s ease;
+    padding: 1rem;
 }
 
 .modal.active,
@@ -44,9 +44,11 @@
     border-radius: 12px;
     padding: 24px;
     max-width: 400px;
-    width: 90%;
+    width: 100%;
     box-shadow: 0 4px 20px rgba(0,0,0,0.15);
     position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 /* ===== MODAL HEADER ===== */
@@ -272,10 +274,97 @@ select:focus {
     outline: none;
 }
 
+/* Add to your dashboard.css or create a new style tag */
+.branch-badge-small {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 1px 6px;
+    background-color: #dbeafe;
+    color: #1e40af;
+    border-radius: 9999px;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.branch-badge-small svg {
+    width: 8px;
+    height: 8px;
+}
+
+/* Add this CSS to your dashboard page */
+.branch-badge-small {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 1px 6px;
+    background-color: #dbeafe;
+    color: #1e40af;
+    border-radius: 9999px;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.branch-badge-small svg {
+    width: 8px;
+    height: 8px;
+}
+
+.employee-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 9999px;
+    background-color: #dbeafe;
+    color: #1e40af;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 640px) {
     .modal-content {
         max-width: 95%;
         padding: 20px;
+    }
+    .time-value {
+        font-size: 24px;
+    }
+    .pin-input {
+        font-size: 20px;
+        padding: 12px;
+    }
+    .modal-title {
+        font-size: 16px;
+    }
+    .modal-subtitle {
+        font-size: 13px;
+    }
+    .btn-primary,
+    .btn-secondary {
+        padding: 10px;
+        font-size: 13px;
+    }
+}
+
+/* Fix for very small screens */
+@media (max-width: 360px) {
+    .modal-content {
+        padding: 16px;
+    }
+    .modal-buttons {
+        flex-direction: column;
+        gap: 8px;
+    }
+    .btn-primary,
+    .btn-secondary {
+        width: 100%;
     }
 }

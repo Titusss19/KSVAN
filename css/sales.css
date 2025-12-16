@@ -1,11 +1,17 @@
-/* Custom K-STREET Styles */
+/* css/sales.css - FULL RESPONSIVE VERSION */
 :root {
     --primary-red: #dc2626;
     --primary-red-dark: #b91c1c;
     --gray-900: #111827;
 }
 
-/* ==================== MODAL STYLES - CENTERED ==================== */
+/* PREVENT HORIZONTAL SCROLL */
+body, html {
+    overflow-x: hidden;
+    max-width: 100%;
+}
+
+/* ==================== MODAL STYLES ==================== */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -37,12 +43,8 @@
 }
 
 @keyframes fadeIn {
-    from { 
-        opacity: 0; 
-    }
-    to { 
-        opacity: 1; 
-    }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 @keyframes slideUp {
@@ -56,7 +58,7 @@
     }
 }
 
-/* Custom scrollbar for modals */
+/* Scrollbar */
 .modal-content-kstreet::-webkit-scrollbar {
     width: 8px;
 }
@@ -71,11 +73,7 @@
     border-radius: 4px;
 }
 
-.modal-content-kstreet::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-}
-
-/* ==================== NAVBAR STYLES ==================== */
+/* ==================== NAVBAR ==================== */
 .navbar-kstreet {
     background: linear-gradient(135deg, #111827, #000);
     height: 64px;
@@ -137,7 +135,7 @@
     font-size: 14px;
 }
 
-/* ==================== TAB STYLES ==================== */
+/* ==================== TABS ==================== */
 .tab-btn-kstreet {
     padding: 12px 24px;
     background: #f3f4f6;
@@ -147,6 +145,7 @@
     transition: all 0.2s;
     cursor: pointer;
     border: none;
+    white-space: nowrap;
 }
 
 .tab-btn-kstreet:hover {
@@ -158,7 +157,7 @@
     color: white;
 }
 
-/* ==================== TABLE STYLES ==================== */
+/* ==================== TABLE ==================== */
 .table-kstreet {
     background: white;
     border-radius: 12px;
@@ -170,13 +169,14 @@
     background: #f9fafb;
     color: #374151;
     font-weight: 600;
+    white-space: nowrap;
 }
 
 .table-kstreet tr:hover {
     background: #f9fafb;
 }
 
-/* ==================== BUTTON STYLES ==================== */
+/* ==================== BUTTONS ==================== */
 .btn-kstreet-primary {
     background: var(--primary-red);
     color: white;
@@ -186,6 +186,7 @@
     transition: all 0.2s;
     border: none;
     cursor: pointer;
+    white-space: nowrap;
 }
 
 .btn-kstreet-primary:hover {
@@ -203,13 +204,14 @@
     transition: all 0.2s;
     border: none;
     cursor: pointer;
+    white-space: nowrap;
 }
 
 .btn-kstreet-secondary:hover {
     background: #e5e7eb;
 }
 
-/* ==================== FORM STYLES ==================== */
+/* ==================== FORMS ==================== */
 .form-select-kstreet, 
 .form-input-kstreet {
     padding: 12px;
@@ -226,7 +228,7 @@
     box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
 }
 
-/* ==================== RECEIPT STYLES ==================== */
+/* ==================== RECEIPT ==================== */
 .receipt-kstreet {
     font-family: 'Courier New', monospace;
     max-width: 400px;
@@ -245,7 +247,7 @@
     transform: rotate(-5deg);
 }
 
-/* ==================== LOADING SPINNER ==================== */
+/* ==================== LOADING ==================== */
 .spinner-kstreet {
     width: 40px;
     height: 40px;
@@ -330,18 +332,146 @@
     font-weight: 600;
 }
 
-/* ==================== UTILITY CLASSES ==================== */
-.hidden {
-    display: none !important;
-}
-
 /* ==================== RESPONSIVE ==================== */
 @media (max-width: 768px) {
-    .modal-content-kstreet {
-        max-height: 95vh;
+    /* Adjust padding for mobile */
+    .content-wrapper {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
     }
     
-    .table-kstreet {
-        overflow-x: auto;
+    /* Make header responsive */
+    .text-3xl {
+        font-size: 1.75rem;
     }
+    
+    /* Stack filter controls */
+    .flex-wrap {
+        flex-direction: column;
+    }
+    
+    .w-48 {
+        width: 100% !important;
+    }
+    
+    /* Make tabs scrollable */
+    .flex.gap-2 {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding-bottom: 0.5rem;
+    }
+    
+    .tab-btn-kstreet {
+        flex-shrink: 0;
+        padding: 10px 16px;
+    }
+    
+    /* Adjust table padding */
+    .py-4 {
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+    
+    .px-6 {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+    
+    /* Make modal responsive */
+    .modal-content-kstreet {
+        margin: 0.5rem;
+        max-width: calc(100% - 1rem);
+    }
+    
+    /* Stack buttons in modal */
+    .flex.justify-end.gap-3 {
+        flex-direction: column;
+    }
+    
+    .btn-kstreet-primary,
+    .btn-kstreet-secondary {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+}
+
+@media (max-width: 640px) {
+    /* Smaller text on mobile */
+    .text-sm {
+        font-size: 0.75rem;
+    }
+    
+    /* Adjust table headers */
+    .font-semibold {
+        font-size: 0.75rem;
+    }
+    
+    /* Make pagination responsive */
+    .pagination-kstreet {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+    }
+    
+    /* Adjust grid in cashier modal */
+    .grid-cols-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Even smaller text for very small screens */
+    .text-xl {
+        font-size: 1.25rem;
+    }
+    
+    .text-lg {
+        font-size: 1rem;
+    }
+    
+    /* Hide icons in tabs on very small screens */
+    .tab-btn-kstreet i {
+        display: none;
+    }
+    
+    .tab-btn-kstreet {
+        padding: 8px 12px;
+        font-size: 0.875rem;
+    }
+}
+
+/* Touch-friendly improvements */
+@media (hover: none) and (pointer: coarse) {
+    button, 
+    .tab-btn-kstreet,
+    .form-select-kstreet,
+    .form-input-kstreet {
+        min-height: 44px;
+    }
+    
+    /* Remove hover effects on touch devices */
+    .btn-kstreet-primary:hover,
+    .btn-kstreet-secondary:hover {
+        transform: none;
+    }
+}
+
+/* Prevent text zoom on iOS */
+@media screen and (max-width: 768px) {
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+        font-size: 16px;
+    }
+}
+
+/* Hide scrollbars but keep functionality */
+.overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Utility class */
+.hidden {
+    display: none !important;
 }

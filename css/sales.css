@@ -521,3 +521,49 @@ body, html {
 .hidden {
     display: none !important;
 }
+
+/* Receipt Modal Centering - FIXED VERSION */
+#receiptModal:not(.hidden) {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+#receiptModal .modal-content-kstreet {
+    margin: 0 auto !important;
+}
+
+.receipt-kstreet {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.receipt-kstreet .text-center {
+    text-align: center !important;
+}
+
+/* Receipt Modal Print Styles */
+@media print {
+    #receiptModal {
+        background: white !important;
+    }
+    
+    .receipt-kstreet {
+        max-width: 80mm;
+        margin: 0 auto;
+        box-shadow: none;
+    }
+    
+    #receiptModal .border-t {
+        display: none;
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .receipt-kstreet {
+        max-width: 100%;
+        padding: 20px;
+    }
+}

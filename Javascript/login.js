@@ -1,19 +1,18 @@
-// Javascript/login.js
 document.addEventListener("DOMContentLoaded", function () {
   const form = document.getElementById("loginForm");
   const message = document.getElementById("messageAlert");
   const btn = document.getElementById("submitBtn");
   const btnText = document.getElementById("btnText");
-  const email = document.getElementById("email");
+  const identifier = document.getElementById("identifier");
   const password = document.getElementById("password");
   const remember = document.getElementById("remember");
 
   if (!form) return;
 
-  // Load remembered email
-  const rememberedEmail = localStorage.getItem("rememberedEmail");
-  if (rememberedEmail) {
-    email.value = rememberedEmail;
+  // Load remembered identifier
+  const rememberedIdentifier = localStorage.getItem("rememberedIdentifier");
+  if (rememberedIdentifier) {
+    identifier.value = rememberedIdentifier;
     remember.checked = true;
   }
 
@@ -21,12 +20,12 @@ document.addEventListener("DOMContentLoaded", function () {
   form.addEventListener("submit", async function (e) {
     e.preventDefault();
 
-    const emailVal = email.value.trim();
+    const identifierVal = identifier.value.trim();
     const passwordVal = password.value;
     const rememberVal = remember.checked;
 
-    if (!emailVal || !passwordVal) {
-      showMsg("Please enter email and password", "error");
+    if (!identifierVal || !passwordVal) {
+      showMsg("Please enter email/username and password", "error");
       return;
     }
 
@@ -36,9 +35,8 @@ document.addEventListener("DOMContentLoaded", function () {
     try {
       console.log("Sending login to: backend/login_api.php");
 
-      // BAGO: Ito na ang tamang endpoint
       const response = await axios.post("backend/login_api.php", {
-        email: emailVal,
+        identifier: identifierVal,
         password: passwordVal,
       });
 
@@ -51,9 +49,9 @@ document.addEventListener("DOMContentLoaded", function () {
         localStorage.setItem("isLoggedIn", "true");
 
         if (rememberVal) {
-          localStorage.setItem("rememberedEmail", emailVal);
+          localStorage.setItem("rememberedIdentifier", identifierVal);
         } else {
-          localStorage.removeItem("rememberedEmail");
+          localStorage.removeItem("rememberedIdentifier");
         }
 
         // Redirect immediately

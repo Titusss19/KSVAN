@@ -1,6 +1,5 @@
-// dash.js - SIMPLE CLEAN VERSION MATCHING SCREENSHOT
+// dash.js - COMPLETE FIX WITH AUTO-REFRESH
 
-// ===== STATE MANAGEMENT =====
 const appState = {
   user: window.currentUser || {},
   selectedBranch: "all",
@@ -13,17 +12,12 @@ const appState = {
     users: false,
     announcements: false,
     branches: false,
+    employees: false,
   },
   selectedEmployee: null,
-  feedbackModal: {
-    visible: false,
-    title: "",
-    message: "",
-    type: "success",
-  },
+  feedbackModal: { visible: false, title: "", message: "", type: "success" },
 };
 
-// ===== ATTENDANCE STATE =====
 let attendanceData = {
   action: "",
   pin: "",
@@ -31,11 +25,51 @@ let attendanceData = {
   employeeName: "",
   employeeRole: "",
 };
-
-// ===== LIVE CLOCK VARIABLE =====
 let liveClockInterval = null;
+let roleChangeHandlersInitialized = false;
 
-// ===== UTILITY FUNCTIONS =====
+function setupRoleChangeHandlers() {
+  if (roleChangeHandlersInitialized) return;
+
+  const addRoleSelect = document.getElementById("addUserRole");
+  const addVoidPinContainer = document.getElementById("voidPinContainer");
+  const addVoidPinInput = document.getElementById("addVoidPin");
+
+  if (addRoleSelect && addVoidPinContainer && addVoidPinInput) {
+    addRoleSelect.addEventListener("change", function (e) {
+      const selectedRole = e.target.value;
+      if (selectedRole === "manager" || selectedRole === "admin") {
+        addVoidPinContainer.style.display = "block";
+        addVoidPinInput.required = true;
+      } else {
+        addVoidPinContainer.style.display = "none";
+        addVoidPinInput.required = false;
+        addVoidPinInput.value = "";
+      }
+    });
+  }
+
+  const editRoleSelect = document.getElementById("editUserRole");
+  const editVoidPinInput = document.getElementById("editVoidPin");
+
+  if (editRoleSelect && editVoidPinInput) {
+    editRoleSelect.addEventListener("change", function (e) {
+      const selectedRole = e.target.value;
+      if (selectedRole === "cashier") {
+        editVoidPinInput.placeholder = "Cashier cannot have Void PIN";
+        editVoidPinInput.disabled = true;
+        editVoidPinInput.value = "";
+      } else {
+        editVoidPinInput.placeholder =
+          "Enter new PIN or leave blank to keep existing";
+        editVoidPinInput.disabled = false;
+      }
+    });
+  }
+
+  roleChangeHandlersInitialized = true;
+}
+
 function formatNumber(num) {
   if (num === null || num === undefined) return "0";
   const number = typeof num === "string" ? parseFloat(num) : num;
@@ -68,15 +102,13 @@ function getTimeAgo(dateString) {
   const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
   const diffInDays = Math.floor(diffInHours / 24);
 
-  if (diffInDays > 0) {
+  if (diffInDays > 0)
     return `${diffInDays} day${diffInDays > 1 ? "s" : ""} ago`;
-  } else if (diffInHours > 0) {
+  if (diffInHours > 0)
     return `${diffInHours} hour${diffInHours > 1 ? "s" : ""} ago`;
-  } else if (diffInMinutes > 0) {
+  if (diffInMinutes > 0)
     return `${diffInMinutes} minute${diffInMinutes > 1 ? "s" : ""} ago`;
-  } else {
-    return "Just now";
-  }
+  return "Just now";
 }
 
 function formatDate(dateString) {
@@ -91,11 +123,8 @@ function formatDate(dateString) {
   });
 }
 
-// ===== LIVE CLOCK FUNCTIONS =====
 function startLiveClock() {
-  if (liveClockInterval) {
-    clearInterval(liveClockInterval);
-  }
+  if (liveClockInterval) clearInterval(liveClockInterval);
   updateLiveClock();
   liveClockInterval = setInterval(updateLiveClock, 1000);
 }
@@ -109,344 +138,178 @@ function stopLiveClock() {
 
 function updateLiveClock() {
   const now = new Date();
-
   const timeStr = now.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
     hour12: true,
   });
-
   const timeEl = document.getElementById("attendanceCurrentTime");
-  if (timeEl) {
-    timeEl.textContent = timeStr;
+  if (timeEl) timeEl.textContent = timeStr;
+}
+
+function openCashInModal() {
+  const modal = document.getElementById("cashInModal");
+  if (modal) {
+    modal.classList.add("active");
+    const amountInput = document.getElementById("cashInAmount");
+    const reasonInput = document.getElementById("cashInReason");
+    if (amountInput) amountInput.value = "";
+    if (reasonInput) reasonInput.value = "";
+    setTimeout(() => {
+      if (amountInput) amountInput.focus();
+    }, 100);
   }
 }
 
-// ===== CASH IN/OUT MODAL FUNCTIONS =====
-
-/**
- * Opens the Cash In modal and resets form fields
- */
-function openCashInModal() {
-    const modal = document.getElementById('cashInModal');
-    if (modal) {
-        modal.classList.add('active');
-        
-        // Reset form fields
-        const amountInput = document.getElementById('cashInAmount');
-        const reasonInput = document.getElementById('cashInReason');
-        
-        if (amountInput) amountInput.value = '';
-        if (reasonInput) reasonInput.value = '';
-        
-        // Focus on amount input after a short delay
-        setTimeout(() => {
-            if (amountInput) amountInput.focus();
-        }, 100);
-    }
-}
-
-/**
- * Closes the Cash In modal
- */
 function closeCashInModal() {
-    const modal = document.getElementById('cashInModal');
-    if (modal) {
-        modal.classList.remove('active');
-    }
+  const modal = document.getElementById("cashInModal");
+  if (modal) modal.classList.remove("active");
 }
 
-/**
- * Processes the Cash In transaction
- * Validates input and sends to backend API
- */
 async function processCashIn() {
-    const amountInput = document.getElementById('cashInAmount');
-    const reasonInput = document.getElementById('cashInReason');
-    
-    if (!amountInput || !reasonInput) {
-        showFeedback('Error', 'Form elements not found', 'error');
-        return;
+  const amountInput = document.getElementById("cashInAmount");
+  const reasonInput = document.getElementById("cashInReason");
+  if (!amountInput || !reasonInput) {
+    showFeedback("Error", "Form elements not found", "error");
+    return;
+  }
+  const amount = parseFloat(amountInput.value);
+  const reason = reasonInput.value.trim();
+  if (!amount || amount <= 0) {
+    showFeedback("Error", "Please enter a valid amount", "error");
+    return;
+  }
+  if (!reason) {
+    showFeedback("Error", "Please enter a reason for cash in", "error");
+    return;
+  }
+  try {
+    const result = await apiCall("cashIn", {
+      amount: amount,
+      type: "deposit",
+      reason: reason,
+      branch: appState.user.branch || "main",
+      user_id: appState.user.id,
+    });
+    if (result.success) {
+      showFeedback(
+        "Cash In Successful",
+        `₱${amount.toFixed(2)} has been added to the register.`,
+        "success"
+      );
+      closeCashInModal();
+      refreshAll();
+    } else {
+      showFeedback(
+        "Error",
+        result.message || "Failed to process cash in",
+        "error"
+      );
     }
-    
-    const amount = parseFloat(amountInput.value);
-    const reason = reasonInput.value.trim();
-
-    // Validation
-    if (!amount || amount <= 0) {
-        showFeedback('Error', 'Please enter a valid amount', 'error');
-        return;
-    }
-
-    if (!reason) {
-        showFeedback('Error', 'Please enter a reason for cash in', 'error');
-        return;
-    }
-
-    try {
-        // Call the API using your existing apiCall function
-        const result = await apiCall('cashIn', {
-            amount: amount,
-            type: 'deposit',
-            reason: reason,
-            branch: appState.user.branch || 'main',
-            user_id: appState.user.id
-        });
-
-        if (result.success) {
-            showFeedback(
-                'Cash In Successful', 
-                `₱${amount.toFixed(2)} has been added to the register.`,
-                'success'
-            );
-            
-            closeCashInModal();
-            
-            // Refresh dashboard data to reflect new cash transaction
-            refreshAll();
-            
-            // Optional: Log the transaction for debugging
-            console.log('Cash In Transaction:', {
-                amount: amount,
-                reason: reason,
-                timestamp: new Date().toISOString()
-            });
-        } else {
-            showFeedback(
-                'Error', 
-                result.message || 'Failed to process cash in',
-                'error'
-            );
-        }
-    } catch (error) {
-        console.error('Cash In Error:', error);
-        showFeedback(
-            'Error', 
-            'Network error. Please try again.',
-            'error'
-        );
-    }
+  } catch (error) {
+    console.error("Cash In Error:", error);
+    showFeedback("Error", "Network error. Please try again.", "error");
+  }
 }
 
-/**
- * Opens the Cash Out modal and resets form fields
- */
 function openCashOutModal() {
-    const modal = document.getElementById('cashOutModal');
-    if (modal) {
-        modal.classList.add('active');
-        
-        // Reset form fields
-        const amountInput = document.getElementById('cashOutAmount');
-        const reasonInput = document.getElementById('cashOutReason');
-        
-        if (amountInput) amountInput.value = '';
-        if (reasonInput) reasonInput.value = '';
-        
-        // Focus on amount input after a short delay
-        setTimeout(() => {
-            if (amountInput) amountInput.focus();
-        }, 100);
-    }
+  const modal = document.getElementById("cashOutModal");
+  if (modal) {
+    modal.classList.add("active");
+    const amountInput = document.getElementById("cashOutAmount");
+    const reasonInput = document.getElementById("cashOutReason");
+    if (amountInput) amountInput.value = "";
+    if (reasonInput) reasonInput.value = "";
+    setTimeout(() => {
+      if (amountInput) amountInput.focus();
+    }, 100);
+  }
 }
 
-/**
- * Closes the Cash Out modal
- */
 function closeCashOutModal() {
-    const modal = document.getElementById('cashOutModal');
-    if (modal) {
-        modal.classList.remove('active');
-    }
+  const modal = document.getElementById("cashOutModal");
+  if (modal) modal.classList.remove("active");
 }
 
-/**
- * Processes the Cash Out transaction
- * Validates input and sends to backend API
- */
 async function processCashOut() {
-    const amountInput = document.getElementById('cashOutAmount');
-    const reasonInput = document.getElementById('cashOutReason');
-    
-    if (!amountInput || !reasonInput) {
-        showFeedback('Error', 'Form elements not found', 'error');
-        return;
+  const amountInput = document.getElementById("cashOutAmount");
+  const reasonInput = document.getElementById("cashOutReason");
+  if (!amountInput || !reasonInput) {
+    showFeedback("Error", "Form elements not found", "error");
+    return;
+  }
+  const amount = parseFloat(amountInput.value);
+  const reason = reasonInput.value.trim();
+  if (!amount || amount <= 0) {
+    showFeedback("Error", "Please enter a valid amount", "error");
+    return;
+  }
+  if (!reason) {
+    showFeedback("Error", "Please enter a reason for cash out", "error");
+    return;
+  }
+  try {
+    const result = await apiCall("cashOut", {
+      amount: amount,
+      type: "withdrawal",
+      reason: reason,
+      branch: appState.user.branch || "main",
+      user_id: appState.user.id,
+    });
+    if (result.success) {
+      showFeedback(
+        "Cash Out Successful",
+        `₱${amount.toFixed(2)} has been removed from the register.`,
+        "success"
+      );
+      closeCashOutModal();
+      refreshAll();
+    } else {
+      showFeedback(
+        "Error",
+        result.message || "Failed to process cash out",
+        "error"
+      );
     }
-    
-    const amount = parseFloat(amountInput.value);
-    const reason = reasonInput.value.trim();
-
-    // Validation
-    if (!amount || amount <= 0) {
-        showFeedback('Error', 'Please enter a valid amount', 'error');
-        return;
-    }
-
-    if (!reason) {
-        showFeedback('Error', 'Please enter a reason for cash out', 'error');
-        return;
-    }
-
-    try {
-        // Call the API using your existing apiCall function
-        const result = await apiCall('cashOut', {
-            amount: amount,
-            type: 'withdrawal',
-            reason: reason,
-            branch: appState.user.branch || 'main',
-            user_id: appState.user.id
-        });
-
-        if (result.success) {
-            showFeedback(
-                'Cash Out Successful', 
-                `₱${amount.toFixed(2)} has been removed from the register.`,
-                'success'
-            );
-            
-            closeCashOutModal();
-            
-            // Refresh dashboard data to reflect new cash transaction
-            refreshAll();
-            
-            // Optional: Log the transaction for debugging
-            console.log('Cash Out Transaction:', {
-                amount: amount,
-                reason: reason,
-                timestamp: new Date().toISOString()
-            });
-        } else {
-            showFeedback(
-                'Error', 
-                result.message || 'Failed to process cash out',
-                'error'
-            );
-        }
-    } catch (error) {
-        console.error('Cash Out Error:', error);
-        showFeedback(
-            'Error', 
-            'Network error. Please try again.',
-            'error'
-        );
-    }
+  } catch (error) {
+    console.error("Cash Out Error:", error);
+    showFeedback("Error", "Network error. Please try again.", "error");
+  }
 }
 
-/**
- * Optional: Get cash transactions list with filters
- * @param {Object} filters - Filter options (branch, start_date, end_date, type)
- * @returns {Promise<Object|null>} Transaction data or null if failed
- */
-async function getCashTransactions(filters = {}) {
-    try {
-        const result = await apiCall('getCashTransactions', {
-            branch: filters.branch || appState.selectedBranch,
-            start_date: filters.start_date || new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0],
-            end_date: filters.end_date || new Date().toISOString().split('T')[0],
-            type: filters.type || 'all' // 'all', 'deposit', 'withdrawal'
-        });
-
-        if (result.success) {
-            console.log('Cash Transactions:', result.data);
-            console.log('Summary:', result.summary);
-            return result;
-        } else {
-            console.error('Failed to get transactions:', result.message);
-            return null;
-        }
-    } catch (error) {
-        console.error('Get Transactions Error:', error);
-        return null;
-    }
-}
-
-/**
- * Optional: Get cash summary for dashboard display
- * @param {string} period - 'today', 'week', 'month', 'all'
- * @param {string} branch - Branch name or 'all'
- * @returns {Promise<Object|null>} Summary data or null if failed
- */
-async function getCashSummary(period = 'today', branch = 'all') {
-    try {
-        const result = await apiCall('getCashSummary', {
-            period: period,
-            branch: branch || appState.selectedBranch
-        });
-
-        if (result.success) {
-            console.log('Cash Summary:', result.data);
-            return result.data;
-        } else {
-            console.error('Failed to get summary:', result.message);
-            return null;
-        }
-    } catch (error) {
-        console.error('Get Summary Error:', error);
-        return null;
-    }
-}
-
-// ===== CLOSE MODALS ON OUTSIDE CLICK =====
-// Add this to your existing window click event listener or create a new one
-window.addEventListener('click', function(event) {
-    const cashInModal = document.getElementById('cashInModal');
-    const cashOutModal = document.getElementById('cashOutModal');
-    
-    // Close cash in modal if clicking outside
-    if (event.target === cashInModal) {
-        closeCashInModal();
-    }
-    
-    // Close cash out modal if clicking outside
-    if (event.target === cashOutModal) {
-        closeCashOutModal();
-    }
+window.addEventListener("click", function (event) {
+  const cashInModal = document.getElementById("cashInModal");
+  const cashOutModal = document.getElementById("cashOutModal");
+  if (event.target === cashInModal) closeCashInModal();
+  if (event.target === cashOutModal) closeCashOutModal();
 });
 
-
-// ===== API CALL FUNCTION =====
 async function apiCall(action, data = {}, useAttendanceAPI = false) {
   const apiUrl = useAttendanceAPI
     ? "backend/attendance_api.php"
     : "backend/dashboard_api.php";
-
   const formData = new FormData();
   formData.append("action", action);
-
   for (const [key, value] of Object.entries(data)) {
     formData.append(key, value);
   }
-
   try {
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      body: formData,
-    });
-
+    const response = await fetch(apiUrl, { method: "POST", body: formData });
     const responseText = await response.text();
-  
-
     try {
       const result = JSON.parse(responseText);
       return result;
     } catch (jsonError) {
-     
-      return {
-        success: false,
-        message: "Server error. Please check backend.",
-      };
+      console.error("JSON Parse Error:", jsonError);
+      console.error("Response was:", responseText);
+      return { success: false, message: "Server error. Please check backend." };
     }
   } catch (error) {
- 
-    return {
-      success: false,
-      message: "Network error: " + error.message,
-    };
+    return { success: false, message: "Network error: " + error.message };
   }
 }
 
-// ===== FEEDBACK MODAL =====
 function showFeedback(title, message, type = "success") {
   appState.feedbackModal = {
     visible: true,
@@ -469,12 +332,10 @@ function closeFeedback() {
 function updateFeedbackModal() {
   const modal = document.getElementById("feedbackModal");
   if (!modal) return;
-
   if (!appState.feedbackModal.visible) {
     modal.classList.remove("active");
     return;
   }
-
   modal.classList.add("active");
   const title = document.getElementById("feedbackTitle");
   const message = document.getElementById("feedbackMessage");
@@ -482,11 +343,9 @@ function updateFeedbackModal() {
   if (message) message.textContent = appState.feedbackModal.message;
 }
 
-// ===== BRANCH FILTER =====
 function toggleBranchDropdown() {
   const dropdown = document.getElementById("branchDropdown");
   const chevron = document.getElementById("chevronIcon");
-
   if (dropdown) {
     dropdown.classList.toggle("hidden");
     if (chevron) {
@@ -500,43 +359,29 @@ function toggleBranchDropdown() {
 function selectBranch(branch) {
   event.preventDefault();
   appState.selectedBranch = branch;
-
   const branchText = document.getElementById("branchText");
   if (branchText) {
     branchText.textContent = branch === "all" ? "All Branches" : branch;
   }
-
   const dropdown = document.getElementById("branchDropdown");
-  if (dropdown) {
-    dropdown.classList.add("hidden");
-  }
-
-  loadStats();
-  loadUsers();
-  loadAnnouncements();
+  if (dropdown) dropdown.classList.add("hidden");
+  refreshAll();
 }
 
-// ===== STATS LOADING =====
 async function loadStats() {
   appState.loading.stats = true;
   updateLoadingIndicators();
-
   try {
-   
     const result = await apiCall("getStats", {
       branch: appState.selectedBranch,
     });
-
     if (result.success) {
       appState.stats = result.data;
       updateStatsDisplay();
-    
     } else {
-    
       showFeedback("Error", "Failed to load stats", "error");
     }
   } catch (error) {
-
     showFeedback("Error", "Error loading stats", "error");
   } finally {
     appState.loading.stats = false;
@@ -547,7 +392,6 @@ async function loadStats() {
 function updateStatsDisplay() {
   if (!appState.stats) return;
   const stats = appState.stats;
-
   const elements = {
     netSales: formatPeso(stats.grossSales),
     grossSales: formatPeso(stats.netSales),
@@ -558,14 +402,10 @@ function updateStatsDisplay() {
     inventoryItems: `${formatNumber(stats.inventoryItemCount)} items in stock`,
     activeEmployees: formatNumber(stats.activeEmployees),
   };
-
   for (const [id, value] of Object.entries(elements)) {
     const element = document.getElementById(id);
-    if (element) {
-      element.textContent = value;
-    }
+    if (element) element.textContent = value;
   }
-
   const todayVoided = document.getElementById("todayVoided");
   if (todayVoided && stats.todayVoidedAmount > 0) {
     todayVoided.style.display = "block";
@@ -577,27 +417,20 @@ function updateStatsDisplay() {
   }
 }
 
-// ===== USERS LOADING =====
 async function loadUsers() {
   appState.loading.users = true;
   updateLoadingIndicators();
-
   try {
-   
     const result = await apiCall("getUsers", {
       branch: appState.selectedBranch,
     });
-
     if (result.success) {
       appState.users = result.data || [];
       updateUsersDisplay();
-  
     } else {
-     
       showFeedback("Error", "Failed to load users", "error");
     }
   } catch (error) {
- 
     showFeedback("Error", "Error loading users", "error");
   } finally {
     appState.loading.users = false;
@@ -608,15 +441,12 @@ async function loadUsers() {
 function updateUsersDisplay() {
   const tbody = document.getElementById("usersTableBody");
   if (!tbody) return;
-
   if (appState.users.length === 0) {
     tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-gray-500">No users found</td></tr>`;
     return;
   }
-
   const currentUserRole = appState.user.role || "cashier";
-  const canEditDelete = ["admin", "owner", "manager"].includes(currentUserRole);
-
+  const canEditDelete = ["admin", "manager"].includes(currentUserRole);
   tbody.innerHTML = appState.users
     .map(
       (user) => `
@@ -631,9 +461,9 @@ function updateUsersDisplay() {
       <td class="py-4 px-4">
         <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold ${
           user.role === "admin"
-            ? "bg-purple-100 text-purple-700"
+            ? "bg-red-500 text-white"
             : user.role === "manager"
-            ? "bg-blue-100 text-red-700"
+            ? "bg-black text-white"
             : "bg-green-100 text-green-700"
         }">
           ${
@@ -686,45 +516,16 @@ function updateUsersDisplay() {
     .join("");
 }
 
-function handleRoleChange() {
-  const roleSelect = document.getElementById("addUserRole");
-  const voidPinContainer = document.getElementById("voidPinContainer");
-  const voidPinInput = document.getElementById("addVoidPin");
-
-  if (roleSelect && voidPinContainer && voidPinInput) {
-    roleSelect.addEventListener("change", function () {
-      if (this.value === "manager" || this.value === "admin") {
-        voidPinContainer.style.display = "block";
-        voidPinInput.required = true;
-      } else {
-        voidPinContainer.style.display = "none";
-        voidPinInput.required = false;
-        voidPinInput.value = "";
-      }
-    });
-
-    if (roleSelect.value === "manager" || roleSelect.value === "admin") {
-      voidPinContainer.style.display = "block";
-      voidPinInput.required = true;
-    }
-  }
-}
-
-// ===== ANNOUNCEMENTS LOADING =====
 async function loadAnnouncements() {
   appState.loading.announcements = true;
   updateLoadingIndicators();
-
   try {
-  
     const result = await apiCall("getAnnouncements", {
       branch: appState.selectedBranch,
     });
-
     if (result.success) {
       appState.announcements = result.data || [];
       updateAnnouncementsDisplay();
-    
     } else {
       console.error("Failed to load announcements:", result.message);
       showFeedback("Error", "Failed to load announcements", "error");
@@ -741,12 +542,10 @@ async function loadAnnouncements() {
 function updateAnnouncementsDisplay() {
   const container = document.getElementById("announcementsContainer");
   if (!container) return;
-
   if (appState.announcements.length === 0) {
     container.innerHTML = `<div class="text-center py-8 text-gray-500">No announcements yet</div>`;
     return;
   }
-
   container.innerHTML = appState.announcements
     .map(
       (announcement) => `
@@ -780,7 +579,6 @@ function updateAnnouncementsDisplay() {
     .join("");
 }
 
-// ===== MODALS =====
 function openAnnouncementModal() {
   const modal = document.getElementById("announcementModal");
   if (modal) modal.classList.add("active");
@@ -792,6 +590,19 @@ function closeAnnouncementModal() {
 }
 
 function openAddUserModal() {
+  const roleSelect = document.getElementById("addUserRole");
+  const voidPinContainer = document.getElementById("voidPinContainer");
+  const voidPinInput = document.getElementById("addVoidPin");
+  document.getElementById("addUserEmail").value = "";
+  document.getElementById("addUsername").value = "";
+  document.getElementById("addPassword").value = "";
+  document.getElementById("addConfirmPassword").value = "";
+  document.getElementById("addUserBranch").value =
+    appState.user.branch || "main";
+  document.getElementById("addUserStatus").value = "Active";
+  if (roleSelect) roleSelect.value = "cashier";
+  if (voidPinInput) voidPinInput.value = "";
+  if (voidPinContainer) voidPinContainer.style.display = "none";
   const modal = document.getElementById("addUserModal");
   if (modal) modal.classList.add("active");
 }
@@ -807,21 +618,28 @@ function openEditModal(userId) {
     showFeedback("Error", "User not found", "error");
     return;
   }
-
   appState.selectedEmployee = { ...user };
-
   const editUsername = document.getElementById("editUsername");
   const editEmail = document.getElementById("editEmail");
   const editUserRole = document.getElementById("editUserRole");
   const editUserBranch = document.getElementById("editUserBranch");
   const editUserStatus = document.getElementById("editUserStatus");
-
+  const editVoidPin = document.getElementById("editVoidPin");
   if (editUsername) editUsername.value = user.username || "";
   if (editEmail) editEmail.value = user.email || "";
-  if (editUserRole) editUserRole.value = user.role || "cashier";
   if (editUserBranch) editUserBranch.value = user.branch || "main";
   if (editUserStatus) editUserStatus.value = user.status || "Active";
-
+  if (editUserRole) editUserRole.value = user.role || "cashier";
+  if (editVoidPin) {
+    editVoidPin.value = "";
+    editVoidPin.placeholder = "Leave blank to keep existing PIN";
+    if (user.role === "cashier") {
+      editVoidPin.disabled = true;
+      editVoidPin.placeholder = "Cashier cannot have Void PIN";
+    } else {
+      editVoidPin.disabled = false;
+    }
+  }
   const modal = document.getElementById("editModal");
   if (modal) modal.classList.add("active");
 }
@@ -838,11 +656,9 @@ function openDeleteModal(userId, email) {
     showFeedback("Error", "User not found", "error");
     return;
   }
-
   appState.selectedEmployee = { ...user };
   const emailEl = document.getElementById("deleteUserEmail");
   if (emailEl) emailEl.textContent = email;
-
   const modal = document.getElementById("deleteModal");
   if (modal) modal.classList.add("active");
 }
@@ -853,24 +669,20 @@ function closeDeleteModal() {
   appState.selectedEmployee = null;
 }
 
-// ===== ACTIONS =====
 async function postAnnouncement() {
   const title = document.getElementById("announcementTitle")?.value || "";
   const message = document.getElementById("announcementMessage")?.value || "";
   const type = document.getElementById("announcementType")?.value || "info";
-
   if (!title || !message) {
     showFeedback("Warning", "Please fill in both title and message", "warning");
     return;
   }
-
   try {
     const result = await apiCall("postAnnouncement", {
       title: title,
       message: message,
       type: type,
     });
-
     if (result.success) {
       document.getElementById("announcementTitle").value = "";
       document.getElementById("announcementMessage").value = "";
@@ -891,17 +703,35 @@ async function postAnnouncement() {
 }
 
 async function addUser() {
-  const email = document.getElementById("addUserEmail")?.value.trim() || "";
-  const username = document.getElementById("addUsername")?.value.trim() || "";
-  const password = document.getElementById("addPassword")?.value || "";
-  const confirmPassword =
-    document.getElementById("addConfirmPassword")?.value || "";
-  const role = document.getElementById("addUserRole")?.value || "cashier";
-  const branch =
-    document.getElementById("addUserBranch")?.value.trim() || "main";
-  const status = document.getElementById("addUserStatus")?.value || "Active";
-  const void_pin = document.getElementById("addVoidPin")?.value || "";
-
+  const emailInput = document.getElementById("addUserEmail");
+  const usernameInput = document.getElementById("addUsername");
+  const passwordInput = document.getElementById("addPassword");
+  const confirmPasswordInput = document.getElementById("addConfirmPassword");
+  const roleSelect = document.getElementById("addUserRole");
+  const branchInput = document.getElementById("addUserBranch");
+  const statusSelect = document.getElementById("addUserStatus");
+  const voidPinInput = document.getElementById("addVoidPin");
+  if (
+    !emailInput ||
+    !usernameInput ||
+    !passwordInput ||
+    !confirmPasswordInput ||
+    !roleSelect
+  ) {
+    console.error("CRITICAL ERROR: Form elements not found!");
+    showFeedback("Error", "Form error - please refresh page", "error");
+    return;
+  }
+  const email = emailInput.value.trim();
+  const username = usernameInput.value.trim();
+  const password = passwordInput.value;
+  const confirmPassword = confirmPasswordInput.value;
+  const role = roleSelect.value;
+  const branch = branchInput
+    ? branchInput.value.trim()
+    : appState.user.branch || "main";
+  const status = statusSelect ? statusSelect.value : "Active";
+  const void_pin = voidPinInput ? voidPinInput.value : "";
   if (!email || !username || !password || !confirmPassword || !branch) {
     showFeedback(
       "Warning",
@@ -910,28 +740,23 @@ async function addUser() {
     );
     return;
   }
-
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
     showFeedback("Error", "Please enter a valid email address", "error");
     return;
   }
-
   if (username.length < 3) {
     showFeedback("Error", "Username must be at least 3 characters", "error");
     return;
   }
-
   if (password.length < 6) {
     showFeedback("Error", "Password must be at least 6 characters", "error");
     return;
   }
-
   if (password !== confirmPassword) {
     showFeedback("Error", "Passwords do not match", "error");
     return;
   }
-
   if ((role === "manager" || role === "admin") && !void_pin) {
     showFeedback(
       "Error",
@@ -940,7 +765,6 @@ async function addUser() {
     );
     return;
   }
-
   if (void_pin) {
     if (void_pin.length !== 4) {
       showFeedback("Error", "Void PIN must be exactly 4 digits", "error");
@@ -951,7 +775,6 @@ async function addUser() {
       return;
     }
   }
-
   try {
     const result = await apiCall("addUser", {
       email: email,
@@ -963,16 +786,15 @@ async function addUser() {
       status: status,
       void_pin: void_pin,
     });
-
     if (result.success) {
-      document.getElementById("addUserEmail").value = "";
-      document.getElementById("addUsername").value = "";
-      document.getElementById("addPassword").value = "";
-      document.getElementById("addConfirmPassword").value = "";
-      document.getElementById("addVoidPin").value = "";
-      document.getElementById("addUserBranch").value =
-        appState.user.branch || "main";
-
+      emailInput.value = "";
+      usernameInput.value = "";
+      passwordInput.value = "";
+      confirmPasswordInput.value = "";
+      if (voidPinInput) voidPinInput.value = "";
+      if (roleSelect) roleSelect.value = "cashier";
+      if (branchInput) branchInput.value = appState.user.branch || "main";
+      if (statusSelect) statusSelect.value = "Active";
       closeAddUserModal();
       loadUsers();
       showFeedback("Success", "User added successfully", "success");
@@ -990,14 +812,23 @@ async function updateUser() {
     showFeedback("Error", "No user selected", "error");
     return;
   }
-
-  const email = document.getElementById("editEmail")?.value || "";
-  const username = document.getElementById("editUsername")?.value || "";
-  const role = document.getElementById("editUserRole")?.value || "cashier";
-  const branch = document.getElementById("editUserBranch")?.value || "main";
-  const status = document.getElementById("editUserStatus")?.value || "Active";
-  const void_pin = document.getElementById("editVoidPin")?.value || "";
-
+  const emailInput = document.getElementById("editEmail");
+  const usernameInput = document.getElementById("editUsername");
+  const roleSelect = document.getElementById("editUserRole");
+  const branchInput = document.getElementById("editUserBranch");
+  const statusSelect = document.getElementById("editUserStatus");
+  const voidPinInput = document.getElementById("editVoidPin");
+  if (!emailInput || !usernameInput || !roleSelect) {
+    console.error("CRITICAL ERROR: Edit form elements not found!");
+    showFeedback("Error", "Form error - please refresh page", "error");
+    return;
+  }
+  const email = emailInput.value;
+  const username = usernameInput.value;
+  const role = roleSelect.value;
+  const branch = branchInput ? branchInput.value : "main";
+  const status = statusSelect ? statusSelect.value : "Active";
+  const void_pin = voidPinInput ? voidPinInput.value : "";
   if (void_pin) {
     if (role === "cashier") {
       showFeedback("Error", "Cashier accounts cannot have Void PIN", "error");
@@ -1012,7 +843,6 @@ async function updateUser() {
       return;
     }
   }
-
   try {
     const result = await apiCall("updateUser", {
       id: appState.selectedEmployee.id,
@@ -1023,7 +853,6 @@ async function updateUser() {
       status: status,
       void_pin: void_pin,
     });
-
     if (result.success) {
       closeEditModal();
       loadUsers();
@@ -1042,12 +871,10 @@ async function confirmDelete() {
     showFeedback("Error", "No user selected", "error");
     return;
   }
-
   try {
     const result = await apiCall("deleteUser", {
       id: appState.selectedEmployee.id,
     });
-
     if (result.success) {
       closeDeleteModal();
       loadUsers();
@@ -1062,6 +889,7 @@ async function confirmDelete() {
 }
 
 function refreshAll() {
+  console.log("Refreshing all data...");
   loadStats();
   loadUsers();
   loadAnnouncements();
@@ -1069,10 +897,12 @@ function refreshAll() {
 }
 
 function refreshAnnouncements() {
+  console.log("Refreshing announcements...");
   loadAnnouncements();
 }
 
 function refreshUsers() {
+  console.log("Refreshing users...");
   loadUsers();
 }
 
@@ -1086,7 +916,8 @@ function updateLoadingIndicators() {
     const isLoading =
       appState.loading.stats ||
       appState.loading.users ||
-      appState.loading.announcements;
+      appState.loading.announcements ||
+      appState.loading.employees;
     if (isLoading) {
       refreshIcon.classList.add("animate-spin");
     } else {
@@ -1095,17 +926,12 @@ function updateLoadingIndicators() {
   }
 }
 
-// ===== LOAD BRANCHES =====
 async function loadBranches() {
   appState.loading.branches = true;
-
   try {
- 
     const result = await apiCall("getBranches", {});
-
     if (result.success) {
       appState.branches = result.data || [];
-     
       updateBranchDropdown();
     } else {
       console.error("Failed to load branches:", result.message);
@@ -1119,59 +945,78 @@ async function loadBranches() {
   }
 }
 
-// ===== LOAD EMPLOYEE STATUS (UPDATED) =====
-async function loadEmployeeStatus() {
-  try {
- 
-    
-    // First check if we should load from dashboard or attendance API
-    const result = await apiCall("getEmployees", {
-      branch: appState.selectedBranch
-    }, false); // Use dashboard API first
+function updateBranchDropdown() {
+  const dropdown = document.getElementById("branchDropdown");
+  if (!dropdown) return;
+  const branchOptions = appState.branches
+    .map(
+      (branch) => `
+    <a href="#" onclick="selectBranch('${branch}')" class="w-full px-4 py-2.5 text-left text-xs sm:text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors text-gray-700">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      ${branch}
+    </a>
+  `
+    )
+    .join("");
+  dropdown.innerHTML = `
+    <div class="py-2">
+      <a href="#" onclick="selectBranch('all')" class="w-full px-4 py-2.5 text-left text-xs sm:text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors text-gray-700">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+        All Branches
+        <span class="ml-auto text-red-500" id="allCheck">✓</span>
+      </a>
+      <div class="border-t border-gray-100 my-1"></div>
+      ${branchOptions}
+    </div>
+  `;
+}
 
+async function loadEmployeeStatus() {
+  appState.loading.employees = true;
+  updateLoadingIndicators();
+  try {
+    const result = await apiCall(
+      "getEmployees",
+      { branch: appState.selectedBranch },
+      false
+    );
     if (result.success) {
       updateEmployeeStatusDisplay(result.employees || []);
-    
     } else {
-      // Fallback to attendance API if dashboard API fails
-    
       const fallbackResult = await apiCall("getEmployees", {}, true);
-      
       if (fallbackResult.success) {
         updateEmployeeStatusDisplay(fallbackResult.employees || []);
-       
       } else {
-      
         updateEmployeeStatusDisplay([]);
       }
     }
   } catch (error) {
     console.error("Error loading employee status:", error);
     updateEmployeeStatusDisplay([]);
+  } finally {
+    appState.loading.employees = false;
+    updateLoadingIndicators();
   }
 }
 
-// ===== UPDATE EMPLOYEE STATUS DISPLAY (WITH BRANCH) =====
 function updateEmployeeStatusDisplay(employees) {
   const container = document.getElementById("employeeStatusList");
   if (!container) return;
-
   if (employees.length === 0) {
-    container.innerHTML = `
-      <div class="text-center py-4 text-gray-500 text-sm">
-        No employees in your branch
-      </div>
-    `;
+    container.innerHTML = `<div class="text-center py-4 text-gray-500 text-sm">No employees in your branch</div>`;
     return;
   }
-
-  // Sort: on duty first, then alphabetically
   employees.sort((a, b) => {
     if (a.is_on_duty && !b.is_on_duty) return -1;
     if (!a.is_on_duty && b.is_on_duty) return 1;
     return a.full_name.localeCompare(b.full_name);
   });
-
   container.innerHTML = employees
     .map((emp) => {
       const statusColor = emp.is_on_duty
@@ -1181,148 +1026,75 @@ function updateEmployeeStatusDisplay(employees) {
       const statusIcon = emp.is_on_duty
         ? '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"></circle></svg>'
         : '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg>';
-      
-      // Add branch badge if available
-      const branchBadge = emp.branch ? 
-        `<span class="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded ml-1">${emp.branch}</span>` : '';
-
+      const branchBadge = emp.branch
+        ? `<span class="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded ml-1">${emp.branch}</span>`
+        : "";
       return `
-        <div class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors">
-          <div class="flex items-center gap-2 flex-1 min-w-0">
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center">
-                <p class="text-sm font-medium text-gray-800 truncate">${emp.full_name || 'Employee'}</p>
-                ${branchBadge}
-              </div>
-              ${
-                emp.is_on_duty && emp.current_hours
-                  ? `<p class="text-xs text-gray-500">Working ${emp.current_hours}h</p>`
-                  : emp.is_on_duty
-                  ? `<p class="text-xs text-gray-500">Currently on duty</p>`
-                  : ''
-              }
+      <div class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors">
+        <div class="flex items-center gap-2 flex-1 min-w-0">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center">
+              <p class="text-sm font-medium text-gray-800 truncate">${
+                emp.full_name || "Employee"
+              }</p>
+              ${branchBadge}
             </div>
-          </div>
-          <div class="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${statusColor} flex-shrink-0">
-            ${statusIcon}
-            <span>${statusText}</span>
+            ${
+              emp.is_on_duty && emp.current_hours
+                ? `<p class="text-xs text-gray-500">Working ${emp.current_hours}h</p>`
+                : emp.is_on_duty
+                ? `<p class="text-xs text-gray-500">Currently on duty</p>`
+                : ""
+            }
           </div>
         </div>
-      `;
+        <div class="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${statusColor} flex-shrink-0">
+          ${statusIcon}
+          <span>${statusText}</span>
+        </div>
+      </div>
+    `;
     })
     .join("");
 }
 
-// ===== UPDATE INITIALIZATION =====
-document.addEventListener("DOMContentLoaded", function () {
-
-
-  if (typeof currentUser !== "undefined") {
-    appState.user = currentUser;
-  
-
-    const branchFilterContainer = document.querySelector(
-      ".relative:has(#branchDropdown)"
-    );
-    if (branchFilterContainer) {
-      if (currentUser.role !== "admin" && currentUser.role !== "owner") {
-        branchFilterContainer.style.display = "none";
-        // Set selected branch to user's branch
-        appState.selectedBranch = currentUser.branch || "main";
-        const branchText = document.getElementById("branchText");
-        if (branchText) {
-          branchText.textContent = appState.selectedBranch;
-        }
-      } else {
-        loadBranches();
-      }
-    }
-
-    const addUserBtn = document.querySelector(
-      'button[onclick="openAddUserModal()"]'
-    );
-    if (
-      addUserBtn &&
-      !["admin", "owner", "manager"].includes(currentUser.role)
-    ) {
-      addUserBtn.style.display = "none";
-    }
-    
-    // Add user branch to add user form
-    const addUserBranch = document.getElementById("addUserBranch");
-    if (addUserBranch && currentUser.branch) {
-      addUserBranch.value = currentUser.branch;
-    }
-  }
-
-  handleRoleChange();
-  startLiveClock();
-
-  setTimeout(() => {
-    loadStats();
-    loadUsers();
-    loadAnnouncements();
-    loadEmployeeStatus();
-  }, 500);
-});
-
-// ============================================
-// ATTENDANCE QUICK ACTIONS - SIMPLE VERSION
-// ============================================
-
 function quickTimeIn() {
-
-
   attendanceData.action = "timeIn";
   attendanceData.pin = "";
   attendanceData.employeeId = null;
-
   document.getElementById("pinModalTitle").textContent = "Clock In";
   document.getElementById("pinModalSubtitle").textContent =
     appState.user.username || "Employee";
-
   const actionBtn = document.getElementById("pinActionButton");
   actionBtn.textContent = "Clock In";
   actionBtn.className = "btn-primary red";
-
   const pinInput = document.getElementById("attendancePinInput");
   if (pinInput) pinInput.value = "";
-
   const pinError = document.getElementById("pinError");
   if (pinError) pinError.classList.add("hidden");
-
   startLiveClock();
   showModal("attendancePinModal");
-
   setTimeout(() => {
     if (pinInput) pinInput.focus();
   }, 100);
 }
 
 function quickTimeOut() {
-  
-
   attendanceData.action = "timeOut";
   attendanceData.pin = "";
   attendanceData.employeeId = null;
-
   document.getElementById("pinModalTitle").textContent = "Clock Out";
   document.getElementById("pinModalSubtitle").textContent =
     appState.user.username || "Employee";
-
   const actionBtn = document.getElementById("pinActionButton");
   actionBtn.textContent = "Clock Out";
   actionBtn.className = "btn-primary";
-
   const pinInput = document.getElementById("attendancePinInput");
   if (pinInput) pinInput.value = "";
-
   const pinError = document.getElementById("pinError");
   if (pinError) pinError.classList.add("hidden");
-
   startLiveClock();
   showModal("attendancePinModal");
-
   setTimeout(() => {
     if (pinInput) pinInput.focus();
   }, 100);
@@ -1331,31 +1103,25 @@ function quickTimeOut() {
 async function verifyPin() {
   const pinInput = document.getElementById("attendancePinInput");
   if (!pinInput) return;
-
   attendanceData.pin = pinInput.value.trim();
-
   if (attendanceData.pin.length !== 4) {
     showPinError("Please enter 4-digit PIN");
     return;
   }
-
   if (!/^\d{4}$/.test(attendanceData.pin)) {
     showPinError("PIN must be numbers only");
     return;
   }
-
   try {
     const checkResult = await apiCall(
       "checkPin",
       { pin: attendanceData.pin },
       true
     );
-
     if (checkResult.success) {
       attendanceData.employeeId = checkResult.employeeId;
       attendanceData.employeeName = checkResult.employeeName;
       attendanceData.employeeRole = checkResult.employeeRole || "Employee";
-
       showConfirmationModal();
     } else {
       showPinError(checkResult.message || "Invalid PIN");
@@ -1368,7 +1134,6 @@ async function verifyPin() {
 
 function showConfirmationModal() {
   const action = attendanceData.action === "timeIn" ? "Clock In" : "Clock Out";
-
   document.getElementById(
     "confirmModalTitle"
   ).textContent = `Confirm ${action}`;
@@ -1378,12 +1143,10 @@ function showConfirmationModal() {
   document.getElementById(
     "confirmDetails"
   ).innerHTML = `<strong>${attendanceData.employeeName}</strong><br>${attendanceData.employeeRole}`;
-
   const actionBtn = document.getElementById("confirmActionButton");
   actionBtn.textContent = `Yes, ${action}`;
   actionBtn.className =
     attendanceData.action === "timeIn" ? "btn-primary red" : "btn-primary";
-
   closeModal("attendancePinModal");
   showModal("attendanceConfirmModal");
 }
@@ -1393,13 +1156,9 @@ async function processAttendanceAction() {
     const action = attendanceData.action;
     const result = await apiCall(
       action,
-      {
-        employeeId: attendanceData.employeeId,
-        pin: attendanceData.pin,
-      },
+      { employeeId: attendanceData.employeeId, pin: attendanceData.pin },
       true
     );
-
     if (result.success) {
       showResultModal(
         "success",
@@ -1407,6 +1166,10 @@ async function processAttendanceAction() {
           `${action === "timeIn" ? "Clocked in" : "Clocked out"} successfully`,
         result
       );
+      console.log("Auto-refreshing employee status...");
+      setTimeout(() => {
+        loadEmployeeStatus();
+      }, 500);
     } else {
       showResultModal("error", result.message || `Failed to ${action}`);
     }
@@ -1421,7 +1184,6 @@ function showResultModal(type, message, data = null) {
   const titleEl = document.getElementById("resultModalTitle");
   const messageEl = document.getElementById("resultMessage");
   const detailsEl = document.getElementById("resultDetails");
-
   if (type === "success") {
     icon.style.background = "#10b981";
     icon.innerHTML =
@@ -1431,10 +1193,8 @@ function showResultModal(type, message, data = null) {
     icon.innerHTML =
       '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
   }
-
   titleEl.textContent = type === "success" ? "Success" : "Error";
   messageEl.textContent = message;
-
   if (data && data.summary) {
     detailsEl.innerHTML = `
       <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin-top: 16px;">
@@ -1455,7 +1215,6 @@ function showResultModal(type, message, data = null) {
   } else {
     detailsEl.innerHTML = "";
   }
-
   closeModal("attendanceConfirmModal");
   showModal("attendanceResultModal");
 }
@@ -1487,12 +1246,10 @@ function closeResultModal() {
 }
 
 function showModal(modalId) {
-
   const modal = document.getElementById(modalId);
   if (modal) {
     modal.classList.add("show", "active");
     document.body.style.overflow = "hidden";
-
     if (modalId === "attendancePinModal") {
       startLiveClock();
     }
@@ -1500,12 +1257,10 @@ function showModal(modalId) {
 }
 
 function closeModal(modalId) {
-
   const modal = document.getElementById(modalId);
   if (modal) {
     modal.classList.remove("show", "active");
     document.body.style.overflow = "auto";
-
     if (
       modalId === "attendancePinModal" ||
       modalId === "attendanceConfirmModal" ||
@@ -1516,48 +1271,48 @@ function closeModal(modalId) {
   }
 }
 
-// ===== INITIALIZATION =====
 document.addEventListener("DOMContentLoaded", function () {
-
-
+  console.log("DOM Content Loaded - Initializing...");
   if (typeof currentUser !== "undefined") {
     appState.user = currentUser;
- 
-
+    console.log("Current User:", currentUser);
     const branchFilterContainer = document.querySelector(
       ".relative:has(#branchDropdown)"
     );
     if (branchFilterContainer) {
-      if (currentUser.role !== "admin" && currentUser.role !== "owner") {
+      if (currentUser.role !== "admin") {
         branchFilterContainer.style.display = "none";
+        appState.selectedBranch = currentUser.branch || "main";
+        const branchText = document.getElementById("branchText");
+        if (branchText) {
+          branchText.textContent = appState.selectedBranch;
+        }
       } else {
         loadBranches();
       }
     }
-
     const addUserBtn = document.querySelector(
       'button[onclick="openAddUserModal()"]'
     );
-    if (
-      addUserBtn &&
-      !["admin", "owner", "manager"].includes(currentUser.role)
-    ) {
+    if (addUserBtn && !["admin", "manager"].includes(currentUser.role)) {
       addUserBtn.style.display = "none";
     }
+    const addUserBranch = document.getElementById("addUserBranch");
+    if (addUserBranch && currentUser.branch) {
+      addUserBranch.value = currentUser.branch;
+    }
   }
-
-  handleRoleChange();
+  setupRoleChangeHandlers();
   startLiveClock();
-
   setTimeout(() => {
     loadStats();
     loadUsers();
     loadAnnouncements();
     loadEmployeeStatus();
   }, 500);
+  console.log("Initialization complete");
 });
 
-// ===== EXPORT FUNCTIONS =====
 window.quickTimeIn = quickTimeIn;
 window.quickTimeOut = quickTimeOut;
 window.verifyPin = verifyPin;
@@ -1589,12 +1344,9 @@ window.startLiveClock = startLiveClock;
 window.stopLiveClock = stopLiveClock;
 window.updateLiveClock = updateLiveClock;
 window.loadEmployeeStatus = loadEmployeeStatus;
-
 window.openCashInModal = openCashInModal;
 window.closeCashInModal = closeCashInModal;
 window.processCashIn = processCashIn;
 window.openCashOutModal = openCashOutModal;
 window.closeCashOutModal = closeCashOutModal;
 window.processCashOut = processCashOut;
-window.getCashTransactions = getCashTransactions;
-window.getCashSummary = getCashSummary;

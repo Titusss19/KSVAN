@@ -1,5 +1,5 @@
 <?php
-// Login.php - FIXED VERSION WITH BRANCH
+// Login.php - EMAIL OR USERNAME LOGIN
 session_start();
 
 // Check if already logged in
@@ -9,23 +9,23 @@ if (isset($_SESSION['user'])) {
 }
 
 // Default values
-$email = $_COOKIE['rememberedEmail'] ?? '';
-$remember = !empty($email);
+$identifier = $_COOKIE['rememberedIdentifier'] ?? '';
+$remember = !empty($identifier);
 $error = '';
 $success = '';
 
 // PROCESS LOGIN
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = $_POST['email'] ?? '';
+    $identifier = $_POST['identifier'] ?? '';
     $password = $_POST['password'] ?? '';
     $remember = isset($_POST['remember']);
     
-    if (empty($email) || empty($password)) {
-        $error = 'Please enter both email and password';
+    if (empty($identifier) || empty($password)) {
+        $error = 'Please enter email/username and password';
     } else {
         // DATABASE CONNECTION
         $host = 'localhost';
-        $dbname = 'db'; // PALITAN KUNG HINDI 'db' ANG DATABASE MO
+        $dbname = 'db';
         $username = 'root';
         $password_db = '';
         
@@ -33,9 +33,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $username, $password_db);
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             
-            // CHECK USER
-            $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
-            $stmt->execute([$email]);
+            // CHECK USER BY EMAIL OR USERNAME
+            $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ? OR username = ?");
+            $stmt->execute([$identifier, $identifier]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if (!$user) {
@@ -43,20 +43,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 // CHECK PASSWORD
                 if (password_verify($password, $user['password'])) {
-                    // LOGIN SUCCESS - INCLUDE BRANCH!
+                    // LOGIN SUCCESS
                     $_SESSION['user'] = [
                         'id' => $user['id'],
                         'email' => $user['email'],
                         'username' => $user['username'] ?? $user['email'],
                         'role' => $user['role'],
-                        'branch' => $user['branch'] ?? 'main'  // ← ADDED THIS!
+                        'branch' => $user['branch'] ?? 'main'
                     ];
                     
                     // Remember me
                     if ($remember) {
-                        setcookie('rememberedEmail', $email, time() + (86400 * 30), '/');
+                        setcookie('rememberedIdentifier', $identifier, time() + (86400 * 30), '/');
                     } else {
-                        setcookie('rememberedEmail', '', time() - 3600, '/');
+                        setcookie('rememberedIdentifier', '', time() - 3600, '/');
                     }
                     
                     // REDIRECT TO DASHBOARD
@@ -110,12 +110,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <!-- LOGIN FORM -->
             <form method="POST" action="" class="space-y-6">
-                <!-- Email -->
+                <!-- Email or Username -->
                 <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700">
-                        Email address
+                    <label for="identifier" class="block text-sm font-medium text-gray-700">
+                        Email or Username
                     </label>
-                    <input id="email" name="email" type="email" value="<?php echo htmlspecialchars($email); ?>"
+                    <input id="identifier" name="identifier" type="text" value="<?php echo htmlspecialchars($identifier); ?>"
                         required class="mt-2 block w-full rounded-md border px-3 py-1.5 border-gray-300">
                 </div>
 

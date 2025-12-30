@@ -1,0 +1,275 @@
+[19-Dec-2025 03:38:04 Europe/Berlin] Request: GET get_store_status
+[19-Dec-2025 03:38:04 Europe/Berlin] Request: GET get_pending_orders
+[19-Dec-2025 03:38:04 Europe/Berlin] Request: GET get_items
+[19-Dec-2025 03:38:04 Europe/Berlin] Request: GET get_all_items
+[19-Dec-2025 03:38:04 Europe/Berlin] getStoreStatus called
+[19-Dec-2025 03:38:04 Europe/Berlin] getAllItems called
+[19-Dec-2025 03:38:04 Europe/Berlin] getItems called
+[19-Dec-2025 03:38:04 Europe/Berlin] Headers received: Array
+(
+    [Host] => localhost
+    [Connection] => keep-alive
+    [sec-ch-ua-platform] => "Windows"
+    [X-User] => {"id":10,"email":"vien@gmail.com","role":"manager","branch":"K-Street"}
+    [User-Agent] => Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0
+    [sec-ch-ua] => "Microsoft Edge";v="143", "Chromium";v="143", "Not A(Brand";v="24"
+    [Content-Type] => application/json
+    [sec-ch-ua-mobile] => ?0
+    [Accept] => */*
+    [Sec-Fetch-Site] => same-origin
+    [Sec-Fetch-Mode] => cors
+    [Sec-Fetch-Dest] => empty
+    [Referer] => http://localhost/KSTREET/pos.php
+    [Accept-Encoding] => gzip, deflate, br, zstd
+    [Accept-Language] => en-US,en;q=0.9
+    [Cookie] => rememberedIdentifier=vien%40gmail.com; PHPSESSID=m81u0m6491h87uffkrthksmblu
+)
+
+[19-Dec-2025 03:38:04 Europe/Berlin] Sending error: Array
+(
+    [success] => 
+    [error] => Invalid action
+)
+
+[19-Dec-2025 03:38:04 Europe/Berlin] Headers received: Array
+(
+    [Host] => localhost
+    [Connection] => keep-alive
+    [sec-ch-ua-platform] => "Windows"
+    [X-User] => {"id":10,"email":"vien@gmail.com","role":"manager","branch":"K-Street"}
+    [User-Agent] => Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0
+    [sec-ch-ua] => "Microsoft Edge";v="143", "Chromium";v="143", "Not A(Brand";v="24"
+    [Content-Type] => application/json
+    [sec-ch-ua-mobile] => ?0
+    [Accept] => */*
+    [Sec-Fetch-Site] => same-origin
+    [Sec-Fetch-Mode] => cors
+    [Sec-Fetch-Dest] => empty
+    [Referer] => http://localhost/KSTREET/pos.php
+    [Accept-Encoding] => gzip, deflate, br, zstd
+    [Accept-Language] => en-US,en;q=0.9
+    [Cookie] => rememberedIdentifier=vien%40gmail.com; PHPSESSID=m81u0m6491h87uffkrthksmblu
+)
+
+[19-Dec-2025 03:38:04 Europe/Berlin] Headers received: Array
+(
+    [Host] => localhost
+    [Connection] => keep-alive
+    [sec-ch-ua-platform] => "Windows"
+    [X-User] => {"id":10,"email":"vien@gmail.com","role":"manager","branch":"K-Street"}
+    [User-Agent] => Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0
+    [sec-ch-ua] => "Microsoft Edge";v="143", "Chromium";v="143", "Not A(Brand";v="24"
+    [Content-Type] => application/json
+    [sec-ch-ua-mobile] => ?0
+    [Accept] => */*
+    [Sec-Fetch-Site] => same-origin
+    [Sec-Fetch-Mode] => cors
+    [Sec-Fetch-Dest] => empty
+    [Referer] => http://localhost/KSTREET/pos.php
+    [Accept-Encoding] => gzip, deflate, br, zstd
+    [Accept-Language] => en-US,en;q=0.9
+    [Cookie] => rememberedIdentifier=vien%40gmail.com; PHPSESSID=m81u0m6491h87uffkrthksmblu
+)
+
+[19-Dec-2025 03:38:04 Europe/Berlin] User from X-User header: Array
+(
+    [id] => 10
+    [email] => vien@gmail.com
+    [role] => manager
+    [branch] => K-Street
+)
+
+[19-Dec-2025 03:38:04 Europe/Berlin] User from X-User header: Array
+(
+    [id] => 10
+    [email] => vien@gmail.com
+    [role] => manager
+    [branch] => K-Street
+)
+
+[19-Dec-2025 03:38:04 Europe/Berlin] User from X-User header: Array
+(
+    [id] => 10
+    [email] => vien@gmail.com
+    [role] => manager
+    [branch] => K-Street
+)
+
+[19-Dec-2025 03:38:04 Europe/Berlin] Getting store status for branch: K-Street
+[19-Dec-2025 03:38:04 Europe/Berlin] Getting all items for branch: K-Street
+[19-Dec-2025 03:38:04 Europe/Berlin] Getting items for branch: K-Street
+[19-Dec-2025 03:38:04 Europe/Berlin] Items fetched: 85
+[19-Dec-2025 03:38:04 Europe/Berlin] All items fetched: 85
+[19-Dec-2025 03:38:04 Europe/Berlin] Request: GET get_all_items
+[19-Dec-2025 03:38:04 Europe/Berlin] getAllItems called
+[19-Dec-2025 03:38:04 Europe/Berlin] Headers received: Array
+(
+    [Host] => localhost
+    [Connection] => keep-alive
+    [sec-ch-ua-platform] => "Windows"
+    [X-User] => {"id":10,"email":"vien@gmail.com","role":"manager","branch":"K-Street"}
+    [User-Agent] => Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0
+    [sec-ch-ua] => "Microsoft Edge";v="143", "Chromium";v="143", "Not A(Brand";v="24"
+    [Content-Type] => application/json
+    [sec-ch-ua-mobile] => ?0
+    [Accept] => */*
+    [Sec-Fetch-Site] => same-origin
+    [Sec-Fetch-Mode] => cors
+    [Sec-Fetch-Dest] => empty
+    [Referer] => http://localhost/KSTREET/pos.php
+    [Accept-Encoding] => gzip, deflate, br, zstd
+    [Accept-Language] => en-US,en;q=0.9
+    [Cookie] => rememberedIdentifier=vien%40gmail.com; PHPSESSID=m81u0m6491h87uffkrthksmblu
+)
+
+[19-Dec-2025 03:38:04 Europe/Berlin] User from X-User header: Array
+(
+    [id] => 10
+    [email] => vien@gmail.com
+    [role] => manager
+    [branch] => K-Street
+)
+
+[19-Dec-2025 03:38:04 Europe/Berlin] Getting all items for branch: K-Street
+[19-Dec-2025 03:38:04 Europe/Berlin] All items fetched: 85
+[19-Dec-2025 03:38:12 Europe/Berlin] Request: GET get_store_status
+[19-Dec-2025 03:38:12 Europe/Berlin] getStoreStatus called
+[19-Dec-2025 03:38:12 Europe/Berlin] Headers received: Array
+(
+    [Host] => localhost
+    [Connection] => keep-alive
+    [sec-ch-ua-platform] => "Windows"
+    [X-User] => {"id":10,"email":"vien@gmail.com","role":"manager","branch":"K-Street"}
+    [User-Agent] => Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0
+    [sec-ch-ua] => "Microsoft Edge";v="143", "Chromium";v="143", "Not A(Brand";v="24"
+    [Content-Type] => application/json
+    [sec-ch-ua-mobile] => ?0
+    [Accept] => */*
+    [Sec-Fetch-Site] => same-origin
+    [Sec-Fetch-Mode] => cors
+    [Sec-Fetch-Dest] => empty
+    [Referer] => http://localhost/KSTREET/pos.php
+    [Accept-Encoding] => gzip, deflate, br, zstd
+    [Accept-Language] => en-US,en;q=0.9
+    [Cookie] => rememberedIdentifier=vien%40gmail.com; PHPSESSID=m81u0m6491h87uffkrthksmblu
+)
+
+[19-Dec-2025 03:38:12 Europe/Berlin] User from X-User header: Array
+(
+    [id] => 10
+    [email] => vien@gmail.com
+    [role] => manager
+    [branch] => K-Street
+)
+
+[19-Dec-2025 03:38:12 Europe/Berlin] Getting store status for branch: K-Street
+[19-Dec-2025 03:38:12 Europe/Berlin] Request: GET get_all_items
+[19-Dec-2025 03:38:12 Europe/Berlin] getAllItems called
+[19-Dec-2025 03:38:12 Europe/Berlin] Headers received: Array
+(
+    [Host] => localhost
+    [Connection] => keep-alive
+    [sec-ch-ua-platform] => "Windows"
+    [X-User] => {"id":10,"email":"vien@gmail.com","role":"manager","branch":"K-Street"}
+    [User-Agent] => Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0
+    [sec-ch-ua] => "Microsoft Edge";v="143", "Chromium";v="143", "Not A(Brand";v="24"
+    [Content-Type] => application/json
+    [sec-ch-ua-mobile] => ?0
+    [Accept] => */*
+    [Sec-Fetch-Site] => same-origin
+    [Sec-Fetch-Mode] => cors
+    [Sec-Fetch-Dest] => empty
+    [Referer] => http://localhost/KSTREET/pos.php
+    [Accept-Encoding] => gzip, deflate, br, zstd
+    [Accept-Language] => en-US,en;q=0.9
+    [Cookie] => rememberedIdentifier=vien%40gmail.com; PHPSESSID=m81u0m6491h87uffkrthksmblu
+)
+
+[19-Dec-2025 03:38:12 Europe/Berlin] Request: GET get_items
+[19-Dec-2025 03:38:12 Europe/Berlin] User from X-User header: Array
+(
+    [id] => 10
+    [email] => vien@gmail.com
+    [role] => manager
+    [branch] => K-Street
+)
+
+[19-Dec-2025 03:38:12 Europe/Berlin] getItems called
+[19-Dec-2025 03:38:12 Europe/Berlin] Headers received: Array
+(
+    [Host] => localhost
+    [Connection] => keep-alive
+    [sec-ch-ua-platform] => "Windows"
+    [X-User] => {"id":10,"email":"vien@gmail.com","role":"manager","branch":"K-Street"}
+    [User-Agent] => Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0
+    [sec-ch-ua] => "Microsoft Edge";v="143", "Chromium";v="143", "Not A(Brand";v="24"
+    [Content-Type] => application/json
+    [sec-ch-ua-mobile] => ?0
+    [Accept] => */*
+    [Sec-Fetch-Site] => same-origin
+    [Sec-Fetch-Mode] => cors
+    [Sec-Fetch-Dest] => empty
+    [Referer] => http://localhost/KSTREET/pos.php
+    [Accept-Encoding] => gzip, deflate, br, zstd
+    [Accept-Language] => en-US,en;q=0.9
+    [Cookie] => rememberedIdentifier=vien%40gmail.com; PHPSESSID=m81u0m6491h87uffkrthksmblu
+)
+
+[19-Dec-2025 03:38:12 Europe/Berlin] Getting all items for branch: K-Street
+[19-Dec-2025 03:38:12 Europe/Berlin] User from X-User header: Array
+(
+    [id] => 10
+    [email] => vien@gmail.com
+    [role] => manager
+    [branch] => K-Street
+)
+
+[19-Dec-2025 03:38:12 Europe/Berlin] Getting items for branch: K-Street
+[19-Dec-2025 03:38:12 Europe/Berlin] All items fetched: 85
+[19-Dec-2025 03:38:12 Europe/Berlin] Items fetched: 85
+[19-Dec-2025 03:38:12 Europe/Berlin] Request: GET get_pending_orders
+[19-Dec-2025 03:38:12 Europe/Berlin] Sending error: Array
+(
+    [success] => 
+    [error] => Invalid action
+)
+
+[19-Dec-2025 03:38:12 Europe/Berlin] Request: GET get_all_items
+[19-Dec-2025 03:38:12 Europe/Berlin] getAllItems called
+[19-Dec-2025 03:38:12 Europe/Berlin] Headers received: Array
+(
+    [Host] => localhost
+    [Connection] => keep-alive
+    [sec-ch-ua-platform] => "Windows"
+    [X-User] => {"id":10,"email":"vien@gmail.com","role":"manager","branch":"K-Street"}
+    [User-Agent] => Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0
+    [sec-ch-ua] => "Microsoft Edge";v="143", "Chromium";v="143", "Not A(Brand";v="24"
+    [Content-Type] => application/json
+    [sec-ch-ua-mobile] => ?0
+    [Accept] => */*
+    [Sec-Fetch-Site] => same-origin
+    [Sec-Fetch-Mode] => cors
+    [Sec-Fetch-Dest] => empty
+    [Referer] => http://localhost/KSTREET/pos.php
+    [Accept-Encoding] => gzip, deflate, br, zstd
+    [Accept-Language] => en-US,en;q=0.9
+    [Cookie] => rememberedIdentifier=vien%40gmail.com; PHPSESSID=m81u0m6491h87uffkrthksmblu
+)
+
+[19-Dec-2025 03:38:12 Europe/Berlin] User from X-User header: Array
+(
+    [id] => 10
+    [email] => vien@gmail.com
+    [role] => manager
+    [branch] => K-Street
+)
+
+[19-Dec-2025 03:38:12 Europe/Berlin] Getting all items for branch: K-Street
+[19-Dec-2025 03:38:12 Europe/Berlin] All items fetched: 85
+[19-Dec-2025 03:59:35 Europe/Berlin] Request: GET get_pending_orders
+[19-Dec-2025 03:59:35 Europe/Berlin] Sending error: Array
+(
+    [success] => 
+    [error] => Invalid action
+)
+

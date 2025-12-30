@@ -103,6 +103,10 @@ $canAddEmployee = in_array($user['role'], ['admin', 'owner', 'manager']);
         </div>
     </div>
 
+    <!-- ========================================
+         ALL MODALS BELOW
+         ======================================== -->
+
     <!-- Add Employee Modal -->
     <?php if ($canAddEmployee): ?>
     <div id="addEmployeeModal" class="modal">
@@ -271,18 +275,12 @@ $canAddEmployee = in_array($user['role'], ['admin', 'owner', 'manager']);
     </div>
     <?php endif; ?>
 
-     <!-- View Employee Modal -->
+    <!-- View Employee Modal -->
     <div id="viewEmployeeModal" class="modal">
         <div class="modal-content" style="max-width: 900px;">
             <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-10">
                 <h2 class="font-semibold text-slate-900 text-lg">Employee Details</h2>
                 <div class="flex items-center gap-2">
-                    <button onclick="downloadDTR()" class="icon-button bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium text-sm px-3 py-2 rounded-lg flex items-center gap-1">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                        </svg>
-                        Download DTR
-                    </button>
                     <button onclick="closeModal('viewEmployeeModal')" class="p-1 hover:bg-slate-100 rounded-lg transition-colors">
                         <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -294,6 +292,79 @@ $canAddEmployee = in_array($user['role'], ['admin', 'owner', 'manager']);
             <div id="viewEmployeeContent" class="p-6">
                 <!-- Content will be loaded dynamically -->
             </div>
+        </div>
+    </div>
+
+    <!-- Edit Time Modal -->
+    <div id="editTimeModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                <h2 class="font-semibold text-slate-900 text-lg">Edit Time Record</h2>
+                <button onclick="closeModal('editTimeModal')" class="p-1 hover:bg-slate-100 rounded-lg transition-colors">
+                    <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <form id="editTimeForm" class="p-6 space-y-4">
+                <input type="hidden" id="editTimeLogId" name="logId">
+                <input type="hidden" id="editTimeEmployeeId" name="employeeId">
+                
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 mb-1">Select Date *</label>
+                    <input type="date" id="editTimeDate" name="date" required 
+                           class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-all">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">Time In *</label>
+                        <input type="time" id="editTimeIn" name="timeIn" required 
+                               class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">Time Out</label>
+                        <input type="time" id="editTimeOut" name="timeOut" 
+                               class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm transition-all">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">Regular Hours</label>
+                        <input type="number" id="editRegularHours" name="regularHours" step="0.01" min="0"
+                               class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">Overtime Hours</label>
+                        <input type="number" id="editOvertimeHours" name="overtimeHours" step="0.01" min="0"
+                               class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm transition-all">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">Daily Pay (₱)</label>
+                        <input type="number" id="editDailyPay" name="dailyPay" step="0.01" min="0"
+                               class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">Overtime Pay (₱)</label>
+                        <input type="number" id="editOvertimePay" name="overtimePay" step="0.01" min="0"
+                               class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all">
+                    </div>
+                </div>
+                
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium text-sm hover:shadow-lg transition-all">
+                        Update Record
+                    </button>
+                    <button type="button" onclick="closeModal('editTimeModal')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-900 py-2.5 rounded-lg font-medium text-sm transition-all">
+                        Cancel
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -363,14 +434,63 @@ $canAddEmployee = in_array($user['role'], ['admin', 'owner', 'manager']);
         </div>
     </div>
 
+    <!-- PAY OUT MODAL -->
+    <div id="payoutModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                    <h2 class="font-semibold text-slate-900 text-lg">Process Pay Out</h2>
+                    <p class="text-sm text-slate-500 mt-1" id="payoutEmployeeName">Employee Name</p>
+                </div>
+                <button onclick="closeModal('payoutModal')" class="p-1 hover:bg-slate-100 rounded-lg transition-colors">
+                    <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
 
-    <!-- Load JavaScript -->
-    <script>
-        // Pass PHP user data to JavaScript
-        const currentUser = <?php echo json_encode($user); ?>;
-    </script>
-    <script src="Javascript/attendance.js"></script>
+            <form id="payoutForm" onsubmit="handlePayout(event)" class="p-6 space-y-4">
+                <input type="hidden" id="payoutEmployeeId">
+                
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-green-900">Pay Out Summary</p>
+                            <p class="text-xs text-green-700 mt-1">Total Amount: <strong id="payoutAmount">₱0.00</strong></p>
+                            <p class="text-xs text-green-700 mt-1">⚠️ This will reset the employee's total pay to zero</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 mb-1">Manager PIN (4-6 digits) *</label>
+                    <input type="password" id="managerPin" required placeholder="Enter manager PIN" minlength="4" maxlength="6" pattern="[0-9]{4,6}" inputmode="numeric" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm transition-all">
+                    <p class="text-xs text-slate-500 mt-1">Only admin, owner, or manager can authorize payout</p>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg font-medium text-sm hover:shadow-lg transition-all">
+                        Process Payout
+                    </button>
+                    <button type="button" onclick="closeModal('payoutModal')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-900 py-2.5 rounded-lg font-medium text-sm transition-all">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 </main>
+
+<!-- Load JavaScript -->
+<script>
+    // Pass PHP user data to JavaScript
+    const currentUser = <?php echo json_encode($user); ?>;
+</script>
+<script src="Javascript/attendance.js"></script>
 
 <script>
 // ============================
@@ -386,7 +506,7 @@ function showModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.add('show');
-        document.body.style.overflow = 'hidden';
+        document.body.classList.add('modal-open');
         // Focus on first input
         const firstInput = modal.querySelector('input:not([type="hidden"])');
         if (firstInput) setTimeout(() => firstInput.focus(), 100);
@@ -397,7 +517,7 @@ function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.remove('show');
-        document.body.style.overflow = 'auto';
+        document.body.classList.remove('modal-open');
     }
     if (modalId === 'timeInOutModal') {
         const pinInput = document.getElementById('pinInput');
@@ -417,8 +537,8 @@ function closeModal(modalId) {
 // Close modal when clicking outside
 document.addEventListener('click', function(event) {
     if (event.target.classList.contains('modal')) {
-        event.target.classList.remove('show');
-        document.body.style.overflow = 'auto';
+        const modalId = event.target.id;
+        closeModal(modalId);
     }
 });
 
@@ -434,8 +554,7 @@ document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') {
         const openModals = document.querySelectorAll('.modal.show');
         openModals.forEach(modal => {
-            modal.classList.remove('show');
-            document.body.style.overflow = 'auto';
+            closeModal(modal.id);
         });
     }
 });

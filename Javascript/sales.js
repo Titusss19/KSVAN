@@ -1,4 +1,3 @@
-// sales.js - COMPLETE VERSION WITH FIXED CASHIER SESSION EXPORT
 class SalesReport {
   constructor() {
     this.currentPage = 1;
@@ -27,6 +26,12 @@ class SalesReport {
     this.cashoutTotalPages = 1;
     this.cashoutTotalRecords = 0;
     this.cashoutData = [];
+
+    // Out Source report properties
+    this.outCurrentPage = 1;
+    this.outTotalPages = 1;
+    this.outTotalRecords = 0;
+    this.outData = [];
 
     console.log("🔍 Checking modals...");
     console.log(
@@ -97,6 +102,9 @@ class SalesReport {
       } else if (this.activeTab === "cashout") {
         this.cashoutCurrentPage = 1;
         this.loadCashoutRecords();
+      } else if (this.activeTab === "out") {
+        this.outCurrentPage = 1;
+        this.loadOutSourceRecords();
       }
     });
 
@@ -109,8 +117,9 @@ class SalesReport {
       } else if (this.activeTab === "void") {
         this.exportVoidToExcel();
       } else if (this.activeTab === "cashout") {
-        // ADD THIS
         this.exportCashoutToExcel();
+      } else if (this.activeTab === "out") {
+        this.exportOutSourceToExcel();
       }
     });
 
@@ -173,6 +182,50 @@ class SalesReport {
       });
     }
 
+    // Cashout Pagination
+    const cashoutPrevBtn = document.getElementById("cashoutPrevPage");
+    const cashoutNextBtn = document.getElementById("cashoutNextPage");
+
+    if (cashoutPrevBtn) {
+      cashoutPrevBtn.addEventListener("click", () => {
+        if (this.cashoutCurrentPage > 1) {
+          this.cashoutCurrentPage--;
+          this.loadCashoutRecords();
+        }
+      });
+    }
+
+    if (cashoutNextBtn) {
+      cashoutNextBtn.addEventListener("click", () => {
+        if (this.cashoutCurrentPage < this.cashoutTotalPages) {
+          this.cashoutCurrentPage++;
+          this.loadCashoutRecords();
+        }
+      });
+    }
+
+    // Out Source Pagination
+    const outPrevBtn = document.getElementById("outPrevPage");
+    const outNextBtn = document.getElementById("outNextPage");
+
+    if (outPrevBtn) {
+      outPrevBtn.addEventListener("click", () => {
+        if (this.outCurrentPage > 1) {
+          this.outCurrentPage--;
+          this.loadOutSourceRecords();
+        }
+      });
+    }
+
+    if (outNextBtn) {
+      outNextBtn.addEventListener("click", () => {
+        if (this.outCurrentPage < this.outTotalPages) {
+          this.outCurrentPage++;
+          this.loadOutSourceRecords();
+        }
+      });
+    }
+
     // Receipt modal close
     const closeReceiptBtn = document.getElementById("closeReceipt");
     if (closeReceiptBtn) {
@@ -225,6 +278,21 @@ class SalesReport {
       });
     }
 
+    // Out Source detail modal close
+    const closeOutDetailBtn = document.getElementById("closeOutDetail");
+    if (closeOutDetailBtn) {
+      closeOutDetailBtn.addEventListener("click", () => {
+        this.closeModal("outDetailModal");
+      });
+    }
+
+    const printOutDetailBtn = document.getElementById("printOutDetail");
+    if (printOutDetailBtn) {
+      printOutDetailBtn.addEventListener("click", () => {
+        this.printOutDetail();
+      });
+    }
+
     // Close all modals with X button or backdrop click
     document.addEventListener("click", (e) => {
       if (
@@ -241,26 +309,6 @@ class SalesReport {
         e.target.classList.add("hidden");
       }
     });
-
-    const cashoutPrevBtn = document.getElementById("cashoutPrevPage");
-    const cashoutNextBtn = document.getElementById("cashoutNextPage");
-    if (cashoutPrevBtn) {
-      cashoutPrevBtn.addEventListener("click", () => {
-        if (this.cashoutCurrentPage > 1) {
-          this.cashoutCurrentPage--;
-          this.loadCashoutRecords();
-        }
-      });
-    }
-
-    if (cashoutNextBtn) {
-      cashoutNextBtn.addEventListener("click", () => {
-        if (this.cashoutCurrentPage < this.cashoutTotalPages) {
-          this.cashoutCurrentPage++;
-          this.loadCashoutRecords();
-        }
-      });
-    }
 
     const cancelEditCashoutBtn = document.getElementById("cancelEditCashout");
     if (cancelEditCashoutBtn) {
@@ -317,6 +365,11 @@ class SalesReport {
       document.getElementById("cashoutReport").classList.remove("hidden");
       if (this.cashoutData.length === 0) {
         this.loadCashoutRecords();
+      }
+    } else if (tab === "out") {
+      document.getElementById("outReport").classList.remove("hidden");
+      if (this.outData.length === 0) {
+        this.loadOutSourceRecords();
       }
     }
   }
@@ -513,6 +566,137 @@ class SalesReport {
     }
   }
 
+  // ============================================
+  // LOAD CASH-OUT RECORDS
+  // ============================================
+  async loadCashoutRecords() {
+    this.showLoading(true);
+
+    const params = new URLSearchParams({
+      action: "cashout",
+      page: this.cashoutCurrentPage,
+      limit: this.itemsPerPage,
+      branch: document.getElementById("branchFilter")
+        ? document.getElementById("branchFilter").value
+        : "all",
+      timeRange: document.getElementById("timeRange").value,
+    });
+
+    if (document.getElementById("timeRange").value === "custom") {
+      const startDate = document.getElementById("startDate").value;
+      const endDate = document.getElementById("endDate").value;
+      if (startDate && endDate) {
+        params.append("startDate", startDate);
+        params.append("endDate", endDate);
+      }
+    }
+
+    try {
+      const response = await fetch(`backend/salesapi.php?${params.toString()}`);
+      const responseText = await response.text();
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (e) {
+        console.error("JSON Parse Error:", e);
+        console.error("Response was:", responseText);
+        throw new Error("Server returned invalid response");
+      }
+
+      if (!result.success) {
+        throw new Error(result.message || "Failed to load cash-out records");
+      }
+
+      this.cashoutData = result.data;
+      this.cashoutTotalRecords = result.pagination.total;
+      this.cashoutTotalPages = result.pagination.pages;
+
+      this.renderCashoutTable();
+      this.updateCashoutPagination();
+    } catch (error) {
+      console.error("Error loading cash-out records:", error);
+      this.showNotification(
+        "error",
+        "Failed to load cash-out records: " + error.message
+      );
+    } finally {
+      this.showLoading(false);
+    }
+  }
+
+  // ============================================
+  // LOAD OUT SOURCE RECORDS
+  // ============================================
+  async loadOutSourceRecords() {
+    this.showLoading(true);
+
+    const params = new URLSearchParams({
+      action: "outsource",
+      page: this.outCurrentPage,
+      limit: this.itemsPerPage,
+      branch: document.getElementById("branchFilter")
+        ? document.getElementById("branchFilter").value
+        : "all",
+      timeRange: document.getElementById("timeRange").value,
+    });
+
+    if (document.getElementById("timeRange").value === "custom") {
+      const startDate = document.getElementById("startDate").value;
+      const endDate = document.getElementById("endDate").value;
+      if (startDate && endDate) {
+        params.append("startDate", startDate);
+        params.append("endDate", endDate);
+      }
+    }
+
+    console.log(
+      "📤 Out Source Request URL:",
+      `backend/salesapi.php?${params.toString()}`
+    );
+
+    try {
+      const response = await fetch(`backend/salesapi.php?${params.toString()}`);
+      const responseText = await response.text();
+
+      console.log("📥 Out Source Raw Response:", responseText);
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (e) {
+        console.error("❌ JSON Parse Error:", e);
+        console.error("Response was:", responseText);
+        throw new Error(
+          "Server returned invalid JSON: " + responseText.substring(0, 200)
+        );
+      }
+
+      console.log("📊 Out Source Parsed Result:", result);
+
+      if (!result.success) {
+        throw new Error(result.message || "Failed to load outsource records");
+      }
+
+      this.outData = result.data || [];
+      this.outTotalRecords = result.pagination?.total || 0;
+      this.outTotalPages = result.pagination?.pages || 1;
+
+      console.log("✅ Out Source Data loaded:", this.outData.length, "records");
+
+      this.renderOutSourceTable();
+      this.updateOutSourcePagination();
+    } catch (error) {
+      console.error("❌ Error loading outsource records:", error);
+      this.showNotification(
+        "error",
+        "Failed to load outsource records: " + error.message
+      );
+    } finally {
+      this.showLoading(false);
+    }
+  }
+
   async loadBranches() {
     try {
       const response = await fetch("backend/salesapi.php?action=branches");
@@ -535,8 +719,6 @@ class SalesReport {
   // ============================================
   // RENDER SALES TABLE
   // ============================================
-  // Updated renderSalesTable() function with merged Cashier/Payment column
-
   renderSalesTable() {
     const tbody = document.getElementById("salesTableBody");
     const emptyState = document.getElementById("salesEmptyState");
@@ -650,10 +832,9 @@ class SalesReport {
     if (orderType === "Dine In") return "order-type-dinein";
     if (orderType === "Take Out") return "order-type-takeout";
     if (orderType === "Delivery") return "order-type-delivery";
-    return "order-type-dinein"; // default
+    return "order-type-dinein";
   }
 
-  // Helper method to get payment method CSS class
   getPaymentMethodClass(paymentMethod) {
     const method = (paymentMethod || "Cash").toLowerCase();
     if (method.includes("cash")) return "bg-green-100 text-green-800";
@@ -665,8 +846,6 @@ class SalesReport {
   // ============================================
   // RENDER CASHIER TABLE
   // ============================================
-  // Replace your renderCashierTable() method with this merged version:
-
   renderCashierTable() {
     const tbody = document.getElementById("cashierTableBody");
     const emptyState = document.getElementById("cashierEmptyState");
@@ -698,7 +877,6 @@ class SalesReport {
                     ${session.username || session.user_email || "Unknown"}
                 </td>
                 
-                <!-- MERGED: Session Period (Login + Logout Time) -->
                 <td class="px-6 py-4 text-sm text-gray-600">
                     <div class="flex flex-col space-y-1">
                         <span class="font-medium text-gray-900">${this.formatDate(
@@ -728,7 +906,6 @@ class SalesReport {
                     ${session.session_duration}
                 </td>
                 
-                <!-- MERGED: Sales Summary (Start + End + Session + Discount + Void) -->
                 <td class="px-6 py-4">
                     <div class="space-y-1 text-xs">
                         <div class="flex justify-between items-center">
@@ -785,8 +962,6 @@ class SalesReport {
   // ============================================
   // RENDER VOID TABLE
   // ============================================
-  // Replace your renderVoidTable() method with this merged version:
-
   renderVoidTable() {
     const tbody = document.getElementById("voidTableBody");
     const emptyState = document.getElementById("voidEmptyState");
@@ -819,7 +994,6 @@ class SalesReport {
                     : ""
                 }
                 
-                <!-- MERGED: Transaction Dates (Void Date + Original Date) -->
                 <td class="px-6 py-4">
                     <div class="space-y-1 text-xs">
                         <div class="flex flex-col">
@@ -847,7 +1021,6 @@ class SalesReport {
                     </div>
                 </td>
                 
-                <!-- MERGED: Order Details (Products + Amount + Order Type) -->
                 <td class="px-6 py-4">
                     <div class="space-y-1">
                         <div class="text-sm text-gray-700 max-w-xs">
@@ -869,7 +1042,6 @@ class SalesReport {
                     </div>
                 </td>
                 
-                <!-- MERGED: Personnel (Cashier + Voided By) -->
                 <td class="px-6 py-4">
                     <div class="space-y-1 text-xs">
                         <div class="flex flex-col">
@@ -889,7 +1061,6 @@ class SalesReport {
                     </div>
                 </td>
                 
-                <!-- Void Reason -->
                 <td class="px-6 py-4 text-sm text-gray-700">
                     <div class="max-w-xs">
                         ${
@@ -914,7 +1085,158 @@ class SalesReport {
   }
 
   // ============================================
-  // UPDATE PAGINATION
+  // RENDER CASHOUT TABLE
+  // ============================================
+  renderCashoutTable() {
+    const tbody = document.getElementById("cashoutTableBody");
+    const emptyState = document.getElementById("cashoutEmptyState");
+
+    if (this.cashoutData.length === 0) {
+      tbody.innerHTML = "";
+      emptyState.classList.remove("hidden");
+      document.getElementById("cashoutPagination").classList.add("hidden");
+      return;
+    }
+
+    emptyState.classList.add("hidden");
+    document.getElementById("cashoutPagination").classList.remove("hidden");
+
+    tbody.innerHTML = this.cashoutData
+      .map(
+        (record) => `
+      <tr class="hover:bg-red-50 transition-colors duration-150">
+        <td class="px-6 py-4 text-sm font-medium text-gray-900">
+          #${record.id}
+          ${
+            record.edited_by
+              ? '<span class="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800" title="Edited by ' +
+                record.edited_by +
+                '"><i class="fas fa-edit mr-1"></i>EDITED</span>'
+              : ""
+          }
+        </td>
+        ${
+          this.isAdmin()
+            ? `
+        <td class="px-6 py-4 text-sm font-medium text-blue-700">
+          ${record.branch || "Unknown"}
+        </td>
+        `
+            : ""
+        }
+        <td class="px-6 py-4 text-sm text-gray-600">
+          ${this.formatDateTime(record.created_at)}
+        </td>
+        <td class="px-6 py-4 text-sm font-medium text-gray-700">
+          ${record.cashier_name || record.cashier_email || "Unknown"}
+        </td>
+        <td class="px-6 py-4 text-center">
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+            record.type === "withdrawal"
+              ? "bg-red-100 text-red-800"
+              : "bg-green-100 text-green-800"
+          }">
+            <i class="fas fa-${
+              record.type === "withdrawal" ? "arrow-down" : "arrow-up"
+            } mr-1"></i>
+            ${record.type.charAt(0).toUpperCase() + record.type.slice(1)}
+          </span>
+        </td>
+        <td class="px-6 py-4 text-sm font-bold text-right ${
+          record.type === "withdrawal" ? "text-red-600" : "text-green-600"
+        }">
+          ${record.type === "withdrawal" ? "-" : "+"}₱${parseFloat(
+          record.amount
+        ).toFixed(2)}
+        </td>
+        <td class="px-6 py-4 text-sm text-gray-700">
+          <div class="max-w-xs">
+            <div class="truncate" title="${
+              record.reason || "No reason provided"
+            }">
+              ${
+                record.reason ||
+                '<span class="text-gray-400 italic">No reason provided</span>'
+              }
+            </div>
+            ${
+              record.edited_by
+                ? `<div class="text-xs text-blue-600 mt-1" title="${record.edit_reason}"><i class="fas fa-info-circle"></i> ${record.edit_reason}</div>`
+                : ""
+            }
+          </div>
+        </td>
+        <td class="px-6 py-4 text-center">
+          <div class="flex gap-2 justify-center">
+            <button onclick="salesReport.showEditCashoutModal(${record.id})" 
+                    class="text-green-600 hover:text-green-800 text-sm font-medium"
+                    title="Edit Record">
+              <i class="fas fa-edit"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `
+      )
+      .join("");
+  }
+
+  // ============================================
+  // RENDER OUT SOURCE TABLE
+  // ============================================
+  renderOutSourceTable() {
+    const tbody = document.getElementById("outTableBody");
+    const emptyState = document.getElementById("outEmptyState");
+
+    if (this.outData.length === 0) {
+      tbody.innerHTML = "";
+      emptyState.classList.remove("hidden");
+      document.getElementById("outPagination").classList.add("hidden");
+      return;
+    }
+
+    emptyState.classList.add("hidden");
+    document.getElementById("outPagination").classList.remove("hidden");
+
+    tbody.innerHTML = this.outData
+      .map(
+        (record) => `
+        <tr class="hover:bg-red-50 transition-colors duration-150">
+            <td class="px-6 py-4 text-sm text-gray-600">
+                <div class="flex flex-col">
+                    <span class="font-medium text-gray-900">${this.formatDate(
+                      record.created_at
+                    )}</span>
+                    <span class="text-xs text-gray-500">${this.formatTimeOnly(
+                      record.created_at
+                    )}</span>
+                </div>
+            </td>
+            <td class="px-6 py-4 text-sm font-bold text-right text-red-600">
+                ₱${parseFloat(record.amount || 0).toFixed(2)}
+            </td>
+            <td class="px-6 py-4">
+                <div class="text-sm text-gray-900">
+                    ${record.product_details || "No details"}
+                </div>
+            </td>
+            <td class="px-6 py-4 text-sm font-medium text-gray-700">
+                ${record.personnel_name || record.personnel_email || "Unknown"}
+            </td>
+            <td class="px-6 py-4 text-center">
+                <button onclick="salesReport.viewOutSourceDetail(${record.id})" 
+                        class="bg-gradient-to-r from-black to-black text-white px-4 py-2 rounded-lg hover:from-black hover:to-black transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md">
+                    View Details
+                </button>
+            </td>
+        </tr>
+    `
+      )
+      .join("");
+  }
+
+  // ============================================
+  // UPDATE PAGINATION METHODS
   // ============================================
   updatePagination() {
     const start = (this.currentPage - 1) * this.itemsPerPage + 1;
@@ -984,9 +1306,306 @@ class SalesReport {
       nextBtn.disabled = this.voidCurrentPage === this.voidTotalPages;
   }
 
+  updateCashoutPagination() {
+    const start = (this.cashoutCurrentPage - 1) * this.itemsPerPage + 1;
+    const end = Math.min(
+      this.cashoutCurrentPage * this.itemsPerPage,
+      this.cashoutTotalRecords
+    );
+
+    const cashoutStartEl = document.getElementById("cashoutStart");
+    const cashoutEndEl = document.getElementById("cashoutEnd");
+    const cashoutTotalEl = document.getElementById("cashoutTotal");
+    const cashoutCurrentPageEl = document.getElementById("cashoutCurrentPage");
+
+    if (cashoutStartEl) cashoutStartEl.textContent = start;
+    if (cashoutEndEl) cashoutEndEl.textContent = end;
+    if (cashoutTotalEl) cashoutTotalEl.textContent = this.cashoutTotalRecords;
+    if (cashoutCurrentPageEl)
+      cashoutCurrentPageEl.textContent = this.cashoutCurrentPage;
+
+    const prevBtn = document.getElementById("cashoutPrevPage");
+    const nextBtn = document.getElementById("cashoutNextPage");
+
+    if (prevBtn) prevBtn.disabled = this.cashoutCurrentPage === 1;
+    if (nextBtn)
+      nextBtn.disabled = this.cashoutCurrentPage === this.cashoutTotalPages;
+  }
+
+  updateOutSourcePagination() {
+    const start = (this.outCurrentPage - 1) * this.itemsPerPage + 1;
+    const end = Math.min(
+      this.outCurrentPage * this.itemsPerPage,
+      this.outTotalRecords
+    );
+
+    const outStartEl = document.getElementById("outStart");
+    const outEndEl = document.getElementById("outEnd");
+    const outTotalEl = document.getElementById("outTotal");
+    const outCurrentPageEl = document.getElementById("outCurrentPage");
+
+    if (outStartEl) outStartEl.textContent = start;
+    if (outEndEl) outEndEl.textContent = end;
+    if (outTotalEl) outTotalEl.textContent = this.outTotalRecords;
+    if (outCurrentPageEl) outCurrentPageEl.textContent = this.outCurrentPage;
+
+    const prevBtn = document.getElementById("outPrevPage");
+    const nextBtn = document.getElementById("outNextPage");
+
+    if (prevBtn) prevBtn.disabled = this.outCurrentPage === 1;
+    if (nextBtn) nextBtn.disabled = this.outCurrentPage === this.outTotalPages;
+  }
+
   // ============================================
-  // VIEW CASHIER DETAILS
+  // VIEW OUT SOURCE DETAIL
   // ============================================
+  async viewOutSourceDetail(recordId) {
+    this.showLoading(true);
+
+    try {
+      const response = await fetch(
+        `backend/salesapi.php?action=outsource-detail&id=${recordId}`
+      );
+      const responseText = await response.text();
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (e) {
+        throw new Error("Invalid JSON response: " + responseText);
+      }
+
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+
+      const record = result.data;
+
+      // Update modal content
+      this.renderOutSourceDetailModal(record);
+
+      // Show modal
+      const modal = document.getElementById("outDetailModal");
+      if (modal) {
+        modal.classList.remove("hidden");
+      }
+    } catch (error) {
+      console.error("View Out Source Detail Error:", error);
+      this.showNotification(
+        "error",
+        "Failed to load record details: " + error.message
+      );
+    } finally {
+      this.showLoading(false);
+    }
+  }
+
+  renderOutSourceDetailModal(record) {
+    // Update modal fields
+    const elements = {
+      outDetailId: record.id,
+      outDetailBranch: record.branch || "Unknown",
+      outDetailDate: this.formatDateTime(record.created_at),
+      outDetailPersonnel:
+        record.personnel_name || record.personnel_email || "Unknown",
+      outDetailSupplier: record.supplier || "N/A",
+      outDetailQuantity: record.quantity || "0",
+      outDetailTotal: `₱${parseFloat(record.amount || 0).toFixed(2)}`,
+      outDetailNotes: record.notes || "No notes provided",
+    };
+
+    Object.entries(elements).forEach(([id, value]) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    });
+
+    // Product details
+    const productsEl = document.getElementById("outDetailProducts");
+    if (productsEl) {
+      productsEl.innerHTML = `
+            <div class="text-sm text-gray-900">
+                ${record.product_details || "No product details"}
+            </div>
+        `;
+    }
+  }
+
+  printOutDetail() {
+    const modal = document.getElementById("outDetailModal");
+    if (!modal) return;
+
+    const printContent = modal.querySelector(".receipt-kstreet").innerHTML;
+
+    const printWindow = window.open("", "_blank", "width=350,height=600");
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Out Source Receipt</title>
+            <style>
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                    font-family: 'Courier New', monospace;
+                }
+                body {
+                    width: 80mm;
+                    padding: 5mm;
+                    font-size: 12px;
+                }
+                .receipt-kstreet {
+                    width: 100%;
+                }
+                @media print {
+                    body { padding: 2mm; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="receipt-kstreet">${printContent}</div>
+            <script>
+                window.onload = function() {
+                    setTimeout(function() {
+                        window.print();
+                    }, 300);
+                };
+            </script>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+  }
+
+  // ============================================
+  // EXPORT OUT SOURCE TO EXCEL
+  // ============================================
+  exportOutSourceToExcel() {
+    if (this.outData.length === 0) {
+      this.showNotification("warning", "No data to export");
+      return;
+    }
+
+    const totalAmount = this.outData.reduce(
+      (sum, r) => sum + parseFloat(r.amount || 0),
+      0
+    );
+
+    const branchFilter = document.getElementById("branchFilter");
+    const currentBranch = branchFilter ? branchFilter.value : "all";
+    const branchText = currentBranch === "all" ? "All Branches" : currentBranch;
+
+    const timeRange = document.getElementById("timeRange").value;
+    const timeRangeText = this.getTimeRangeText(timeRange);
+
+    const ws_data = [];
+
+    // Header
+    ws_data.push(["K - STREET"]);
+    ws_data.push([`BRANCH: ${branchText}`]);
+    ws_data.push([`Out Source Report - Period: ${timeRangeText}`]);
+    ws_data.push([]);
+
+    // Summary
+    ws_data.push(["OUT SOURCE SUMMARY"]);
+    ws_data.push([`Total Records: ${this.outData.length}`]);
+    ws_data.push([
+      `Total Amount: ₱${totalAmount.toLocaleString("en-PH", {
+        minimumFractionDigits: 2,
+      })}`,
+    ]);
+    ws_data.push([]);
+
+    // Table Headers
+    const headers = ["Date & Time", "Amount", "Product Details", "Personnel"];
+    ws_data.push(headers);
+
+    // Data Rows
+    this.outData.forEach((record) => {
+      const row = [
+        this.formatDateTime(record.created_at),
+        parseFloat(record.amount || 0),
+        record.product_details || "No details",
+        record.personnel_name || record.personnel_email || "Unknown",
+      ];
+      ws_data.push(row);
+    });
+
+    // Footer
+    ws_data.push([]);
+    ws_data.push([`Generated: ${new Date().toLocaleString("en-PH")}`]);
+
+    // Create worksheet
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+    // Apply styles
+    this.applyOutSourceExcelStyles(ws, ws_data.length);
+
+    // Set column widths
+    ws["!cols"] = [
+      { wch: 22 }, // Date & Time
+      { wch: 15 }, // Amount
+      { wch: 50 }, // Product Details
+      { wch: 25 }, // Personnel
+    ];
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Out Source Report");
+
+    // Generate filename
+    const filename = `K-Street-OutSource_Report_${currentBranch}_${
+      new Date().toISOString().split("T")[0]
+    }.xlsx`;
+
+    // Download
+    XLSX.writeFile(wb, filename);
+
+    this.showNotification(
+      "success",
+      "Out Source report exported successfully!"
+    );
+  }
+
+  applyOutSourceExcelStyles(ws, totalRows) {
+    // Header style (Row 1)
+    if (ws["A1"]) {
+      ws["A1"].s = {
+        font: { bold: true, color: { rgb: "FFFFFFFF" }, size: 14 },
+        fill: { fgColor: { rgb: "FFDC2626" } },
+        alignment: { horizontal: "center", vertical: "center" },
+      };
+    }
+
+    // Summary title (Row 5)
+    if (ws["A5"]) {
+      ws["A5"].s = {
+        font: { bold: true, size: 11 },
+        fill: { fgColor: { rgb: "FFFFCDD2" } },
+        alignment: { horizontal: "left" },
+      };
+    }
+
+    // Table header row (Row 9)
+    const headerRow = 9;
+    for (let col = 0; col < 4; col++) {
+      const cellRef = XLSX.utils.encode_cell({ r: headerRow - 1, c: col });
+      if (ws[cellRef]) {
+        ws[cellRef].s = {
+          font: { bold: true, color: { rgb: "FFFFFFFF" }, size: 10 },
+          fill: { fgColor: { rgb: "FFD32F2F" } },
+          alignment: { horizontal: "center", vertical: "center" },
+        };
+      }
+    }
+  }
+
+  // ============================================
+  // CONTINUING WITH REST OF THE METHODS...
+  // (Keep all your existing methods: viewCashierDetails, viewReceipt, etc.)
+  // I'll add the remaining essential methods below:
+  // ============================================
+
   async viewCashierDetails(sessionId) {
     this.showLoading(true);
 
@@ -1010,10 +1629,8 @@ class SalesReport {
       const session = result.data;
       this.selectedSession = session;
 
-      // Update modal content
       this.renderCashierDetailModal(session);
 
-      // Show modal
       const modal = document.getElementById("cashierDetailModal");
       if (modal) {
         modal.classList.remove("hidden");
@@ -1029,17 +1646,12 @@ class SalesReport {
     }
   }
 
-  // ============================================
-  // RENDER CASHIER DETAIL MODAL
-  // ============================================
   renderCashierDetailModal(session) {
-    // Header info
     const cashierBranch = document.getElementById("cashierDetailBranch");
     if (cashierBranch) {
       cashierBranch.textContent = session.branch || window.currentUser.branch;
     }
 
-    // Cashier Info Section
     const cashierInfoSection = document.getElementById("cashierInfoSection");
     if (cashierInfoSection) {
       cashierInfoSection.innerHTML = `
@@ -1064,7 +1676,6 @@ class SalesReport {
       `;
     }
 
-    // Sales Summary Section
     const salesSummarySection = document.getElementById("salesSummarySection");
     if (salesSummarySection) {
       let paymentMethodsHtml = "";
@@ -1143,7 +1754,6 @@ class SalesReport {
       `;
     }
 
-    // Orders Table
     const ordersTableBody = document.getElementById("cashierOrdersTableBody");
     if (ordersTableBody && session.orders && session.orders.length > 0) {
       ordersTableBody.innerHTML = session.orders
@@ -1190,9 +1800,6 @@ class SalesReport {
     }
   }
 
-  // ============================================
-  // VIEW RECEIPT
-  // ============================================
   async viewReceipt(orderId) {
     try {
       const response = await fetch(
@@ -1248,7 +1855,6 @@ class SalesReport {
           2
         )}`;
 
-      // Parse and display items
       const items = this.parseItems(order.items);
       const itemsHtml = items
         .map(
@@ -1263,7 +1869,6 @@ class SalesReport {
 
       if (receiptItems) receiptItems.innerHTML = itemsHtml;
 
-      // Handle void info
       if (order.is_void) {
         if (voidStamp) voidStamp.classList.remove("hidden");
         if (voidInfo) voidInfo.classList.remove("hidden");
@@ -1288,7 +1893,6 @@ class SalesReport {
         }
       }
 
-      // Show modal
       const receiptModal = document.getElementById("receiptModal");
       if (receiptModal) {
         receiptModal.classList.remove("hidden");
@@ -1299,9 +1903,6 @@ class SalesReport {
     }
   }
 
-  // ============================================
-  // SHOW VOID MODAL
-  // ============================================
   async showVoidModal(orderId) {
     const order = this.salesData.find((o) => o.id === orderId);
     if (!order) {
@@ -1311,7 +1912,6 @@ class SalesReport {
 
     this.selectedOrder = order;
 
-    // Update order info
     const voidOrderInfo = document.getElementById("voidOrderInfo");
     if (voidOrderInfo) {
       voidOrderInfo.innerHTML = `
@@ -1342,7 +1942,6 @@ class SalesReport {
       `;
     }
 
-    // Clear inputs
     const voidReasonInput = document.getElementById("voidReasonInput");
     const managerPin = document.getElementById("managerPin");
     const pinError = document.getElementById("pinError");
@@ -1352,7 +1951,6 @@ class SalesReport {
     if (managerPin) managerPin.value = "";
     if (pinError) pinError.classList.add("hidden");
 
-    // Show/hide PIN section based on role
     if (pinSection) {
       if (window.currentUser && window.currentUser.role === "cashier") {
         pinSection.classList.remove("hidden");
@@ -1361,20 +1959,15 @@ class SalesReport {
       }
     }
 
-    // Close receipt modal if open
     const receiptModal = document.getElementById("receiptModal");
     if (receiptModal) receiptModal.classList.add("hidden");
 
-    // Show void modal
     const voidModal = document.getElementById("voidModal");
     if (voidModal) {
       voidModal.classList.remove("hidden");
     }
   }
 
-  // ============================================
-  // CONFIRM VOID
-  // ============================================
   async confirmVoid() {
     const reason = document.getElementById("voidReasonInput").value.trim();
     const pin = document.getElementById("managerPin")
@@ -1389,7 +1982,6 @@ class SalesReport {
       return;
     }
 
-    // If cashier, verify PIN first
     let managerInfo = null;
     if (window.currentUser.role === "cashier") {
       if (!pin) {
@@ -1430,7 +2022,6 @@ class SalesReport {
       }
     }
 
-    // Proceed with void
     this.showLoading(true);
 
     try {
@@ -1450,16 +2041,13 @@ class SalesReport {
         throw new Error(result.message);
       }
 
-      // Close modal
       this.closeModal("voidModal");
 
-      // Show success notification
       this.showNotification(
         "success",
         `Order #${this.selectedOrder.id} has been successfully voided`
       );
 
-      // Reload current view
       if (this.activeTab === "sales") {
         this.loadSales();
       } else if (this.activeTab === "void") {
@@ -1471,6 +2059,580 @@ class SalesReport {
     } finally {
       this.showLoading(false);
     }
+  }
+
+  // ============================================
+  // PRINT CASHIER REPORT - THERMAL PRINTER OPTIMIZED (FIXED)
+  // ============================================
+  printCashierReport() {
+    const session = this.selectedSession;
+    if (!session) {
+      console.error("No session selected");
+      this.showNotification("error", "No session selected to print");
+      return;
+    }
+
+    console.log("🖨️ Printing session:", session);
+
+    // Calculate payment methods if needed
+    let paymentMethods = {};
+    if (
+      session.payment_methods &&
+      typeof session.payment_methods === "object" &&
+      !Array.isArray(session.payment_methods)
+    ) {
+      paymentMethods = session.payment_methods;
+    } else if (session.orders && session.orders.length > 0) {
+      session.orders.forEach((order) => {
+        const method = order.payment_method || "Cash";
+        if (!paymentMethods[method]) {
+          paymentMethods[method] = { count: 0, total: 0 };
+        }
+        paymentMethods[method].count++;
+        paymentMethods[method].total += parseFloat(order.total || 0);
+      });
+    }
+
+    const printHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Cashier Session Report</title>
+        <meta charset="UTF-8">
+       <style>
+    /* RESET EVERYTHING */
+    * {
+        margin: 0 !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
+        line-height: 1.4 !important;
+        font-family: 'Courier New', monospace !important;
+    }
+    
+    @page {
+        size: 80mm auto !important;  /* ✅ AUTO = BABABA KUNG MAHABA */
+        margin: 0 !important;
+    }
+    
+    html, body {
+        width: 80mm !important;
+        height: auto !important;  /* ✅ AUTO HEIGHT */
+        margin: 0 auto !important;
+        padding: 0 !important;
+        background: white !important;
+        color: black !important;
+        font-size: 16px !important;
+        overflow: visible !important;  /* ✅ PARA MAKITA LAHAT */
+    }
+    
+    body {
+        padding: 1mm !important;
+        margin: 0 auto !important;
+        width: 80mm !important;
+        min-height: auto !important;  /* ✅ WALANG FIXED HEIGHT */
+    }
+    
+    .receipt {
+        width: 80mm !important;
+        margin: 0 auto !important;
+        padding: 1mm !important;
+        text-align: center !important;
+        overflow: visible !important;  /* ✅ WALANG HIDDEN CONTENT */
+    }
+    
+    /* HEADER */
+    .store-name {
+        font-size: 18px !important;
+        font-weight: bold !important;
+        text-transform: uppercase;
+        margin: 0.4mm 0 !important;
+    }
+    
+    .store-address {
+        font-size: 17px !important;
+        margin: 0.4mm 0 !important;
+    }
+    
+    .report-title {
+        font-size: 18px !important;
+        font-weight: bold !important;
+        margin: 0.4mm 0 !important;
+    }
+    
+    .divider {
+        font-size: 16px !important;
+        margin: 0.9mm 0 !important;
+        padding: 0 !important;
+    }
+    
+  /* SECTION INFO */
+.info {
+    font-size: 17px !important;
+    text-align: left !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    table-layout: fixed !important;  /* ✅ FIXED WIDTH */
+}
+
+.info td {
+    font-size: 17px !important;
+    padding: 0.4mm 0 !important;
+    word-wrap: break-word !important;  /* ✅ WORD WRAP */
+    overflow-wrap: break-word !important;  /* ✅ BREAK LONG TEXT */
+    white-space: normal !important;  /* ✅ ALLOW LINE BREAKS */
+}
+
+.info td:first-child {
+    width: 35% !important;  /* ✅ LABEL WIDTH */
+    font-weight: bold !important;
+    vertical-align: top !important;  /* ✅ ALIGN TOP */
+}
+
+.info td:last-child {
+    width: 65% !important;  /* ✅ VALUE WIDTH */
+    word-break: break-all !important;  /* ✅ BREAK KAHIT WALANG SPACE */
+}
+    
+    /* SECTION HEADERS */
+    .section-header {
+        font-size: 17px !important;
+        font-weight: bold !important;
+        text-align: left !important;
+        margin: 0.4mm 0 !important;
+        page-break-after: avoid !important;  /* ✅ HINDI PUPUPUTULIN */
+    }
+    
+    /* SALES TABLE */
+    .sales-table {
+        width: 100% !important;
+        font-size: 16px !important;
+        border-collapse: collapse !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        page-break-inside: auto !important;  /* ✅ AUTOMATIC PAGINATION */
+    }
+    
+    .sales-table td {
+        padding: 0.4mm 0 !important;
+        vertical-align: top !important;
+        font-weight: bold !important;
+    }
+    
+    .sales-table tr {
+        page-break-inside: avoid !important;  /* ✅ HINDI PUTOL ANG ROW */
+    }
+    
+    .sales-label {
+        text-align: left !important;
+        width: 60% !important;
+        font-size: 16px !important;
+    }
+    
+    .sales-value {
+        text-align: right !important;
+        width: 40% !important;
+        font-size: 16px !important;
+    }
+    
+    /* PAYMENT METHODS TABLE */
+    .payment-table {
+        width: 100% !important;
+        font-size: 16px !important;
+        border-collapse: collapse !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        page-break-inside: auto !important;  /* ✅ AUTOMATIC PAGINATION */
+    }
+    
+    .payment-table td {
+        padding: 0.4mm 0 !important;
+        vertical-align: top !important;
+    }
+    
+    .payment-table tr {
+        page-break-inside: avoid !important;  /* ✅ HINDI PUTOL ANG ROW */
+    }
+    
+    .payment-method {
+        text-align: left !important;
+        width: 40% !important;
+        font-size: 16px !important;
+        font-weight: bold !important;
+    }
+    
+    .payment-count {
+        text-align: center !important;
+        width: 20% !important;
+        font-size: 16px !important;
+    }
+    
+    .payment-amount {
+        text-align: right !important;
+        width: 40% !important;
+        font-size: 16px !important;
+        font-weight: bold !important;
+    }
+    
+    /* ORDERS TABLE */
+    .orders-table {
+        width: 100% !important;
+        font-size: 14px !important;
+        border-collapse: collapse !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        page-break-inside: auto !important;  /* ✅ AUTOMATIC PAGINATION */
+    }
+    
+    .orders-table td {
+        padding: 0.4mm 0 !important;
+        vertical-align: top !important;
+        word-wrap: break-word !important;  /* ✅ WORD WRAP */
+        overflow-wrap: break-word !important;  /* ✅ BREAK LONG WORDS */
+    }
+    
+    .orders-table tr {
+        page-break-inside: avoid !important;  /* ✅ HINDI PUTOL ANG ROW */
+    }
+    
+    .order-id {
+        text-align: left !important;
+        width: 20% !important;
+        font-size: 14px !important;
+        font-weight: bold !important;
+    }
+    
+    .order-details {
+        text-align: left !important;
+        width: 50% !important;
+        font-size: 14px !important;
+        word-wrap: break-word !important;  /* ✅ BABABA KUNG MAHABA */
+        white-space: normal !important;  /* ✅ ALLOW LINE BREAKS */
+    }
+    
+    .order-amount {
+        text-align: right !important;
+        width: 30% !important;
+        font-size: 14px !important;
+        font-weight: bold !important;
+    }
+    
+    /* TOTALS */
+    .totals {
+        width: 100% !important;
+        font-size: 16px !important;
+        margin: 0.9mm 0 0 !important;
+        padding: 0 !important;
+        border-top: 2px solid black !important;
+    }
+    
+    .totals td {
+        padding: 0.4mm 0 !important;
+        font-weight: bold !important;
+    }
+    
+    .grand-total {
+        font-weight: 900 !important;
+        font-size: 16px !important;
+        border-top: 2px solid black !important;
+        border-bottom: 2px solid black !important;
+    }
+    
+    .grand-total td {
+        font-weight: 900 !important;
+    }
+    
+    /* FOOTER */
+    .footer {
+        font-size: 12px !important;
+        margin: 0.6mm 0 0 !important;
+        padding: 0 !important;
+    }
+    
+    .footer div {
+        margin: 0.4mm 0 !important;
+    }
+    
+    .transaction-info {
+        font-size: 12px !important;
+        color: #666 !important;
+        margin: 0.6mm 0 0 !important;
+        padding: 0 !important;
+    }
+    
+    /* PRINT BUTTON (FOR PREVIEW ONLY) */
+    .no-print {
+        display: block !important;  /* ✅ VISIBLE SA PREVIEW */
+        text-align: center !important;
+        margin-top: 10mm !important;
+        padding: 5mm !important;
+    }
+    
+    /* PRINT SPECIFIC */
+    @media print {
+        .no-print {
+            display: none !important;  /* ✅ HIDDEN KAPAG PRINT */
+        }
+        
+        html, body {
+            overflow: visible !important;  /* ✅ MAKITA LAHAT */
+        }
+        
+        .receipt {
+            padding: 0.5mm !important;
+            overflow: visible !important;  /* ✅ WALANG NAKATAGO */
+        }
+        
+        body {
+            padding: 0.5mm !important;
+        }
+    }
+</style>
+    </head>
+    <body>
+        <div class="receipt">
+            <!-- HEADER -->
+            <div class="store-name">K-STREET TARLAC</div>
+            <div class="store-address">Mc Arthur Highway, Magaspac</div>
+            <div class="store-address">Gerona, Tarlac</div>
+            
+            <div class="divider">=============================</div>
+            
+            <div class="report-title">CASHIER SESSION REPORT</div>
+            
+            <div class="divider">=============================</div>
+            
+          <!-- CASHIER INFORMATION -->
+<div class="section-header">CASHIER INFORMATION</div>
+<table class="info">
+    <tr>
+        <td><strong>Cashier:</strong></td>
+        <td>${
+          (session.username || session.user_email || "Unknown").length > 20
+            ? (session.username || session.user_email).substring(0, 17) + "..."
+            : session.username || session.user_email || "Unknown"
+        }
+        </td>
+    </tr>
+    <tr>
+        <td><strong>Email:</strong></td>
+        <td>${
+          session.user_email.length > 25
+            ? session.user_email.substring(0, 22) + "..."
+            : session.user_email
+        }
+        </td>
+    </tr>
+    <tr>
+        <td><strong>Branch:</strong></td>
+        <td>${session.branch || window.currentUser?.branch || "main"}</td>
+    </tr>
+    <tr>
+        <td><strong>Login:</strong></td>
+        <td style="font-size: 15px !important;">${this.formatDateTime(
+          session.login_time
+        )}</td>
+    </tr>
+    <tr>
+        <td><strong>Logout:</strong></td>
+        <td style="font-size: 15px !important;">
+            ${
+              session.logout_time
+                ? this.formatDateTime(session.logout_time)
+                : "Still Active"
+            }
+        </td>
+    </tr>
+    <tr>
+        <td><strong>Duration:</strong></td>
+        <td>${session.session_duration}</td>
+    </tr>
+</table>
+            
+            <div class="divider">-----------------------------</div>
+            
+            <!-- SALES SUMMARY -->
+            <div class="section-header">SALES SUMMARY</div>
+            <table class="sales-table">
+                <tr>
+                    <td class="sales-label">Start Gross:</td>
+                    <td class="sales-value">₱${parseFloat(
+                      session.start_gross_sales
+                    ).toFixed(2)}</td>
+                </tr>
+                <tr>
+                    <td class="sales-label">End Gross:</td>
+                    <td class="sales-value">₱${parseFloat(
+                      session.end_gross_sales
+                    ).toFixed(2)}</td>
+                </tr>
+                <tr style="border-top: 1px solid black;">
+                    <td class="sales-label">Session Sales:</td>
+                    <td class="sales-value">₱${parseFloat(
+                      session.session_sales
+                    ).toFixed(2)}</td>
+                </tr>
+                <tr>
+                    <td class="sales-label">Total Transactions:</td>
+                    <td class="sales-value">${
+                      session.transaction_count || 0
+                    }</td>
+                </tr>
+                <tr>
+                    <td class="sales-label">Total Discount:</td>
+                    <td class="sales-value">₱${parseFloat(
+                      session.total_discount
+                    ).toFixed(2)}</td>
+                </tr>
+                <tr>
+                    <td class="sales-label">Total Void:</td>
+                    <td class="sales-value">₱${parseFloat(
+                      session.total_void
+                    ).toFixed(2)}</td>
+                </tr>
+            </table>
+            
+            <div class="divider">-----------------------------</div>
+            
+            <!-- PAYMENT METHODS -->
+            <div class="section-header">PAYMENT METHODS</div>
+            <table class="payment-table">
+                ${this.generatePaymentMethodsSection(paymentMethods)}
+            </table>
+            
+            <div class="divider">-----------------------------</div>
+            
+            <!-- ORDERS DURING SESSION -->
+            <div class="section-header">ORDERS (${
+              session.orders ? session.orders.length : 0
+            })</div>
+            <table class="orders-table">
+                ${this.generateOrdersSection(session)}
+            </table>
+            
+            <div class="divider">=============================</div>
+            
+            <!-- FOOTER -->
+            <div class="footer">
+                <div style="font-weight: bold;">*** END OF REPORT ***</div>
+            </div>
+            
+            <div class="transaction-info">
+                <div>Report Generated:</div>
+                <div>${new Date()
+                  .toLocaleString("en-PH", {
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false,
+                    timeZone: "Asia/Manila",
+                  })
+                  .replace(",", "")}</div>
+            </div>
+        </div>
+        
+        
+        <!-- AUTO PRINT SCRIPT -->
+        <script>
+            // AUTO PRINT
+            window.onload = function() {
+                setTimeout(function() {
+                    window.print();
+                }, 300);
+            };
+            
+            // KEYBOARD SHORTCUTS
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') window.close();
+                if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+                    e.preventDefault();
+                    window.print();
+                }
+            });
+        </script>
+    </body>
+    </html>
+    `;
+
+    // OPEN IN NEW WINDOW
+    const printWindow = window.open("", "_blank", "width=350,height=600");
+    if (!printWindow) {
+      this.showNotification(
+        "error",
+        "Failed to open print window. Please allow popups."
+      );
+      return;
+    }
+
+    printWindow.document.write(printHTML);
+    printWindow.document.close();
+    printWindow.focus();
+
+    console.log("✅ Print window opened successfully");
+  }
+
+  // ============================================
+  // HELPER: GENERATE PAYMENT METHODS SECTION
+  // ============================================
+  generatePaymentMethodsSection(paymentMethods) {
+    if (!paymentMethods || Object.keys(paymentMethods).length === 0) {
+      return `
+      <tr>
+        <td colspan="3" style="text-align: center; font-style: italic; color: #666;">
+          No payment methods recorded
+        </td>
+      </tr>
+    `;
+    }
+
+    let html = "";
+    Object.entries(paymentMethods).forEach(([method, data]) => {
+      html += `
+      <tr>
+        <td class="payment-method">${method}</td>
+        <td class="payment-count">${data.count}x</td>
+        <td class="payment-amount">₱${parseFloat(data.total).toFixed(2)}</td>
+      </tr>
+    `;
+    });
+
+    return html;
+  }
+
+  // ============================================
+  // HELPER: GENERATE ORDERS SECTION
+  // ============================================
+  generateOrdersSection(session) {
+    if (!session.orders || session.orders.length === 0) {
+      return `
+      <tr>
+        <td colspan="3" style="text-align: center; font-style: italic; color: #666;">
+          No orders during this session
+        </td>
+      </tr>
+    `;
+    }
+
+    let html = "";
+    session.orders.forEach((order) => {
+      const productNames = this.formatProductNames(order);
+      const shortName =
+        productNames.length > 30
+          ? productNames.substring(0, 27) + "..."
+          : productNames;
+
+      html += `
+      <tr>
+        <td class="order-id">#${order.id}</td>
+        <td class="order-details">${shortName}</td>
+        <td class="order-amount">₱${parseFloat(order.total).toFixed(2)}</td>
+      </tr>
+    `;
+    });
+
+    return html;
   }
 
   // ============================================
@@ -1493,334 +2655,432 @@ class SalesReport {
     <!DOCTYPE html>
     <html>
     <head>
-        <title>K-Street Receipt</title>
+        <title>Receipt</title>
+        <meta charset="UTF-8">
         <style>
-            @media print {
-                @page {
-                    size: 80mm auto;
-                    margin: 0;
-                    padding: 0;
-                }
-                
-                html, body {
-                    width: 80mm !important;
-                    min-height: 100vh;
-                    margin: 0 !important;
-                    padding: 0 !important;
-                    font-size: 10px !important;
-                    line-height: 1.1 !important;
-                }
-                
-                body {
-                    font-family: 'Courier New', monospace;
-                    font-size: 10px;
-                    line-height: 1.1;
-                    width: 80mm;
-                    margin: 0 auto;
-                    padding: 2mm;
-                    white-space: pre-wrap;
-                    word-wrap: break-word;
-                }
-                
-                .receipt-container {
-                    width: 80mm;
-                    padding: 1mm 2mm;
-                    margin: 0;
-                    page-break-inside: avoid;
-                }
-                
-                .no-print {
-                    display: none !important;
-                }
+            /* RESET EVERYTHING */
+            * {
+                margin: 0 !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+                line-height: 1.4 !important; /* ✅ 4.0 spacing between lines */
+                font-family: 'Courier New', monospace !important;
+            }
+            
+            @page {
+                size: 80mm auto !important;
+                margin: 0 !important;
+            }
+            
+            html, body {
+                width: 80mm !important;
+                height: auto !important;
+                margin: 0 auto !important;
+                padding: 0 !important;
+                background: white !important;
+                color: black !important;
+                font-size: 16px !important; /* BASE SIZE */
             }
             
             body {
-                font-family: 'Courier New', monospace;
-                font-size: 10px;
-                line-height: 1.1;
-                width: 80mm;
-                margin: 0 auto;
-                padding: 2mm;
-                background: white;
-                color: black;
+                padding: 1mm !important; /* ✅ 1mm minimal */
+                margin: 0 auto !important;
+                width: 80mm !important;
             }
             
-            .receipt-container {
-                width: 80mm;
-                padding: 1mm 2mm;
-                border: 1px dashed #ccc;
-                background: white;
+            .receipt {
+                width: 80mm !important;
+                margin: 0 auto !important;
+                padding: 1mm !important;
+                text-align: center !important;
             }
             
-            .header {
-                text-align: center;
-                margin-bottom: 1mm;
-                font-weight: bold;
-                font-size: 11px;
-            }
-            
+            /* HEADER */
             .store-name {
-                font-size: 12px;
-                font-weight: bold;
+                font-size: 18px !important; /* ✅ 18px bold */
+                font-weight: bold !important;
                 text-transform: uppercase;
+                margin: 0.4mm 0 !important; /* Added 4 spacing */
+            }
+            
+            .store-address {
+                font-size: 17px !important; /* ✅ 17px */
+                margin: 0.4mm 0 !important; /* Added 4 spacing */
             }
             
             .divider {
-                text-align: center;
-                margin: 1mm 0;
-                border-bottom: 1px dashed #000;
+                font-size: 16px !important;
+                margin: 0.9mm 0 !important; /* ✅ 0.9mm minimal */
+                padding: 0 !important;
             }
             
-            .section {
-                margin: 1mm 0;
+            /* SECTION INFO */
+            .info {
+                font-size: 17px !important; /* ✅ 17px */
+                text-align: left !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
             }
             
+            .info td {
+                font-size: 17px !important; /* ✅ 17px */
+                padding: 0.4mm 0 !important; /* ✅ 0.4mm-0.5mm minimal */
+            }
+            
+            /* ITEMS HEADER */
+            .items-header {
+                font-size: 17px !important; /* ✅ 17px */
+                font-weight: bold !important;
+                text-align: left !important;
+                margin: 0.4mm 0 !important; /* Added 4 spacing */
+            }
+            
+            /* ITEMS TABLE */
             .items-table {
-                width: 100%;
-                border-collapse: collapse;
-                margin: 1mm 0;
+                width: 100% !important;
+                font-size: 16px !important;
+                border-collapse: collapse !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
             
             .items-table td {
-                vertical-align: top;
-                padding: 0.5mm 0;
+                padding: 0.4mm 0 !important; /* ✅ 0.4mm-0.5mm minimal */
+                vertical-align: top !important;
             }
             
             .item-name {
-                width: 60%;
-                text-align: left;
+                text-align: left !important;
+                width: 50% !important;
+                font-size: 16px !important; /* ✅ 16px BOLD */
+                font-weight: bold !important;
             }
             
             .item-qty {
-                width: 20%;
-                text-align: center;
+                text-align: center !important;
+                width: 15% !important;
+                font-size: 16px !important;
+                font-weight: bold !important;
             }
             
             .item-price {
-                width: 20%;
-                text-align: right;
+                text-align: right !important;
+                width: 35% !important;
+                font-size: 16px !important; /* ✅ 16px BOLD */
+                font-weight: bold !important;
             }
             
-            .totals-table {
-                width: 100%;
-                margin-top: 2mm;
-                border-top: 1px solid #000;
-                padding-top: 1mm;
+            .item-addons {
+                font-size: 16px !important; /* ✅ 16px italic */
+                font-style: italic !important;
+                padding-left: 2mm !important;
+                text-align: left !important;
             }
             
-            .totals-table td {
-                padding: 0.5mm 0;
+            .item-notes {
+                font-size: 16px !important; /* ✅ 16px italic */
+                font-style: italic !important;
+                padding-left: 2mm !important;
+                text-align: left !important;
+                color: #666 !important;
             }
             
-            .total-label {
-                text-align: left;
-                width: 70%;
+            /* TOTALS */
+            .totals {
+                width: 100% !important;
+                font-size: 16px !important; /* ✅ 16px BOLD */
+                margin: 0.9mm 0 0 !important; /* ✅ 0.9mm minimal */
+                padding: 0 !important;
+                border-top: 1px solid black !important;
             }
             
-            .total-value {
-                text-align: right;
-                width: 30%;
+            .totals td {
+                padding: 0.4mm 0 !important; /* ✅ 0.4mm-0.5mm minimal */
+                font-weight: bold !important;
             }
             
             .grand-total {
-                font-weight: bold;
-                border-top: 2px solid #000;
-                border-bottom: 2px solid #000;
-                padding: 1mm 0;
+                font-weight: 900 !important; /* ✅ 16px SUPER BOLD */
+                font-size: 16px !important;
+                border-top: 2px solid black !important;
+                border-bottom: 2px solid black !important;
             }
             
+            .grand-total td {
+                font-weight: 900 !important;
+            }
+            
+            /* FOOTER */
             .footer {
-                text-align: center;
-                margin-top: 2mm;
-                font-size: 9px;
-                font-style: italic;
+                font-size: 12px !important; /* ✅ 12px */
+                margin: 0.6mm 0 0 !important; /* ✅ 0.6mm-0.9mm minimal */
+                padding: 0 !important;
             }
             
+            .footer div {
+                margin: 0.4mm 0 !important; /* Added 4 spacing between footer lines */
+            }
+            
+            .transaction-info {
+                font-size: 12px !important; /* ✅ 12px */
+                color: #666 !important;
+                margin: 0.6mm 0 0 !important; /* ✅ 0.6mm-0.9mm minimal */
+                padding: 0 !important;
+            }
+            
+            .transaction-info br {
+                margin: 0.4mm 0 !important; /* Added 4 spacing between transaction lines */
+            }
+            
+            /* VOID STAMP */
             .void-stamp {
-                text-align: center;
-                color: #dc2626;
-                font-weight: bold;
-                border: 2px solid #dc2626;
-                padding: 2mm;
-                margin: 2mm 0;
-                font-size: 14px;
+                color: red !important;
+                font-weight: bold !important;
+                font-size: 18px !important;
+                border: 2px solid red !important;
+                margin: 0.9mm 0 !important; /* ✅ 0.9mm minimal */
+                padding: 0.9mm !important;
+            }
+            
+            .void-info {
+                font-size: 16px !important;
+                background: #fee !important;
+                margin: 0.9mm 0 !important;
+                padding: 0.9mm !important;
+            }
+            
+            .void-info div {
+                margin: 0.4mm 0 !important; /* Added 4 spacing */
+            }
+            
+            /* PRINT BUTTON (FOR PREVIEW ONLY) */
+            .no-print {
+                display: none !important;
+            }
+            
+            /* FORCE NO PAGE BREAKS */
+            .receipt {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            
+            /* PRINT SPECIFIC */
+            @media print {
+                .no-print {
+                    display: none !important;
+                }
+                
+                .receipt {
+                    padding: 0.5mm !important;
+                }
+                
+                body {
+                    padding: 0.5mm !important;
+                }
             }
         </style>
     </head>
     <body>
-        <div class="receipt-container">
-            <!-- Store Header -->
-            <div class="header">
-                <div class="store-name">K-STREET</div>
-                <div>Mc Arthur Highway, Magaspac</div>
-                <div>Gerona, Tarlac</div>
-            </div>
+        <div class="receipt">
+            <!-- HEADER -->
+            <div class="store-name">K-STREET TARLAC</div>
+            <div class="store-address">Mc Arthur Highway, Magaspac</div>
+            <div class="store-address">Gerona, Tarlac</div>
+            
+            <div class="divider">=============================</div>
             
             ${
               order.is_void
-                ? '<div class="void-stamp">*** VOIDED ***</div>'
+                ? '<div class="void-stamp">*** VOIDED ***</div><div class="divider">=============================</div>'
                 : ""
             }
             
-            <div class="divider">===============================</div>
+            <!-- TRANSACTION INFO -->
+            <table class="info">
+                <tr>
+                    <td><strong>Order #:</strong></td>
+                    <td>${order.id}</td>
+                </tr>
+                <tr>
+                    <td><strong>Cashier:</strong></td>
+                    <td>${
+                      order.cashier_name || order.cashier_email || "Unknown"
+                    }</td>
+                </tr>
+                <tr>
+                    <td><strong>Type:</strong></td>
+                    <td>${order.orderType}</td>
+                </tr>
+                <tr>
+                    <td><strong>Payment:</strong></td>
+                    <td>${order.payment_method || "Cash"}</td>
+                </tr>
+                <tr>
+                    <td><strong>Date:</strong></td>
+                    <td>${this.formatDateTime(order.created_at)}</td>
+                </tr>
+            </table>
             
-            <!-- Transaction Details -->
-            <div class="section">
-                <table width="100%">
-                    <tr>
-                        <td><strong>Order #:</strong></td>
-                        <td>${order.id}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Cashier:</strong></td>
-                        <td>${
-                          order.cashier_name || order.cashier_email || "Unknown"
-                        }</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Order Type:</strong></td>
-                        <td>${order.orderType}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Payment:</strong></td>
-                        <td>${order.payment_method || "Cash"}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Date:</strong></td>
-                        <td>${this.formatDateTime(order.created_at)}</td>
-                    </tr>
-                </table>
-            </div>
+            <div class="divider">-----------------------------</div>
             
-            <div class="divider">-------------------------------</div>
-            
-            <!-- Order Items -->
-            <div class="section">
-                <strong>ORDER ITEMS:</strong>
-                <table class="items-table">
-                    ${items
-                      .map(
-                        (item) => `
+            <!-- ITEMS -->
+            <div class="items-header">ORDER ITEMS:</div>
+            <table class="items-table">
+                ${items
+                  .map(
+                    (item) => `
+                    <tr>
+                        <td class="item-name">${item.name}</td>
+                        <td class="item-qty">x${item.quantity}</td>
+                        <td class="item-price">₱${(
+                          (item.price || 0) * (item.quantity || 1)
+                        ).toFixed(2)}</td>
+                    </tr>
+                    ${
+                      item.addons && item.addons.length > 0
+                        ? `
                         <tr>
-                            <td class="item-name">${item.name}</td>
-                            <td class="item-qty">x${item.quantity}</td>
-                            <td class="item-price">${(
-                              (item.price || 0) * (item.quantity || 1)
-                            ).toFixed(2)}</td>
+                            <td colspan="3" class="item-addons">
+                                + ${item.addons.join(", ")}
+                            </td>
                         </tr>
                     `
-                      )
-                      .join("")}
-                </table>
-            </div>
+                        : ""
+                    }
+                    ${
+                      item.notes
+                        ? `
+                        <tr>
+                            <td colspan="3" class="item-notes">
+                                Note: ${item.notes}
+                            </td>
+                        </tr>
+                    `
+                        : ""
+                    }
+                `
+                  )
+                  .join("")}
+            </table>
             
-            <div class="divider">-------------------------------</div>
+            <div class="divider">-----------------------------</div>
             
-            <!-- Totals -->
-            <div class="section">
-                <table class="totals-table">
-                    <tr class="grand-total">
-                        <td class="total-label">TOTAL:</td>
-                        <td class="total-value">${parseFloat(
-                          order.total
-                        ).toFixed(2)}</td>
-                    </tr>
-                    <tr>
-                        <td class="total-label">Amount Paid:</td>
-                        <td class="total-value">${parseFloat(
-                          order.paidAmount
-                        ).toFixed(2)}</td>
-                    </tr>
-                    <tr>
-                        <td class="total-label">Change:</td>
-                        <td class="total-value">${parseFloat(
-                          order.changeAmount
-                        ).toFixed(2)}</td>
-                    </tr>
-                </table>
-            </div>
+            <!-- TOTALS -->
+            <table class="totals">
+                <tr class="grand-total">
+                    <td style="text-align: left; width: 60%;">TOTAL:</td>
+                    <td style="text-align: right; width: 40%;">₱${parseFloat(
+                      order.total
+                    ).toFixed(2)}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;">Amount Paid:</td>
+                    <td style="text-align: right;">₱${parseFloat(
+                      order.paidAmount
+                    ).toFixed(2)}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;">Change:</td>
+                    <td style="text-align: right;">₱${parseFloat(
+                      order.changeAmount
+                    ).toFixed(2)}</td>
+                </tr>
+            </table>
             
             ${
               order.is_void
                 ? `
-                <div class="divider">-------------------------------</div>
-                <div class="section" style="background: #fee; padding: 2mm; margin: 2mm 0;">
-                    <strong style="color: #dc2626;">VOID INFORMATION:</strong><br>
-                    <strong>Reason:</strong> ${
+                <div class="divider">-----------------------------</div>
+                <div class="void-info">
+                    <div style="color: #dc2626; font-weight: bold;">VOID INFORMATION:</div>
+                    <div><strong>Reason:</strong> ${
                       order.void_reason || "Not specified"
-                    }<br>
-                    <strong>Voided By:</strong> ${
+                    }</div>
+                    <div><strong>Voided By:</strong> ${
                       order.voided_by || "Admin"
-                    }<br>
-                    <strong>Date:</strong> ${
+                    }</div>
+                    <div><strong>Date:</strong> ${
                       order.voided_at
                         ? this.formatDateTime(order.voided_at)
                         : "N/A"
-                    }
+                    }</div>
                 </div>
             `
                 : ""
             }
             
-            <div class="divider">===============================</div>
+            <div class="divider">=============================</div>
             
-            <!-- Footer -->
+            <!-- FOOTER -->
             <div class="footer">
                 ${
                   order.is_void
-                    ? '<div style="color: #dc2626; font-weight: bold;">THIS TRANSACTION HAS BEEN VOIDED</div>'
-                    : "<div>Thank you for your order!</div><div>Please come again!</div>"
+                    ? '<div style="color: red; font-weight: bold;">*** VOIDED TRANSACTION ***</div>'
+                    : '<div>Thank you for dining with us!</div><div>Please come again!</div><div style="font-weight: bold;">*** THIS IS YOUR OFFICIAL RECEIPT ***</div>'
                 }
             </div>
             
-            <div class="footer" style="font-size: 8px; margin-top: 2mm;">
-                Transaction ID: KST-${order.id}<br>
-                Printed: ${new Date().toLocaleString("en-PH")}
+            <div class="transaction-info">
+                <div>Transaction ID: ${this.generateTransactionCode(
+                  order.id
+                )}</div>
+                <div>Printed: ${new Date()
+                  .toLocaleString("en-PH", {
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false,
+                  })
+                  .replace(",", "")}</div>
             </div>
         </div>
         
-        <!-- Print button for preview -->
-        <div class="no-print" style="margin-top: 10mm; text-align: center;">
+        <!-- PREVIEW CONTROLS -->
+        <div class="no-print" style="text-align: center; margin-top: 5mm;">
             <button onclick="window.print()" style="
-                padding: 8px 16px;
+                padding: 5px 10px;
                 background: #dc2626;
                 color: white;
                 border: none;
-                border-radius: 4px;
-                font-size: 12px;
+                border-radius: 3px;
+                font-size: 11px;
                 cursor: pointer;
-                margin: 5px;
+                margin: 2px;
             ">
-                🖨️ Print Receipt
+                🖨️ Print
             </button>
             <button onclick="window.close()" style="
-                padding: 8px 16px;
+                padding: 5px 10px;
                 background: #6b7280;
                 color: white;
                 border: none;
-                border-radius: 4px;
-                font-size: 12px;
+                border-radius: 3px;
+                font-size: 11px;
                 cursor: pointer;
-                margin: 5px;
+                margin: 2px;
             ">
                 ✕ Close
             </button>
         </div>
         
+        <!-- AUTO PRINT SCRIPT -->
         <script>
+            // AUTO PRINT
             window.onload = function() {
                 setTimeout(function() {
                     window.print();
                 }, 300);
             };
             
+            // KEYBOARD SHORTCUTS
             document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') window.close();
                 if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
                     e.preventDefault();
                     window.print();
-                }
-                if (e.key === 'Escape') {
-                    window.close();
                 }
             });
         </script>
@@ -1828,174 +3088,27 @@ class SalesReport {
     </html>
     `;
 
-    const printWindow = window.open("", "_blank", "width=300,height=600");
+    // OPEN IN NEW WINDOW
+    const printWindow = window.open("", "_blank", "width=350,height=600");
     printWindow.document.write(printHTML);
     printWindow.document.close();
     printWindow.focus();
   }
-
-  // ============================================
-  // PRINT CASHIER REPORT
-  // ============================================
-  printCashierReport() {
-    const session = this.selectedSession;
-    if (!session) return;
-
-    const printWindow = window.open("", "_blank");
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>K-STREET Cashier Report</title>
-        <style>
-          body { 
-            font-family: Arial, sans-serif; 
-            padding: 20px;
-            max-width: 800px;
-            margin: 0 auto;
-          }
-          @media print { 
-            @page { margin: 15mm; } 
-          }
-          .header {
-            text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #000;
-            padding-bottom: 10px;
-          }
-          .store-name {
-            font-size: 24px;
-            font-weight: bold;
-            color: #d32f2f;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 10px 0;
-          }
-          th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-          }
-          th {
-            background-color: #f2f2f2;
-          }
-          .summary-box {
-            background-color: #f9f9f9;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 5px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div class="store-name">K - STREET</div>
-          <div>Mc Arthur Highway, Magaspac, Gerona, Tarlac</div>
-          <h2>CASHIER SESSION REPORT</h2>
-          <div>Branch: ${session.branch || window.currentUser.branch}</div>
-        </div>
-
-        <div class="summary-box">
-          <h3>CASHIER INFORMATION</h3>
-          <p><strong>Cashier:</strong> ${
-            session.username || session.user_email
-          }</p>
-          <p><strong>Login Time:</strong> ${this.formatDateTime(
-            session.login_time
-          )}</p>
-          <p><strong>Logout Time:</strong> ${
-            session.logout_time
-              ? this.formatDateTime(session.logout_time)
-              : "Still Active"
-          }</p>
-          <p><strong>Session Duration:</strong> ${session.session_duration}</p>
-        </div>
-
-        <div class="summary-box">
-          <h3>SALES SUMMARY</h3>
-          <p><strong>Starting Gross Sales:</strong> ₱${parseFloat(
-            session.start_gross_sales
-          ).toFixed(2)}</p>
-          <p><strong>Ending Gross Sales:</strong> ₱${parseFloat(
-            session.end_gross_sales
-          ).toFixed(2)}</p>
-          <p><strong>Sales During Session:</strong> ₱${parseFloat(
-            session.session_sales
-          ).toFixed(2)}</p>
-          <p><strong>Total Transactions:</strong> ${
-            session.transaction_count || 0
-          }</p>
-          <p style="color: #15803d;"><strong>Total Applied Discount:</strong> ₱${parseFloat(
-            session.total_discount
-          ).toFixed(2)}</p>
-          <p style="color: #dc2626;"><strong>Total Void Amount:</strong> ₱${parseFloat(
-            session.total_void
-          ).toFixed(2)} ${
-      session.void_count > 0
-        ? `(${session.void_count} transaction${
-            session.void_count !== 1 ? "s" : ""
-          })`
-        : ""
-    }</p>
-        </div>
-
-        ${
-          session.orders && session.orders.length > 0
-            ? `
-        <h3>ORDERS DURING SESSION (${session.orders.length} transactions)</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Order ID</th>
-              <th>Products</th>
-              <th>Total</th>
-              <th>Order Type</th>
-              <th>Payment</th>
-              <th>Time</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${session.orders
-              .map(
-                (order) => `
-              <tr>
-                <td>#${order.id}</td>
-                <td>${this.formatProductNames(order)}</td>
-                <td>₱${parseFloat(order.total).toFixed(2)}</td>
-                <td>${order.orderType}</td>
-                <td>${order.payment_method || "Cash"}</td>
-                <td>${this.formatTime(order.created_at)}</td>
-              </tr>
-            `
-              )
-              .join("")}
-          </tbody>
-        </table>
-        `
-            : ""
-        }
-
-        <div style="text-align: center; margin-top: 30px; padding-top: 10px; border-top: 1px dashed #ddd;">
-          <p>K-Street POS System</p>
-          <p>Printed: ${new Date().toLocaleString("en-PH")}</p>
-        </div>
-
-        <script>
-          window.onload = function() {
-            setTimeout(function() {
-              window.print();
-              window.close();
-            }, 250);
-          }
-        </script>
-      </body>
-      </html>
-    `);
-
-    printWindow.document.close();
+  // Helper function to generate transaction code
+  generateTransactionCode(orderId) {
+    const date = new Date();
+    const timestamp = date.getTime().toString().slice(-6);
+    const random = Math.floor(Math.random() * 1000)
+      .toString()
+      .padStart(3, "0");
+    return `KST-${date.getFullYear().toString().slice(-2)}${(
+      date.getMonth() + 1
+    )
+      .toString()
+      .padStart(2, "0")}${date
+      .getDate()
+      .toString()
+      .padStart(2, "0")}-${orderId}${random}`;
   }
 
   // ============================================
@@ -3366,11 +4479,9 @@ class SalesReport {
       };
     }
   }
-
   // ============================================
   // HELPER FUNCTIONS
   // ============================================
-
   formatDateTime(dateString) {
     const date = new Date(dateString);
     return date.toLocaleString("en-PH", {
@@ -3383,6 +4494,23 @@ class SalesReport {
   }
 
   formatTime(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("en-PH", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-PH", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  }
+
+  formatTimeOnly(dateString) {
     const date = new Date(dateString);
     return date.toLocaleTimeString("en-PH", {
       hour: "2-digit",
@@ -3431,10 +4559,25 @@ class SalesReport {
     return "All Time";
   }
 
-  // Helper function for currency formatting
   formatCurrency(value) {
     const num = parseFloat(value || 0);
     return `P${num.toFixed(2)}`;
+  }
+
+  generateTransactionCode(orderId) {
+    const date = new Date();
+    const timestamp = date.getTime().toString().slice(-6);
+    const random = Math.floor(Math.random() * 1000)
+      .toString()
+      .padStart(3, "0");
+    return `KST-${date.getFullYear().toString().slice(-2)}${(
+      date.getMonth() + 1
+    )
+      .toString()
+      .padStart(2, "0")}${date
+      .getDate()
+      .toString()
+      .padStart(2, "0")}-${orderId}${random}`;
   }
 
   showNotification(type, message) {
@@ -3449,7 +4592,6 @@ class SalesReport {
       return;
     }
 
-    // Set icon and colors based on type
     if (type === "success") {
       icon.className =
         "w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 bg-green-100";
@@ -3515,648 +4657,6 @@ class SalesReport {
       loading.classList.remove("flex");
     }
   }
-  async loadCashoutRecords() {
-    this.showLoading(true);
-
-    const params = new URLSearchParams({
-      action: "cashout",
-      page: this.cashoutCurrentPage,
-      limit: this.itemsPerPage,
-      branch: document.getElementById("branchFilter")
-        ? document.getElementById("branchFilter").value
-        : "all",
-      timeRange: document.getElementById("timeRange").value,
-    });
-
-    if (document.getElementById("timeRange").value === "custom") {
-      const startDate = document.getElementById("startDate").value;
-      const endDate = document.getElementById("endDate").value;
-      if (startDate && endDate) {
-        params.append("startDate", startDate);
-        params.append("endDate", endDate);
-      }
-    }
-
-    try {
-      const response = await fetch(`backend/salesapi.php?${params.toString()}`);
-      const responseText = await response.text();
-
-      let result;
-      try {
-        result = JSON.parse(responseText);
-      } catch (e) {
-        console.error("JSON Parse Error:", e);
-        console.error("Response was:", responseText);
-        throw new Error("Server returned invalid response");
-      }
-
-      if (!result.success) {
-        throw new Error(result.message || "Failed to load cash-out records");
-      }
-
-      this.cashoutData = result.data;
-      this.cashoutTotalRecords = result.pagination.total;
-      this.cashoutTotalPages = result.pagination.pages;
-
-      this.renderCashoutTable();
-      this.updateCashoutPagination();
-    } catch (error) {
-      console.error("Error loading cash-out records:", error);
-      this.showNotification(
-        "error",
-        "Failed to load cash-out records: " + error.message
-      );
-    } finally {
-      this.showLoading(false);
-    }
-  }
-
-  renderCashoutTable() {
-    const tbody = document.getElementById("cashoutTableBody");
-    const emptyState = document.getElementById("cashoutEmptyState");
-
-    if (this.cashoutData.length === 0) {
-      tbody.innerHTML = "";
-      emptyState.classList.remove("hidden");
-      document.getElementById("cashoutPagination").classList.add("hidden");
-      return;
-    }
-
-    emptyState.classList.add("hidden");
-    document.getElementById("cashoutPagination").classList.remove("hidden");
-
-    tbody.innerHTML = this.cashoutData
-      .map(
-        (record) => `
-      <tr class="hover:bg-red-50 transition-colors duration-150">
-        <td class="px-6 py-4 text-sm font-medium text-gray-900">
-          #${record.id}
-        </td>
-        ${
-          this.isAdmin()
-            ? `
-        <td class="px-6 py-4 text-sm font-medium text-blue-700">
-          ${record.branch || "Unknown"}
-        </td>
-        `
-            : ""
-        }
-        <td class="px-6 py-4 text-sm text-gray-600">
-          ${this.formatDateTime(record.created_at)}
-        </td>
-        <td class="px-6 py-4 text-sm font-medium text-gray-700">
-          ${record.cashier_name || record.cashier_email || "Unknown"}
-        </td>
-        <td class="px-6 py-4 text-center">
-          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-            record.type === "withdrawal"
-              ? "bg-red-100 text-red-800"
-              : "bg-green-100 text-green-800"
-          }">
-            <i class="fas fa-${
-              record.type === "withdrawal" ? "arrow-down" : "arrow-up"
-            } mr-1"></i>
-            ${record.type.charAt(0).toUpperCase() + record.type.slice(1)}
-          </span>
-        </td>
-        <td class="px-6 py-4 text-sm font-bold text-right ${
-          record.type === "withdrawal" ? "text-red-600" : "text-green-600"
-        }">
-          ${record.type === "withdrawal" ? "-" : "+"}₱${parseFloat(
-          record.amount
-        ).toFixed(2)}
-        </td>
-        <td class="px-6 py-4 text-sm text-gray-700">
-          <div class="max-w-xs truncate" title="${
-            record.reason || "No reason provided"
-          }">
-            ${
-              record.reason ||
-              '<span class="text-gray-400 italic">No reason provided</span>'
-            }
-          </div>
-        </td>
-        <td class="px-6 py-4 text-center">
-          <button onclick="salesReport.viewCashierDetails(${
-            record.cashier_session_id
-          })" 
-                  class="text-blue-600 hover:text-blue-800 text-sm font-medium">
-            <i class="fas fa-external-link-alt"></i> View Session
-          </button>
-        </td>
-      </tr>
-    `
-      )
-      .join("");
-  }
-
-  updateCashoutPagination() {
-    const start = (this.cashoutCurrentPage - 1) * this.itemsPerPage + 1;
-    const end = Math.min(
-      this.cashoutCurrentPage * this.itemsPerPage,
-      this.cashoutTotalRecords
-    );
-
-    const cashoutStartEl = document.getElementById("cashoutStart");
-    const cashoutEndEl = document.getElementById("cashoutEnd");
-    const cashoutTotalEl = document.getElementById("cashoutTotal");
-    const cashoutCurrentPageEl = document.getElementById("cashoutCurrentPage");
-
-    if (cashoutStartEl) cashoutStartEl.textContent = start;
-    if (cashoutEndEl) cashoutEndEl.textContent = end;
-    if (cashoutTotalEl) cashoutTotalEl.textContent = this.cashoutTotalRecords;
-    if (cashoutCurrentPageEl)
-      cashoutCurrentPageEl.textContent = this.cashoutCurrentPage;
-
-    const prevBtn = document.getElementById("cashoutPrevPage");
-    const nextBtn = document.getElementById("cashoutNextPage");
-
-    if (prevBtn) prevBtn.disabled = this.cashoutCurrentPage === 1;
-    if (nextBtn)
-      nextBtn.disabled = this.cashoutCurrentPage === this.cashoutTotalPages;
-  }
-
-  exportCashoutToExcel() {
-    if (this.cashoutData.length === 0) {
-      this.showNotification("warning", "No data to export");
-      return;
-    }
-
-    const totalWithdrawals = this.cashoutData
-      .filter((r) => r.type === "withdrawal")
-      .reduce((sum, r) => sum + parseFloat(r.amount), 0);
-
-    const totalDeposits = this.cashoutData
-      .filter((r) => r.type === "deposit")
-      .reduce((sum, r) => sum + parseFloat(r.amount), 0);
-
-    const netAmount = totalDeposits - totalWithdrawals;
-
-    const branchFilter = document.getElementById("branchFilter");
-    const currentBranch = branchFilter ? branchFilter.value : "all";
-    const branchText = currentBranch === "all" ? "All Branches" : currentBranch;
-
-    const timeRange = document.getElementById("timeRange").value;
-    const timeRangeText = this.getTimeRangeText(timeRange);
-
-    const ws_data = [];
-
-    ws_data.push(["K - STREET"]);
-    ws_data.push([`BRANCH: ${branchText}`]);
-    ws_data.push([`Cash-Out Report - Period: ${timeRangeText}`]);
-    ws_data.push([]);
-
-    ws_data.push(["CASH-OUT SUMMARY"]);
-    ws_data.push([`Total Records: ${this.cashoutData.length}`]);
-    ws_data.push([
-      `Total Withdrawals: ₱${totalWithdrawals.toLocaleString("en-PH", {
-        minimumFractionDigits: 2,
-      })}`,
-    ]);
-    ws_data.push([
-      `Total Deposits: ₱${totalDeposits.toLocaleString("en-PH", {
-        minimumFractionDigits: 2,
-      })}`,
-    ]);
-    ws_data.push([
-      `Net Amount: ₱${netAmount.toLocaleString("en-PH", {
-        minimumFractionDigits: 2,
-      })}`,
-    ]);
-    ws_data.push([]);
-
-    const headers = this.isAdmin()
-      ? ["ID", "Branch", "Date & Time", "Cashier", "Type", "Amount", "Reason"]
-      : ["ID", "Date & Time", "Cashier", "Type", "Amount", "Reason"];
-    ws_data.push(headers);
-
-    this.cashoutData.forEach((record) => {
-      const row = this.isAdmin()
-        ? [
-            record.id,
-            record.branch || "Unknown",
-            this.formatDateTime(record.created_at),
-            record.cashier_name || record.cashier_email || "Unknown",
-            record.type.charAt(0).toUpperCase() + record.type.slice(1),
-            parseFloat(record.amount),
-            record.reason || "No reason provided",
-          ]
-        : [
-            record.id,
-            this.formatDateTime(record.created_at),
-            record.cashier_name || record.cashier_email || "Unknown",
-            record.type.charAt(0).toUpperCase() + record.type.slice(1),
-            parseFloat(record.amount),
-            record.reason || "No reason provided",
-          ];
-      ws_data.push(row);
-    });
-
-    ws_data.push([]);
-    ws_data.push([`Generated: ${new Date().toLocaleString("en-PH")}`]);
-
-    const ws = XLSX.utils.aoa_to_sheet(ws_data);
-    this.applyCashoutExcelStyles(ws, ws_data.length);
-
-    ws["!cols"] = this.isAdmin()
-      ? [
-          { wch: 8 },
-          { wch: 15 },
-          { wch: 22 },
-          { wch: 25 },
-          { wch: 12 },
-          { wch: 15 },
-          { wch: 40 },
-        ]
-      : [
-          { wch: 8 },
-          { wch: 22 },
-          { wch: 25 },
-          { wch: 12 },
-          { wch: 15 },
-          { wch: 40 },
-        ];
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Cash-Out Report");
-
-    const filename = `K-Street-CashOut_Report_${currentBranch}_${
-      new Date().toISOString().split("T")[0]
-    }.xlsx`;
-    XLSX.writeFile(wb, filename);
-
-    this.showNotification("success", "Cash-out report exported successfully!");
-  }
-
-  applyCashoutExcelStyles(ws, totalRows) {
-    if (ws["A1"]) {
-      ws["A1"].s = {
-        font: { bold: true, color: { rgb: "FFFFFFFF" }, size: 14 },
-        fill: { fgColor: { rgb: "FFDC2626" } },
-        alignment: { horizontal: "center", vertical: "center" },
-      };
-    }
-
-    if (ws["A5"]) {
-      ws["A5"].s = {
-        font: { bold: true, size: 11 },
-        fill: { fgColor: { rgb: "FFFFCDD2" } },
-        alignment: { horizontal: "left" },
-      };
-    }
-
-    const headerRow = 11;
-    const numCols = this.isAdmin() ? 7 : 6;
-    for (let col = 0; col < numCols; col++) {
-      const cellRef = XLSX.utils.encode_cell({ r: headerRow - 1, c: col });
-      if (ws[cellRef]) {
-        ws[cellRef].s = {
-          font: { bold: true, color: { rgb: "FFFFFFFF" }, size: 10 },
-          fill: { fgColor: { rgb: "FFD32F2F" } },
-          alignment: { horizontal: "center", vertical: "center" },
-        };
-      }
-    }
-  }
-
-  showEditCashoutModal(cashoutId) {
-    const record = this.cashoutData.find((r) => r.id === cashoutId);
-    if (!record) {
-      this.showNotification("error", "Cash-out record not found");
-      return;
-    }
-
-    this.selectedCashout = record;
-
-    // Populate form
-    const editCashoutInfo = document.getElementById("editCashoutInfo");
-    if (editCashoutInfo) {
-      editCashoutInfo.innerHTML = `
-      <div class="space-y-2 text-sm">
-        <div class="flex justify-between">
-          <span class="font-semibold">Record #:</span>
-          <span>${record.id}</span>
-        </div>
-        <div class="flex justify-between">
-          <span class="font-semibold">Date:</span>
-          <span>${this.formatDateTime(record.created_at)}</span>
-        </div>
-        <div class="flex justify-between">
-          <span class="font-semibold">Cashier:</span>
-          <span>${
-            record.cashier_name || record.cashier_email || "Unknown"
-          }</span>
-        </div>
-        <div class="flex justify-between">
-          <span class="font-semibold">Branch:</span>
-          <span>${record.branch || "Unknown"}</span>
-        </div>
-        ${
-          record.edited_by
-            ? `
-        <div class="mt-2 pt-2 border-t border-gray-200">
-          <p class="text-xs text-gray-500">Last edited by: ${
-            record.edited_by
-          }</p>
-          <p class="text-xs text-gray-500">Edit date: ${this.formatDateTime(
-            record.edited_at
-          )}</p>
-          <p class="text-xs text-gray-500">Edit reason: ${
-            record.edit_reason
-          }</p>
-        </div>
-        `
-            : ""
-        }
-      </div>
-    `;
-    }
-
-    // Fill in current values
-    const typeSelect = document.getElementById("editCashoutType");
-    const amountInput = document.getElementById("editCashoutAmount");
-    const reasonInput = document.getElementById("editCashoutReason");
-    const editReasonInput = document.getElementById("editCashoutEditReason");
-    const pinInput = document.getElementById("editCashoutPin");
-    const pinError = document.getElementById("editPinError");
-
-    if (typeSelect) typeSelect.value = record.type;
-    if (amountInput) amountInput.value = parseFloat(record.amount).toFixed(2);
-    if (reasonInput) reasonInput.value = record.reason || "";
-    if (editReasonInput) editReasonInput.value = "";
-    if (pinInput) pinInput.value = "";
-    if (pinError) pinError.classList.add("hidden");
-
-    // Show modal
-    const modal = document.getElementById("editCashoutModal");
-    if (modal) {
-      modal.classList.remove("hidden");
-    }
-  }
-
-  // ============================================
-  // CONFIRM EDIT CASHOUT
-  // ============================================
-  async confirmEditCashout() {
-    const type = document.getElementById("editCashoutType").value;
-    const amount = document.getElementById("editCashoutAmount").value;
-    const reason = document.getElementById("editCashoutReason").value.trim();
-    const editReason = document
-      .getElementById("editCashoutEditReason")
-      .value.trim();
-    const pin = document.getElementById("editCashoutPin").value.trim();
-
-    // Validation
-    if (!type || !amount || !reason || !editReason) {
-      this.showNotification("warning", "Please fill in all required fields");
-      return;
-    }
-
-    if (!pin) {
-      this.showNotification("warning", "Please enter owner PIN");
-      return;
-    }
-
-    if (parseFloat(amount) <= 0) {
-      this.showNotification("warning", "Amount must be greater than 0");
-      return;
-    }
-
-    this.showLoading(true);
-
-    try {
-      // Verify owner PIN first
-      const verifyResponse = await fetch(
-        "backend/salesapi.php?action=verify-owner-pin",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pin: pin }),
-        }
-      );
-
-      const verifyResult = await verifyResponse.json();
-
-      if (!verifyResult.success) {
-        const pinError = document.getElementById("editPinError");
-        if (pinError) {
-          pinError.textContent = verifyResult.message || "Invalid owner PIN";
-          pinError.classList.remove("hidden");
-        }
-        this.showLoading(false);
-        return;
-      }
-
-      const ownerInfo = verifyResult.owner;
-
-      // Proceed with edit
-      const editResponse = await fetch(
-        "backend/salesapi.php?action=edit-cashout",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            cashoutId: this.selectedCashout.id,
-            type: type,
-            amount: parseFloat(amount),
-            reason: reason,
-            editReason: editReason,
-            owner: ownerInfo,
-          }),
-        }
-      );
-
-      const editResult = await editResponse.json();
-
-      if (!editResult.success) {
-        throw new Error(editResult.message);
-      }
-
-      // Close modal
-      this.closeModal("editCashoutModal");
-
-      // Show success notification
-      this.showNotification(
-        "success",
-        `Cash-out record #${this.selectedCashout.id} has been updated successfully`
-      );
-
-      // Reload data
-      this.loadCashoutRecords();
-    } catch (error) {
-      console.error("Edit cashout error:", error);
-      this.showNotification(
-        "error",
-        "Failed to edit cash-out: " + error.message
-      );
-    } finally {
-      this.showLoading(false);
-    }
-  }
-
-  // ============================================
-  // UPDATE RENDER CASHOUT TABLE - ADD EDIT BUTTON
-  // ============================================
-  renderCashoutTable() {
-    const tbody = document.getElementById("cashoutTableBody");
-    const emptyState = document.getElementById("cashoutEmptyState");
-
-    if (this.cashoutData.length === 0) {
-      tbody.innerHTML = "";
-      emptyState.classList.remove("hidden");
-      document.getElementById("cashoutPagination").classList.add("hidden");
-      return;
-    }
-
-    emptyState.classList.add("hidden");
-    document.getElementById("cashoutPagination").classList.remove("hidden");
-
-    tbody.innerHTML = this.cashoutData
-      .map(
-        (record) => `
-    <tr class="hover:bg-red-50 transition-colors duration-150">
-      <td class="px-6 py-4 text-sm font-medium text-gray-900">
-        #${record.id}
-        ${
-          record.edited_by
-            ? '<span class="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800" title="Edited by ' +
-              record.edited_by +
-              '"><i class="fas fa-edit mr-1"></i>EDITED</span>'
-            : ""
-        }
-      </td>
-      ${
-        this.isAdmin()
-          ? `
-      <td class="px-6 py-4 text-sm font-medium text-blue-700">
-        ${record.branch || "Unknown"}
-      </td>
-      `
-          : ""
-      }
-      <td class="px-6 py-4 text-sm text-gray-600">
-        ${this.formatDateTime(record.created_at)}
-      </td>
-      <td class="px-6 py-4 text-sm font-medium text-gray-700">
-        ${record.cashier_name || record.cashier_email || "Unknown"}
-      </td>
-      <td class="px-6 py-4 text-center">
-        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-          record.type === "withdrawal"
-            ? "bg-red-100 text-red-800"
-            : "bg-green-100 text-green-800"
-        }">
-          <i class="fas fa-${
-            record.type === "withdrawal" ? "arrow-down" : "arrow-up"
-          } mr-1"></i>
-          ${record.type.charAt(0).toUpperCase() + record.type.slice(1)}
-        </span>
-      </td>
-      <td class="px-6 py-4 text-sm font-bold text-right ${
-        record.type === "withdrawal" ? "text-red-600" : "text-green-600"
-      }">
-        ${record.type === "withdrawal" ? "-" : "+"}₱${parseFloat(
-          record.amount
-        ).toFixed(2)}
-      </td>
-      <td class="px-6 py-4 text-sm text-gray-700">
-        <div class="max-w-xs">
-          <div class="truncate" title="${
-            record.reason || "No reason provided"
-          }">
-            ${
-              record.reason ||
-              '<span class="text-gray-400 italic">No reason provided</span>'
-            }
-          </div>
-          ${
-            record.edited_by
-              ? `<div class="text-xs text-blue-600 mt-1" title="${record.edit_reason}"><i class="fas fa-info-circle"></i> ${record.edit_reason}</div>`
-              : ""
-          }
-        </div>
-      </td>
-      <td class="px-6 py-4 text-center">
-        <div class="flex gap-2 justify-center">
-          
-          <button onclick="salesReport.showEditCashoutModal(${record.id})" 
-                  class="text-green-600 hover:text-green-800 text-sm font-medium"
-                  title="Edit Record">
-            <i class="fas fa-edit"></i>
-          </button>
-        </div>
-      </td>
-    </tr>
-  `
-      )
-      .join("");
-  }
-
-  formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-PH", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  }
-
-  formatTimeOnly(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString("en-PH", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
-}
-
-function populateSalesTable(salesData) {
-    const tbody = document.getElementById('salesTableBody');
-    tbody.innerHTML = '';
-    
-    salesData.forEach((sale, index) => {
-        const row = document.createElement('tr');
-        row.className = 'border-b border-gray-200 hover:bg-gray-50';
-        
-        // Format products list
-        const productsText = sale.products.map(p => 
-            `${p.name} (${p.quantity}x)`
-        ).join(', ');
-        
-        // Determine order type class
-        let orderTypeClass = 'order-type-dinein';
-        if (sale.order_type === 'Take Out') orderTypeClass = 'order-type-takeout';
-        if (sale.order_type === 'Delivery') orderTypeClass = 'order-type-delivery';
-        
-        row.innerHTML = `
-            <td class="py-4 px-6 text-sm text-gray-900">${index + 1}</td>
-            <td class="py-4 px-6 text-sm text-gray-900">${sale.date_time}</td>
-            <td class="py-4 px-6 order-details-cell">
-                <div class="space-y-1">
-                    <div class="products-list">${productsText}</div>
-                    <div class="order-meta">
-                        <span class="amount">₱${parseFloat(sale.total).toFixed(2)}</span>
-                        <span class="order-type-badge ${orderTypeClass}">${sale.order_type}</span>
-                    </div>
-                </div>
-            </td>
-            <td class="py-4 px-6 text-sm text-right text-gray-900">₱${parseFloat(sale.paid).toFixed(2)}</td>
-            <td class="py-4 px-6 text-sm text-right text-gray-900">₱${parseFloat(sale.change).toFixed(2)}</td>
-            <td class="py-4 px-6 text-sm text-gray-900">${sale.cashier}</td>
-            <td class="py-4 px-6">
-                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    ${sale.payment_method}
-                </span>
-            </td>
-            <td class="py-4 px-6 text-center">
-                <button onclick="viewReceipt(${sale.id})" class="text-red-600 hover:text-red-800">
-                    <i class="fas fa-receipt"></i>
-                </button>
-            </td>
-        `;
-        
-        tbody.appendChild(row);
-    });
 }
 
 // Initialize when page loads

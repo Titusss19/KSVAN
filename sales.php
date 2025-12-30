@@ -65,6 +65,10 @@ $currentUser = $user;
                 <i class="fas fa-ban"></i>
                 Void Reports
             </button>
+            <button class="tab-btn-kstreet" data-tab="out">
+                <i class="fas fa-box-open"></i>
+                Out Source
+            </button>
         </div>
 
         <!-- Filter Controls -->
@@ -361,6 +365,51 @@ $currentUser = $user;
                     </div>
                 </div>
             </div>
+
+            <!-- Out Source Report -->
+            <div id="outReport" class="report-pane hidden">
+                <div class="table-kstreet">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="bg-red-500 text-white">
+                                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Date & Time</th>
+                                    <th class="py-4 px-6 text-right text-sm font-semibold tracking-wide">Amount</th>
+                                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Product Details</th>
+                                    <th class="py-4 px-6 text-left text-sm font-semibold tracking-wide">Personnel</th>
+                                    <th class="py-4 px-6 text-center text-sm font-semibold tracking-wide">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="outTableBody">
+                                <!-- Out source data will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="outEmptyState" class="hidden text-center py-16">
+                        <i class="fas fa-box-open text-5xl text-gray-300 mb-4"></i>
+                        <h4 class="text-lg font-semibold text-gray-700">No outsource records found</h4>
+                        <p class="text-gray-500">Outsourced products and supplies will appear here</p>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div id="outPagination" class="pagination-kstreet hidden px-6 py-4">
+                        <div class="text-sm text-gray-600">
+                            Showing <span id="outStart">1</span> to <span id="outEnd">10</span> of <span id="outTotal">0</span> records
+                        </div>
+                        <div class="flex gap-2 items-center">
+                            <button id="outPrevPage" class="btn-pagination-kstreet">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <span class="font-semibold text-gray-700 px-4">Page <span id="outCurrentPage">1</span></span>
+                            <button id="outNextPage" class="btn-pagination-kstreet">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </main>
@@ -563,6 +612,94 @@ $currentUser = $user;
             </button>
             <button id="printCashierReport" class="btn-kstreet-primary bg-blue-600 hover:bg-blue-700">
                 <i class="fas fa-print"></i> Print Report
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Out Source Detail Modal -->
+<div id="outDetailModal" class="modal-overlay hidden">
+    <div class="modal-content-kstreet max-w-3xl w-full">
+        <div class="flex justify-between items-center p-6 border-b bg-gradient-to-r from-red-600 to-red-700 text-white">
+            <h3 class="text-xl font-bold flex items-center gap-2">
+                <i class="fas fa-box-open"></i>
+                Out Source Details
+            </h3>
+            <button type="button" class="modal-close text-white hover:bg-white hover:bg-opacity-20 rounded-lg w-8 h-8 flex items-center justify-center">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="p-6">
+            <div class="receipt-kstreet">
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900">K-STREET</h2>
+                    <p class="text-gray-600 text-sm">Mc Arthur Highway, Magaspac, Gerona, Tarlac</p>
+                    <div class="border-t-2 border-b-2 border-dashed border-gray-400 py-3 my-3">
+                        <h3 class="text-xl font-bold text-black">OUT SOURCE RECORD</h3>
+                    </div>
+                </div>
+                
+                <div class="space-y-4">
+                    <div class="border-b-2 border-dashed border-gray-300 pb-4">
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-semibold">Record #:</span>
+                            <span id="outDetailId">-</span>
+                        </div>
+                        <?php if ($user['role'] === 'admin' || $user['role'] === 'owner'): ?>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-semibold">Branch:</span>
+                            <span id="outDetailBranch">-</span>
+                        </div>
+                        <?php endif; ?>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-semibold">Date:</span>
+                            <span id="outDetailDate">-</span>
+                        </div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-semibold">Personnel:</span>
+                            <span id="outDetailPersonnel">-</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="font-semibold">Supplier:</span>
+                            <span id="outDetailSupplier">-</span>
+                        </div>
+                    </div>
+                    
+                    <div class="border-b-2 border-dashed border-gray-300 pb-4">
+                        <h4 class="font-bold text-gray-900 mb-2">PRODUCT DETAILS:</h4>
+                        <div id="outDetailProducts" class="space-y-2"></div>
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-sm">
+                            <span class="font-semibold">Total Quantity:</span>
+                            <span id="outDetailQuantity">0</span>
+                        </div>
+                        <div class="flex justify-between font-bold text-lg">
+                            <span>Total Amount:</span>
+                            <span id="outDetailTotal">₱0.00</span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-bold text-gray-900 mb-2">Notes:</h4>
+                        <p id="outDetailNotes" class="text-sm text-gray-700">-</p>
+                    </div>
+                    
+                    <div class="text-center pt-4 border-t-2 border-dashed border-gray-300">
+                        <p class="text-gray-600" id="outDetailFooter">K-Street POS System</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-6 border-t flex justify-end gap-3">
+            <button class="btn-kstreet-secondary" id="closeOutDetail">Close</button>
+            <button class="btn-kstreet-primary bg-blue-600 hover:bg-blue-700" id="printOutDetail">
+                <i class="fas fa-print"></i> Print
             </button>
         </div>
     </div>

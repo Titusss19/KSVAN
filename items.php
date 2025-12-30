@@ -110,6 +110,7 @@ $currentUser = $user;
                         <option value="k-street Flavor">k-street Flavor</option>
                         <option value="k-street add sides">k-street add sides</option>
                         <option value="k-street upgrades">k-street upgrades</option>
+                        <option value="k-street product">k-street Product</option>
                     </select>
                 </div>
 
@@ -300,6 +301,7 @@ $currentUser = $user;
                                 <option value="k-street Flavor">k-street Flavor</option>
                                 <option value="k-street add sides">k-street add sides</option>
                                 <option value="k-street upgrades">k-street upgrades</option>
+                                <option value="k-street product">k-street Product</option>
                             </select>
                         </div>
                     </div>

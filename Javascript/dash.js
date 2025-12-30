@@ -1,4 +1,4 @@
-// dash.js - COMPLETE FIX WITH AUTO-REFRESH
+// dash.js - ULTIMATE FIX - ALL EMPLOYEES DISPLAY
 
 const appState = {
   user: window.currentUser || {},
@@ -18,6 +18,9 @@ const appState = {
   feedbackModal: { visible: false, title: "", message: "", type: "success" },
 };
 
+let employeeStatusCache = {};
+let lastUpdateTime = 0;
+let employeeCooldowns = {};
 let attendanceData = {
   action: "",
   pin: "",
@@ -25,8 +28,431 @@ let attendanceData = {
   employeeName: "",
   employeeRole: "",
 };
+
 let liveClockInterval = null;
 let roleChangeHandlersInitialized = false;
+let realTimeSyncInterval = null;
+let productRowCounter = 0;
+let productsVisible = false;
+
+
+// ============== OUT SOURCE MODAL FUNCTIONS ==============
+
+function openOutSourceModal() {
+  const modal = document.getElementById("outSourceModal");
+  if (modal) {
+    modal.classList.add("active");
+
+    // Reset form
+    document.getElementById("outPersonnelName").value = "";
+
+    // Clear existing rows
+    const container = document.getElementById("productRowsContainer");
+    if (container) {
+      container.innerHTML = "";
+    }
+
+    // Reset counter
+    productRowCounter = 0;
+
+    // Add one default product row
+    addProductRow();
+
+    setTimeout(() => {
+      document.getElementById("outPersonnelName").focus();
+    }, 100);
+  }
+}
+
+function closeOutSourceModal() {
+  const modal = document.getElementById("outSourceModal");
+  if (modal) modal.classList.remove("active");
+}
+
+function addProductRow() {
+  const container = document.getElementById("productRowsContainer");
+  if (!container) return;
+
+  productRowCounter++;
+  const rowId = `productRow_${productRowCounter}`;
+
+  const row = document.createElement("div");
+  row.id = rowId;
+  row.className =
+    "flex gap-2 items-start bg-gray-50 p-2 rounded-lg border border-gray-200";
+  row.innerHTML = `
+        <div class="flex-1 space-y-2">
+            <input 
+                type="text" 
+                id="productDetails_${productRowCounter}" 
+                placeholder="Product details (e.g., Item name, quantity, specs)" 
+                class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+            />
+            <input 
+                type="number" 
+                id="productAmount_${productRowCounter}" 
+                placeholder="Amount (₱)" 
+                step="0.01" 
+                min="0"
+                oninput="calculateTotal()"
+                class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+            />
+        </div>
+        <button 
+            onclick="removeProductRow('${rowId}')" 
+            class="mt-1 p-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded transition-colors"
+            title="Remove product"
+        >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </button>
+    `;
+
+  container.appendChild(row);
+  calculateTotal();
+}
+
+function removeProductRow(rowId) {
+  const row = document.getElementById(rowId);
+  if (row) {
+    row.remove();
+    calculateTotal();
+  }
+}
+
+function calculateTotal() {
+  const container = document.getElementById("productRowsContainer");
+  if (!container) return;
+
+  let total = 0;
+  const rows = container.querySelectorAll('[id^="productAmount_"]');
+
+  rows.forEach((input) => {
+    const value = parseFloat(input.value) || 0;
+    total += value;
+  });
+
+  const totalEl = document.getElementById("outTotalAmount");
+  if (totalEl) {
+    totalEl.textContent = `₱${total.toFixed(2)}`;
+  }
+}
+
+async function submitOutSource() {
+  const personnelName = document
+    .getElementById("outPersonnelName")
+    .value.trim();
+
+  if (!personnelName) {
+    showFeedback("Error", "Please enter personnel name", "error");
+    return;
+  }
+
+  // Collect products
+  const products = [];
+  let totalAmount = 0;
+
+  const container = document.getElementById("productRowsContainer");
+  const rows = container.children;
+
+  if (rows.length === 0) {
+    showFeedback("Error", "Please add at least one product", "error");
+    return;
+  }
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const detailsInput = row.querySelector('[id^="productDetails_"]');
+    const amountInput = row.querySelector('[id^="productAmount_"]');
+
+    const details = detailsInput ? detailsInput.value.trim() : "";
+    const amount = amountInput ? parseFloat(amountInput.value) || 0 : 0;
+
+    if (!details) {
+      showFeedback(
+        "Error",
+        `Please enter product details for row ${i + 1}`,
+        "error"
+      );
+      return;
+    }
+
+    if (amount <= 0) {
+      showFeedback("Error", `Please enter valid amount for row ${i + 1}`, "error");
+      return;
+    }
+
+    products.push({ details, amount });
+    totalAmount += amount;
+  }
+
+  // Build product details string - format: "Details1 (₱100.00), Details2 (₱50.00)"
+  let productDetailsString = products
+    .map((p) => `${p.details} `)
+    .join(", ");
+
+  try {
+    const result = await apiCall("addOutSource", {
+      personnel_name: personnelName,
+      product_details: productDetailsString,
+      amount: totalAmount,
+      branch: appState.user.branch || "main",
+      created_by: appState.user.id,
+    });
+
+    if (result.success) {
+      showFeedback(
+        "Success",
+        "Out Source record added successfully",
+        "success"
+      );
+      closeOutSourceModal();
+      refreshAll();
+    } else {
+      showFeedback(
+        "Error",
+        result.message || "Failed to add Out Source record",
+        "error"
+      );
+    }
+  } catch (error) {
+    console.error("Out Source Error:", error);
+    showFeedback("Error", "Network error. Please try again.", "error");
+  }
+}
+
+
+// ============== CRITICAL REAL-TIME FUNCTIONS ==============
+
+async function syncEmployeeStatus() {
+  try {
+    console.log("🔄 SYNCING ALL EMPLOYEES...");
+
+    const userBranch = appState.user.branch || "main";
+    const userRole = appState.user.role || "cashier";
+
+    // Try BOTH APIs for maximum compatibility
+    let result = null;
+
+    // First try attendance API (getEmployees)
+    try {
+      console.log("Trying attendance API...");
+      result = await apiCall(
+        "getEmployees",
+        {
+          branch: userRole === "admin" ? appState.selectedBranch : userBranch,
+        },
+        true
+      );
+
+      if (
+        result.success &&
+        result.employees &&
+        Array.isArray(result.employees)
+      ) {
+        console.log(`✅ Attendance API: ${result.employees.length} employees`);
+      }
+    } catch (attendanceError) {
+      console.log("Attendance API failed:", attendanceError);
+      result = null;
+    }
+
+    // If attendance API failed or returned no employees, try dashboard API
+    if (
+      !result ||
+      !result.success ||
+      !result.employees ||
+      result.employees.length === 0
+    ) {
+      console.log("Trying dashboard API...");
+      result = await apiCall(
+        "getEmployees",
+        {
+          branch: userRole === "admin" ? appState.selectedBranch : userBranch,
+        },
+        false
+      );
+
+      if (
+        result.success &&
+        result.employees &&
+        Array.isArray(result.employees)
+      ) {
+        console.log(`✅ Dashboard API: ${result.employees.length} employees`);
+      }
+    }
+
+    if (result.success && result.employees && Array.isArray(result.employees)) {
+      console.log(`📊 Total employees found: ${result.employees.length}`);
+
+      // Clear and update cache
+      employeeStatusCache = {};
+
+      result.employees.forEach((emp) => {
+        const employeeId = emp.id || emp.employee_id;
+        const full_name = emp.full_name || emp.username || "Employee";
+        const branch = emp.branch || userBranch;
+
+        // Determine if on duty - multiple ways to check
+        let is_on_duty = false;
+        let current_hours = "0";
+
+        if (emp.is_on_duty !== undefined) {
+          is_on_duty = emp.is_on_duty === 1 || emp.is_on_duty === true;
+        } else if (
+          emp.duty_status === "on_duty" &&
+          emp.time_in &&
+          !emp.time_out
+        ) {
+          is_on_duty = true;
+        }
+
+        // Calculate hours if on duty
+        if (is_on_duty && emp.time_in) {
+          const timeIn = new Date(emp.time_in);
+          const now = new Date();
+          const diffMs = now - timeIn;
+          const diffHours = diffMs / (1000 * 60 * 60);
+          current_hours = diffHours.toFixed(1);
+        } else if (emp.current_hours) {
+          current_hours = emp.current_hours;
+        }
+
+        employeeStatusCache[employeeId] = {
+          id: employeeId,
+          full_name: full_name,
+          branch: branch,
+          is_on_duty: is_on_duty,
+          current_hours: current_hours,
+          last_update: Date.now(),
+          raw_data: emp, // Store raw for debugging
+        };
+      });
+
+      renderEmployeeStatus();
+      return true;
+    } else {
+      console.error("No employees found in any API");
+      employeeStatusCache = {};
+      renderEmployeeStatus();
+      return false;
+    }
+  } catch (error) {
+    console.error("FATAL SYNC ERROR:", error);
+    return false;
+  }
+}
+
+function forceEmployeeStatus(employeeId, isOnDuty) {
+  console.log(
+    `🔧 FORCING STATUS: ${employeeId} -> ${isOnDuty ? "ON DUTY" : "OFF DUTY"}`
+  );
+
+  if (employeeStatusCache[employeeId]) {
+    employeeStatusCache[employeeId].is_on_duty = isOnDuty;
+    employeeStatusCache[employeeId].last_update = Date.now();
+  } else {
+    // Create temporary entry
+    employeeStatusCache[employeeId] = {
+      id: employeeId,
+      full_name: attendanceData.employeeName || "Employee",
+      branch: appState.user.branch || "main",
+      is_on_duty: isOnDuty,
+      current_hours: "0",
+      last_update: Date.now(),
+    };
+  }
+
+  renderEmployeeStatus();
+  setTimeout(() => syncEmployeeStatus(), 1000); // Full sync after 1 second
+}
+
+function renderEmployeeStatus() {
+  const container = document.getElementById("employeeStatusList");
+  if (!container) {
+    console.error("❌ employeeStatusList element not found!");
+    return;
+  }
+
+  const userBranch = appState.user.branch || "main";
+  const employees = Object.values(employeeStatusCache)
+    .filter((emp) => emp.branch === userBranch)
+    .sort((a, b) => {
+      // On duty first, then alphabetically
+      if (a.is_on_duty && !b.is_on_duty) return -1;
+      if (!a.is_on_duty && b.is_on_duty) return 1;
+      return a.full_name.localeCompare(b.full_name);
+    });
+
+  console.log(
+    `🎯 Rendering ${employees.length} employees for branch: ${userBranch}`
+  );
+
+  if (employees.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-4 text-gray-500 text-sm">
+        <div class="mb-2">No employees found in ${userBranch}</div>
+        <button onclick="forceSync()" class="px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded text-sm">
+          🔄 Try Again
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = employees
+    .map((emp) => {
+      const statusColor = emp.is_on_duty
+        ? "bg-green-100 text-green-600"
+        : "bg-gray-100 text-gray-600";
+      const statusText = emp.is_on_duty ? "On Duty" : "Off Duty";
+      const statusIcon = emp.is_on_duty
+        ? '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"></circle></svg>'
+        : '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg>';
+
+      return `
+      <div class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors">
+        <div class="flex items-center gap-2 flex-1 min-w-0">
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-800 truncate">${
+              emp.full_name
+            }</p>
+            ${
+              emp.is_on_duty && parseFloat(emp.current_hours) > 0
+                ? `<p class="text-xs text-gray-500">Working ${emp.current_hours}h</p>`
+                : emp.is_on_duty
+                ? `<p class="text-xs text-gray-500">Currently on duty</p>`
+                : ""
+            }
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${statusColor} flex-shrink-0">
+          ${statusIcon}
+          <span>${statusText}</span>
+        </div>
+      </div>
+    `;
+    })
+    .join("");
+}
+
+async function loadEmployeeStatus() {
+  appState.loading.employees = true;
+  updateLoadingIndicators();
+
+  try {
+    await syncEmployeeStatus();
+  } catch (error) {
+    console.error("Load Employee Status Error:", error);
+  } finally {
+    appState.loading.employees = false;
+    updateLoadingIndicators();
+  }
+}
+
+// ============== ALL YOUR EXISTING FUNCTIONS - KEEP THESE EXACTLY ==============
 
 function setupRoleChangeHandlers() {
   if (roleChangeHandlersInitialized) return;
@@ -147,143 +573,6 @@ function updateLiveClock() {
   const timeEl = document.getElementById("attendanceCurrentTime");
   if (timeEl) timeEl.textContent = timeStr;
 }
-
-function openCashInModal() {
-  const modal = document.getElementById("cashInModal");
-  if (modal) {
-    modal.classList.add("active");
-    const amountInput = document.getElementById("cashInAmount");
-    const reasonInput = document.getElementById("cashInReason");
-    if (amountInput) amountInput.value = "";
-    if (reasonInput) reasonInput.value = "";
-    setTimeout(() => {
-      if (amountInput) amountInput.focus();
-    }, 100);
-  }
-}
-
-function closeCashInModal() {
-  const modal = document.getElementById("cashInModal");
-  if (modal) modal.classList.remove("active");
-}
-
-async function processCashIn() {
-  const amountInput = document.getElementById("cashInAmount");
-  const reasonInput = document.getElementById("cashInReason");
-  if (!amountInput || !reasonInput) {
-    showFeedback("Error", "Form elements not found", "error");
-    return;
-  }
-  const amount = parseFloat(amountInput.value);
-  const reason = reasonInput.value.trim();
-  if (!amount || amount <= 0) {
-    showFeedback("Error", "Please enter a valid amount", "error");
-    return;
-  }
-  if (!reason) {
-    showFeedback("Error", "Please enter a reason for cash in", "error");
-    return;
-  }
-  try {
-    const result = await apiCall("cashIn", {
-      amount: amount,
-      type: "deposit",
-      reason: reason,
-      branch: appState.user.branch || "main",
-      user_id: appState.user.id,
-    });
-    if (result.success) {
-      showFeedback(
-        "Cash In Successful",
-        `₱${amount.toFixed(2)} has been added to the register.`,
-        "success"
-      );
-      closeCashInModal();
-      refreshAll();
-    } else {
-      showFeedback(
-        "Error",
-        result.message || "Failed to process cash in",
-        "error"
-      );
-    }
-  } catch (error) {
-    console.error("Cash In Error:", error);
-    showFeedback("Error", "Network error. Please try again.", "error");
-  }
-}
-
-function openCashOutModal() {
-  const modal = document.getElementById("cashOutModal");
-  if (modal) {
-    modal.classList.add("active");
-    const amountInput = document.getElementById("cashOutAmount");
-    const reasonInput = document.getElementById("cashOutReason");
-    if (amountInput) amountInput.value = "";
-    if (reasonInput) reasonInput.value = "";
-    setTimeout(() => {
-      if (amountInput) amountInput.focus();
-    }, 100);
-  }
-}
-
-function closeCashOutModal() {
-  const modal = document.getElementById("cashOutModal");
-  if (modal) modal.classList.remove("active");
-}
-
-async function processCashOut() {
-  const amountInput = document.getElementById("cashOutAmount");
-  const reasonInput = document.getElementById("cashOutReason");
-  if (!amountInput || !reasonInput) {
-    showFeedback("Error", "Form elements not found", "error");
-    return;
-  }
-  const amount = parseFloat(amountInput.value);
-  const reason = reasonInput.value.trim();
-  if (!amount || amount <= 0) {
-    showFeedback("Error", "Please enter a valid amount", "error");
-    return;
-  }
-  if (!reason) {
-    showFeedback("Error", "Please enter a reason for cash out", "error");
-    return;
-  }
-  try {
-    const result = await apiCall("cashOut", {
-      amount: amount,
-      type: "withdrawal",
-      reason: reason,
-      branch: appState.user.branch || "main",
-      user_id: appState.user.id,
-    });
-    if (result.success) {
-      showFeedback(
-        "Cash Out Successful",
-        `₱${amount.toFixed(2)} has been removed from the register.`,
-        "success"
-      );
-      closeCashOutModal();
-      refreshAll();
-    } else {
-      showFeedback(
-        "Error",
-        result.message || "Failed to process cash out",
-        "error"
-      );
-    }
-  } catch (error) {
-    console.error("Cash Out Error:", error);
-    showFeedback("Error", "Network error. Please try again.", "error");
-  }
-}
-
-window.addEventListener("click", function (event) {
-  const cashInModal = document.getElementById("cashInModal");
-  const cashOutModal = document.getElementById("cashOutModal");
-  if (event.target === cashInModal) closeCashInModal();
-  if (event.target === cashOutModal) closeCashOutModal();
-});
 
 async function apiCall(action, data = {}, useAttendanceAPI = false) {
   const apiUrl = useAttendanceAPI
@@ -977,86 +1266,7 @@ function updateBranchDropdown() {
   `;
 }
 
-async function loadEmployeeStatus() {
-  appState.loading.employees = true;
-  updateLoadingIndicators();
-  try {
-    const result = await apiCall(
-      "getEmployees",
-      { branch: appState.selectedBranch },
-      false
-    );
-    if (result.success) {
-      updateEmployeeStatusDisplay(result.employees || []);
-    } else {
-      const fallbackResult = await apiCall("getEmployees", {}, true);
-      if (fallbackResult.success) {
-        updateEmployeeStatusDisplay(fallbackResult.employees || []);
-      } else {
-        updateEmployeeStatusDisplay([]);
-      }
-    }
-  } catch (error) {
-    console.error("Error loading employee status:", error);
-    updateEmployeeStatusDisplay([]);
-  } finally {
-    appState.loading.employees = false;
-    updateLoadingIndicators();
-  }
-}
-
-function updateEmployeeStatusDisplay(employees) {
-  const container = document.getElementById("employeeStatusList");
-  if (!container) return;
-  if (employees.length === 0) {
-    container.innerHTML = `<div class="text-center py-4 text-gray-500 text-sm">No employees in your branch</div>`;
-    return;
-  }
-  employees.sort((a, b) => {
-    if (a.is_on_duty && !b.is_on_duty) return -1;
-    if (!a.is_on_duty && b.is_on_duty) return 1;
-    return a.full_name.localeCompare(b.full_name);
-  });
-  container.innerHTML = employees
-    .map((emp) => {
-      const statusColor = emp.is_on_duty
-        ? "bg-green-100 text-green-600"
-        : "bg-gray-100 text-gray-600";
-      const statusText = emp.is_on_duty ? "On Duty" : "Off Duty";
-      const statusIcon = emp.is_on_duty
-        ? '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"></circle></svg>'
-        : '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg>';
-      const branchBadge = emp.branch
-        ? `<span class="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded ml-1">${emp.branch}</span>`
-        : "";
-      return `
-      <div class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors">
-        <div class="flex items-center gap-2 flex-1 min-w-0">
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center">
-              <p class="text-sm font-medium text-gray-800 truncate">${
-                emp.full_name || "Employee"
-              }</p>
-              ${branchBadge}
-            </div>
-            ${
-              emp.is_on_duty && emp.current_hours
-                ? `<p class="text-xs text-gray-500">Working ${emp.current_hours}h</p>`
-                : emp.is_on_duty
-                ? `<p class="text-xs text-gray-500">Currently on duty</p>`
-                : ""
-            }
-          </div>
-        </div>
-        <div class="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${statusColor} flex-shrink-0">
-          ${statusIcon}
-          <span>${statusText}</span>
-        </div>
-      </div>
-    `;
-    })
-    .join("");
-}
+// ============== ATTENDANCE FUNCTIONS ==============
 
 function quickTimeIn() {
   attendanceData.action = "timeIn";
@@ -1112,6 +1322,27 @@ async function verifyPin() {
     showPinError("PIN must be numbers only");
     return;
   }
+
+  const now = Date.now();
+  const cooldown = 3 * 60 * 1000;
+  const action = attendanceData.action;
+  const cooldownKey = `${attendanceData.pin}_${action}`;
+
+  if (
+    employeeCooldowns[cooldownKey] &&
+    now - employeeCooldowns[cooldownKey] < cooldown
+  ) {
+    const remaining = Math.ceil(
+      (cooldown - (now - employeeCooldowns[cooldownKey])) / 1000
+    );
+    showPinError(
+      `Please wait ${remaining} seconds before ${
+        action === "timeIn" ? "clocking in" : "clocking out"
+      } again`
+    );
+    return;
+  }
+
   try {
     const checkResult = await apiCall(
       "checkPin",
@@ -1122,6 +1353,9 @@ async function verifyPin() {
       attendanceData.employeeId = checkResult.employeeId;
       attendanceData.employeeName = checkResult.employeeName;
       attendanceData.employeeRole = checkResult.employeeRole || "Employee";
+
+      employeeCooldowns[cooldownKey] = now;
+
       showConfirmationModal();
     } else {
       showPinError(checkResult.message || "Invalid PIN");
@@ -1159,23 +1393,28 @@ async function processAttendanceAction() {
       { employeeId: attendanceData.employeeId, pin: attendanceData.pin },
       true
     );
+
     if (result.success) {
+      const isOnDuty = action === "timeIn";
+      forceEmployeeStatus(attendanceData.employeeId, isOnDuty);
+
+      setTimeout(() => {
+        syncEmployeeStatus();
+      }, 500);
+
       showResultModal(
         "success",
-        result.message ||
-          `${action === "timeIn" ? "Clocked in" : "Clocked out"} successfully`,
+        `${
+          action === "timeIn" ? "✅ Clocked in" : "🕒 Clocked out"
+        } successfully!`,
         result
       );
-      console.log("Auto-refreshing employee status...");
-      setTimeout(() => {
-        loadEmployeeStatus();
-      }, 500);
     } else {
       showResultModal("error", result.message || `Failed to ${action}`);
     }
   } catch (error) {
     console.error("Attendance Action Error:", error);
-    showResultModal("error", error.message || "System error");
+    showResultModal("error", "System error: " + error.message);
   }
 }
 
@@ -1184,29 +1423,40 @@ function showResultModal(type, message, data = null) {
   const titleEl = document.getElementById("resultModalTitle");
   const messageEl = document.getElementById("resultMessage");
   const detailsEl = document.getElementById("resultDetails");
+
   if (type === "success") {
     icon.style.background = "#10b981";
-    icon.innerHTML =
-      '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+    icon.innerHTML = "✓";
+
+    setTimeout(() => {
+      forceEmployeeStatus(
+        attendanceData.employeeId,
+        attendanceData.action === "timeIn"
+      );
+      syncEmployeeStatus();
+    }, 100);
   } else {
     icon.style.background = "#ef4444";
-    icon.innerHTML =
-      '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+    icon.innerHTML = "✗";
   }
-  titleEl.textContent = type === "success" ? "Success" : "Error";
+
+  titleEl.textContent = type === "success" ? "Success!" : "Error";
   messageEl.textContent = message;
+
   if (data && data.summary) {
     detailsEl.innerHTML = `
-      <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin-top: 16px;">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 14px;">
-          <div>Total Hours:</div>
-          <div style="font-weight: 600;">${data.summary.totalHours || 0}h</div>
-          <div>Regular:</div>
-          <div style="font-weight: 600;">${
+      <div class="bg-gray-50 p-4 rounded-lg mt-4">
+        <div class="grid grid-cols-2 gap-2 text-sm">
+          <div class="text-gray-600">Total Hours:</div>
+          <div class="font-semibold text-gray-800">${
+            data.summary.totalHours || 0
+          }h</div>
+          <div class="text-gray-600">Regular:</div>
+          <div class="font-semibold text-gray-800">${
             data.summary.regularHours || 0
           }h</div>
-          <div>Overtime:</div>
-          <div style="font-weight: 600;">${
+          <div class="text-gray-600">Overtime:</div>
+          <div class="font-semibold text-gray-800">${
             data.summary.overtimeHours || 0
           }h</div>
         </div>
@@ -1215,6 +1465,7 @@ function showResultModal(type, message, data = null) {
   } else {
     detailsEl.innerHTML = "";
   }
+
   closeModal("attendanceConfirmModal");
   showModal("attendanceResultModal");
 }
@@ -1243,6 +1494,10 @@ function closeResultModal() {
   attendanceData.pin = "";
   attendanceData.employeeId = null;
   stopLiveClock();
+
+  setTimeout(() => {
+    syncEmployeeStatus();
+  }, 300);
 }
 
 function showModal(modalId) {
@@ -1271,11 +1526,172 @@ function closeModal(modalId) {
   }
 }
 
+// ============== CASH IN/OUT FUNCTIONS ==============
+
+function openCashInModal() {
+  const modal = document.getElementById("cashInModal");
+  if (modal) {
+    modal.classList.add("active");
+    const amountInput = document.getElementById("cashInAmount");
+    const reasonInput = document.getElementById("cashInReason");
+    if (amountInput) amountInput.value = "";
+    if (reasonInput) reasonInput.value = "";
+    setTimeout(() => {
+      if (amountInput) amountInput.focus();
+    }, 100);
+  }
+}
+
+function closeCashInModal() {
+  const modal = document.getElementById("cashInModal");
+  if (modal) modal.classList.remove("active");
+}
+
+async function processCashIn() {
+  const amountInput = document.getElementById("cashInAmount");
+  const reasonInput = document.getElementById("cashInReason");
+  if (!amountInput || !reasonInput) {
+    showFeedback("Error", "Form elements not found", "error");
+    return;
+  }
+  const amount = parseFloat(amountInput.value);
+  const reason = reasonInput.value.trim();
+  if (!amount || amount <= 0) {
+    showFeedback("Error", "Please enter a valid amount", "error");
+    return;
+  }
+  if (!reason) {
+    showFeedback("Error", "Please enter a reason for cash in", "error");
+    return;
+  }
+  try {
+    const result = await apiCall("cashIn", {
+      amount: amount,
+      type: "deposit",
+      reason: reason,
+      branch: appState.user.branch || "main",
+      user_id: appState.user.id,
+    });
+    if (result.success) {
+      showFeedback(
+        "Cash In Successful",
+        `₱${amount.toFixed(2)} has been added to the register.`,
+        "success"
+      );
+      closeCashInModal();
+      refreshAll();
+    } else {
+      showFeedback(
+        "Error",
+        result.message || "Failed to process cash in",
+        "error"
+      );
+    }
+  } catch (error) {
+    console.error("Cash In Error:", error);
+    showFeedback("Error", "Network error. Please try again.", "error");
+  }
+}
+
+function openCashOutModal() {
+  const modal = document.getElementById("cashOutModal");
+  if (modal) {
+    modal.classList.add("active");
+    const amountInput = document.getElementById("cashOutAmount");
+    const reasonInput = document.getElementById("cashOutReason");
+    if (amountInput) amountInput.value = "";
+    if (reasonInput) reasonInput.value = "";
+    setTimeout(() => {
+      if (amountInput) amountInput.focus();
+    }, 100);
+  }
+}
+
+function closeCashOutModal() {
+  const modal = document.getElementById("cashOutModal");
+  if (modal) modal.classList.remove("active");
+}
+
+async function processCashOut() {
+  const amountInput = document.getElementById("cashOutAmount");
+  const reasonInput = document.getElementById("cashOutReason");
+  if (!amountInput || !reasonInput) {
+    showFeedback("Error", "Form elements not found", "error");
+    return;
+  }
+  const amount = parseFloat(amountInput.value);
+  const reason = reasonInput.value.trim();
+  if (!amount || amount <= 0) {
+    showFeedback("Error", "Please enter a valid amount", "error");
+    return;
+  }
+  if (!reason) {
+    showFeedback("Error", "Please enter a reason for cash out", "error");
+    return;
+  }
+  try {
+    const result = await apiCall("cashOut", {
+      amount: amount,
+      type: "withdrawal",
+      reason: reason,
+      branch: appState.user.branch || "main",
+      user_id: appState.user.id,
+    });
+    if (result.success) {
+      showFeedback(
+        "Cash Out Successful",
+        `₱${amount.toFixed(2)} has been removed from the register.`,
+        "success"
+      );
+      closeCashOutModal();
+      refreshAll();
+    } else {
+      showFeedback(
+        "Error",
+        result.message || "Failed to process cash out",
+        "error"
+      );
+    }
+  } catch (error) {
+    console.error("Cash Out Error:", error);
+    showFeedback("Error", "Network error. Please try again.", "error");
+  }
+}
+
+// ============== REAL-TIME SYSTEM ==============
+
+function startRealTimeSync() {
+  if (realTimeSyncInterval) {
+    clearInterval(realTimeSyncInterval);
+  }
+
+  realTimeSyncInterval = setInterval(() => {
+    const now = Date.now();
+    if (now - lastUpdateTime > 3000) {
+      syncEmployeeStatus();
+      lastUpdateTime = now;
+    }
+  }, 3000);
+
+  window.addEventListener("focus", () => {
+    syncEmployeeStatus();
+  });
+
+  window.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      syncEmployeeStatus();
+    }
+  });
+}
+
+// ============== INITIALIZATION ==============
+
 document.addEventListener("DOMContentLoaded", function () {
-  console.log("DOM Content Loaded - Initializing...");
+  console.log("🚀 DOM LOADED - STARTING REAL-TIME SYSTEM");
+
   if (typeof currentUser !== "undefined") {
     appState.user = currentUser;
-    console.log("Current User:", currentUser);
+
     const branchFilterContainer = document.querySelector(
       ".relative:has(#branchDropdown)"
     );
@@ -1302,16 +1718,29 @@ document.addEventListener("DOMContentLoaded", function () {
       addUserBranch.value = currentUser.branch;
     }
   }
+
   setupRoleChangeHandlers();
   startLiveClock();
+  startRealTimeSync();
+
   setTimeout(() => {
     loadStats();
     loadUsers();
     loadAnnouncements();
-    loadEmployeeStatus();
+
+    // Initial sync
+    syncEmployeeStatus().then((success) => {
+      console.log("Initial sync:", success ? "✅ Success" : "❌ Failed");
+      if (!success) {
+        setTimeout(() => syncEmployeeStatus(), 2000);
+      }
+    });
   }, 500);
-  console.log("Initialization complete");
+
+  console.log("✅ REAL-TIME SYSTEM ACTIVE");
 });
+
+// ============== WINDOW EXPORTS ==============
 
 window.quickTimeIn = quickTimeIn;
 window.quickTimeOut = quickTimeOut;
@@ -1350,3 +1779,14 @@ window.processCashIn = processCashIn;
 window.openCashOutModal = openCashOutModal;
 window.closeCashOutModal = closeCashOutModal;
 window.processCashOut = processCashOut;
+window.syncEmployeeStatus = syncEmployeeStatus;
+window.forceEmployeeStatus = forceEmployeeStatus;
+window.renderEmployeeStatus = renderEmployeeStatus;
+window.forceSync = syncEmployeeStatus; // Alias for button
+window.openOutSourceModal = openOutSourceModal;
+window.closeOutSourceModal = closeOutSourceModal;
+window.toggleProducts = toggleProducts;
+window.addProductRow = addProductRow;
+window.removeProductRow = removeProductRow;
+window.calculateTotal = calculateTotal;
+window.submitOutSource = submitOutSource;

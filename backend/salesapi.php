@@ -1,5 +1,5 @@
 <?php
-// salesapi.php
+// salesapi.php - COMPLETE WITH OUT SOURCE SUPPORT
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
@@ -26,41 +26,45 @@ $request = isset($_GET['action']) ? $_GET['action'] : '';
 
 try {
     switch ($method) {
-case 'GET':
-    if ($request === 'sales') {
-        getSales($pdo, $user);
-    } elseif ($request === 'branches') {
-        getBranches($pdo);
-    } elseif ($request === 'order' && isset($_GET['id'])) {
-        getOrder($pdo, $_GET['id'], $user);
-    } elseif ($request === 'cashier-sessions') {
-        getCashierSessions($pdo, $user);
-    } elseif ($request === 'cashier-details' && isset($_GET['id'])) {
-        getCashierDetails($pdo, $_GET['id'], $user);
-    } elseif ($request === 'void-orders') {
-        getVoidOrders($pdo, $user);
-    } elseif ($request === 'cashout') {
-        getCashoutRecords($pdo, $user);
-    } else {
-        throw new Exception('Invalid request');
-    }
-    break;
+        case 'GET':
+            if ($request === 'sales') {
+                getSales($pdo, $user);
+            } elseif ($request === 'branches') {
+                getBranches($pdo);
+            } elseif ($request === 'order' && isset($_GET['id'])) {
+                getOrder($pdo, $_GET['id'], $user);
+            } elseif ($request === 'cashier-sessions') {
+                getCashierSessions($pdo, $user);
+            } elseif ($request === 'cashier-details' && isset($_GET['id'])) {
+                getCashierDetails($pdo, $_GET['id'], $user);
+            } elseif ($request === 'void-orders') {
+                getVoidOrders($pdo, $user);
+            } elseif ($request === 'cashout') {
+                getCashoutRecords($pdo, $user);
+            } elseif ($request === 'outsource') {
+                getOutSourceRecords($pdo, $user);
+            } elseif ($request === 'outsource-detail' && isset($_GET['id'])) {
+                getOutSourceDetail($pdo, $_GET['id'], $user);
+            } else {
+                throw new Exception('Invalid request');
+            }
+            break;
             
-case 'POST':
-    if ($request === 'void') {
-        voidOrder($pdo, $user);
-    } elseif ($request === 'verify-pin') {
-        verifyManagerPin($pdo);
-    } elseif ($request === 'verify-owner-pin') {
-        verifyOwnerPin($pdo);
-    } elseif ($request === 'cashout') {
-        recordCashout($pdo, $user);
-    } elseif ($request === 'edit-cashout') {
-        editCashout($pdo, $user);
-    } else {
-        throw new Exception('Invalid request');
-    }
-    break;
+        case 'POST':
+            if ($request === 'void') {
+                voidOrder($pdo, $user);
+            } elseif ($request === 'verify-pin') {
+                verifyManagerPin($pdo);
+            } elseif ($request === 'verify-owner-pin') {
+                verifyOwnerPin($pdo);
+            } elseif ($request === 'cashout') {
+                recordCashout($pdo, $user);
+            } elseif ($request === 'edit-cashout') {
+                editCashout($pdo, $user);
+            } else {
+                throw new Exception('Invalid request');
+            }
+            break;
             
         default:
             throw new Exception('Method not allowed');
@@ -68,6 +72,139 @@ case 'POST':
 } catch (Exception $e) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+}
+
+// ============================================
+// GET OUT SOURCE RECORDS
+// ============================================
+function getOutSourceRecords($pdo, $user) {
+    $branch = isset($_GET['branch']) ? $_GET['branch'] : 'all';
+    $timeRange = isset($_GET['timeRange']) ? $_GET['timeRange'] : 'all';
+    $startDate = isset($_GET['startDate']) ? $_GET['startDate'] : null;
+    $endDate = isset($_GET['endDate']) ? $_GET['endDate'] : null;
+    $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+    $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+    $offset = ($page - 1) * $limit;
+    
+    // Build WHERE clause
+    $where = ['1=1'];
+    $params = [];
+    
+    // Branch filter
+    if ($user['role'] === 'admin' || $user['role'] === 'owner') {
+        if ($branch !== 'all') {
+            $where[] = 'o.branch = :branch';
+            $params[':branch'] = $branch;
+        }
+    } else {
+        $where[] = 'o.branch = :branch';
+        $params[':branch'] = $user['branch'];
+    }
+    
+    // Time range filter
+    if ($timeRange === 'today') {
+        $where[] = 'DATE(o.created_at) = CURDATE()';
+    } elseif ($timeRange === 'yesterday') {
+        $where[] = 'DATE(o.created_at) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)';
+    } elseif ($timeRange === 'week') {
+        $where[] = 'o.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)';
+    } elseif ($timeRange === 'month') {
+        $where[] = 'o.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)';
+    } elseif ($timeRange === 'custom' && $startDate && $endDate) {
+        $where[] = 'DATE(o.created_at) BETWEEN :startDate AND :endDate';
+        $params[':startDate'] = $startDate;
+        $params[':endDate'] = $endDate;
+    }
+    
+    $whereClause = implode(' AND ', $where);
+    
+    // Get total count
+    $countSql = "SELECT COUNT(*) as total FROM outsource_records o WHERE $whereClause";
+    $countStmt = $pdo->prepare($countSql);
+    $countStmt->execute($params);
+    $total = $countStmt->fetch()['total'];
+    
+    // Get paginated data
+    $sql = "SELECT 
+                o.id,
+                o.branch,
+                o.created_at,
+                o.amount,
+                o.product_details,
+                o.personnel_name,
+                o.supplier
+            FROM outsource_records o
+            WHERE $whereClause
+            ORDER BY o.created_at DESC
+            LIMIT :limit OFFSET :offset";
+    
+    $stmt = $pdo->prepare($sql);
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
+    
+    $records = $stmt->fetchAll();
+    
+    // Format data
+    foreach ($records as &$record) {
+        $record['amount'] = floatval($record['amount']);
+    }
+    
+    echo json_encode([
+        'success' => true,
+        'data' => $records,
+        'pagination' => [
+            'total' => (int)$total,
+            'page' => $page,
+            'limit' => $limit,
+            'pages' => ceil($total / $limit)
+        ]
+    ]);
+}
+
+// ============================================
+// GET OUT SOURCE DETAIL
+// ============================================
+function getOutSourceDetail($pdo, $recordId, $user) {
+    $sql = "SELECT 
+                o.id,
+                o.branch,
+                o.created_at,
+                o.amount,
+                o.product_details,
+                o.personnel_name,
+                o.supplier
+            FROM outsource_records o
+            WHERE o.id = :id";
+    
+    // Add branch restriction for non-admin
+    if ($user['role'] !== 'admin' && $user['role'] !== 'owner') {
+        $sql .= " AND o.branch = :branch";
+    }
+    
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindValue(':id', $recordId, PDO::PARAM_INT);
+    if ($user['role'] !== 'admin' && $user['role'] !== 'owner') {
+        $stmt->bindValue(':branch', $user['branch']);
+    }
+    $stmt->execute();
+    
+    $record = $stmt->fetch();
+    
+    if (!$record) {
+        throw new Exception('Out Source record not found');
+    }
+    
+    // Format data
+    $record['amount'] = floatval($record['amount']);
+    
+    echo json_encode([
+        'success' => true,
+        'data' => $record
+    ]);
 }
 
 // ============================================
@@ -407,19 +544,18 @@ function computeSessionData($pdo, $session) {
 // ============================================
 function getCashierDetails($pdo, $sessionId, $user) {
     // Get session info
-   // Get session info
-$sql = "SELECT 
-            s.id,
-            s.user_id,
-            s.user_email,
-            s.timestamp as login_time,
-            s.branch,
-            s.action,
-            u.username,
-            u.email
-        FROM store_status_log s
-        LEFT JOIN users u ON s.user_id = u.id
-        WHERE s.id = :id";
+    $sql = "SELECT 
+                s.id,
+                s.user_id,
+                s.user_email,
+                s.timestamp as login_time,
+                s.branch,
+                s.action,
+                u.username,
+                u.email
+            FROM store_status_log s
+            LEFT JOIN users u ON s.user_id = u.id
+            WHERE s.id = :id";
     
     // Add branch restriction for non-admin
     if ($user['role'] !== 'admin' && $user['role'] !== 'owner') {

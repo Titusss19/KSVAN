@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         // DATABASE CONNECTION
         $host = 'localhost';
-        $dbname = 'db';
+        $dbname = 'u426321422_KSTREET';
         $username = 'root';
         $password_db = '';
         

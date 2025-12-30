@@ -267,21 +267,23 @@
                     </div>
                 </div>
 
-                <!-- Quick Actions -->
+             <!-- Quick Actions -->
 <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100">
     <h3 class="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4">Quick Actions</h3>
     <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4 sm:mb-6">
         <a href="pos.php" class="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 transition font-medium text-xs sm:text-sm text-center">Open POS</a>
-        <a href="sales_report.php" class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition font-medium text-xs sm:text-sm text-center">Sales Report</a>
+        <a href="sales.php" class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition font-medium text-xs sm:text-sm text-center">Sales Report</a>
         <a href="items.php" class="bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 transition font-medium text-xs sm:text-sm text-center">Inventory</a>
         <button onclick="quickTimeIn()" class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg transition font-medium text-xs sm:text-sm">Time In</button>
         <button onclick="quickTimeOut()" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg transition font-medium text-xs sm:text-sm">Time Out</button>
         <button onclick="openCashInModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-2 rounded-lg transition font-medium text-xs sm:text-sm">Cash In</button>
         <button onclick="openCashOutModal()" class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-lg transition font-medium text-xs sm:text-sm">Cash Out</button>
+        <button onclick="openOutSourceModal()" class="bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded-lg transition font-medium text-xs sm:text-sm">Add Outsource</button>
     </div>
 
     <div class="pt-4 sm:pt-6 border-t border-gray-200">
         <h4 class="font-semibold text-gray-700 mb-2 sm:mb-3 text-sm sm:text-base">Employee Status</h4>
+        
         <div class="space-y-2 max-h-48 sm:max-h-64 overflow-y-auto custom-scrollbar" id="employeeStatusList">
             <div class="text-center py-3 sm:py-4 text-gray-500 text-xs sm:text-sm">
                 Loading employees...
@@ -686,6 +688,7 @@
         </div>
     </div>
 
+    <!-- Cash In Modal -->
     <div id="cashInModal" class="modal">
     <div class="modal-content">
         <div class="flex justify-between items-center mb-4">
@@ -726,6 +729,58 @@
                 <button onclick="closeCashInModal()" class="flex-1 px-3 py-2 sm:px-4 sm:py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors text-sm">Cancel</button>
                 <button onclick="processCashIn()" class="flex-1 px-3 py-2 sm:px-4 sm:py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all transform hover:scale-105 text-sm">Submit</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Out Source Modal -->
+<div id="outSourceModal" class="modal-overlay">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3 class="text-xl font-bold text-gray-800">Add Out Source Record</h3>
+            <button onclick="closeOutSourceModal()" class="text-gray-400 hover:text-gray-600">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <!-- Personnel Name -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Personnel Name *</label>
+                <input type="text" id="outPersonnelName" placeholder="Enter personnel name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+            </div>
+
+            <!-- Products Section -->
+            <div class="mb-4">
+                <div class="flex items-center justify-between mb-3">
+                    <label class="block text-sm font-medium text-gray-700">Products</label>
+                    <button type="button" onclick="addProductRow()" class="text-sm text-purple-600 hover:text-purple-700 font-medium">
+                        + Add Row
+                    </button>
+                </div>
+                
+                <div id="productRowsContainer" class="space-y-2 mb-3">
+                    <!-- Product rows will be added here -->
+                </div>
+
+                <!-- Total Amount Display -->
+                <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-gray-700">Total Amount:</span>
+                        <span id="outTotalAmount" class="text-lg font-bold text-purple-600">₱0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" onclick="closeOutSourceModal()" class="btn-secondary">Cancel</button>
+            <button type="button" onclick="submitOutSource()" class="btn-primary" style="background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);">
+                Submit Out Source
+            </button>
         </div>
     </div>
 </div>

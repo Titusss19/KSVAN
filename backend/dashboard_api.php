@@ -732,6 +732,41 @@ elseif ($action === 'cashOut') {
     }
 }
 
+// ===== ADD OUT SOURCE =====
+elseif ($action === 'addOutSource') {
+    $personnelName = trim($_POST['personnel_name'] ?? '');
+    $productDetails = trim($_POST['product_details'] ?? '');
+    $amount = floatval($_POST['amount'] ?? 0);
+    $branch = trim($_POST['branch'] ?? getUserBranch($user));
+    $createdBy = intval($_POST['created_by'] ?? $user['id'] ?? 0);
+    
+    if (empty($personnelName)) {
+        echo formatResponse(false, 'Personnel name is required');
+        exit();
+    }
+    
+    try {
+        $stmt = $pdo->prepare("INSERT INTO outsource_records (branch, created_at, amount, product_details, personnel_name, created_by) VALUES (?, NOW(), ?, ?, ?, ?)");
+        $stmt->execute([$branch, $amount, $productDetails, $personnelName, $createdBy]);
+        
+        if ($stmt->rowCount() > 0) {
+            echo formatResponse(true, 'Out Source record added successfully', [
+                'id' => $pdo->lastInsertId(),
+                'amount' => $amount,
+                'branch' => $branch,
+                'personnel_name' => $personnelName,
+                'product_details' => $productDetails,
+                'created_at' => date('Y-m-d H:i:s')
+            ]);
+        } else {
+            echo formatResponse(false, 'Failed to add Out Source record');
+        }
+    } catch (PDOException $e) {
+        error_log("Add Out Source Error: " . $e->getMessage());
+        echo formatResponse(false, 'Database error: ' . $e->getMessage());
+    }
+}
+
 else {
     echo formatResponse(false, 'Invalid action');
 }

@@ -46,7 +46,6 @@ class ProductsInventorySystem {
 
       // First, let's see what the response really is
       const responseText = await productsResponse.text();
-     
 
       // Check if response contains HTML error
       if (responseText.includes("<br />") || responseText.includes("<b>")) {
@@ -65,7 +64,6 @@ class ProductsInventorySystem {
 
       if (productsData.success) {
         this.products = productsData.products;
-      
       } else {
         console.error("Error from server:", productsData.error);
         this.products = [];
@@ -96,7 +94,6 @@ class ProductsInventorySystem {
             price: parseFloat(item.price || 0),
             total_price: parseFloat(item.total_price || 0),
           }));
-         
         } else {
           console.warn("Inventory load warning:", inventoryData.error);
           this.inventory = [];
@@ -1243,33 +1240,67 @@ class ProductsInventorySystem {
     }, 1000);
   }
 
-  confirmDelete() {
-    this.showLoading(true);
-    setTimeout(() => {
-      if (this.currentModalType === "product") {
-        const index = this.products.findIndex(
-          (item) => item.id === this.itemToDelete.id
-        );
-        if (index > -1) {
-          this.products.splice(index, 1);
-        }
-        this.showSuccess("Product deleted successfully!");
-      } else {
-        const index = this.inventory.findIndex(
-          (item) => item.id === this.inventoryToDelete.id
-        );
-        if (index > -1) {
-          this.inventory.splice(index, 1);
-        }
-        this.showSuccess("Inventory item deleted successfully!");
-      }
+  // IPALIT LANG ANG confirmDelete() METHOD SA INYONG EXISTING JS FILE
 
-      this.showLoading(false);
-      document.getElementById("deleteModal").classList.add("hidden");
-      this.renderCurrentTable();
-      this.itemToDelete = null;
-      this.inventoryToDelete = null;
-    }, 1000);
+  confirmDelete() {
+    const itemId =
+      this.currentModalType === "product"
+        ? this.itemToDelete.id
+        : this.inventoryToDelete.id;
+
+    if (!itemId) {
+      this.showError("No item selected for deletion");
+      return;
+    }
+
+    this.showLoading(true);
+
+    const formData = new FormData();
+    formData.append("id", itemId);
+    formData.append("type", this.currentModalType); // 'product' or 'inventory'
+
+    // Use the existing delete_item.php
+    fetch("backend/delete_item.php", {
+      method: "POST",
+      body: formData,
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        this.showLoading(false);
+
+        if (data.success) {
+          // Remove from local array after successful database deletion
+          if (this.currentModalType === "product") {
+            const index = this.products.findIndex(
+              (item) => item.id === this.itemToDelete.id
+            );
+            if (index > -1) {
+              this.products.splice(index, 1);
+            }
+            this.showSuccess("Product deleted successfully!");
+          } else {
+            const index = this.inventory.findIndex(
+              (item) => item.id === this.inventoryToDelete.id
+            );
+            if (index > -1) {
+              this.inventory.splice(index, 1);
+            }
+            this.showSuccess("Inventory item deleted successfully!");
+          }
+
+          document.getElementById("deleteModal").classList.add("hidden");
+          this.renderCurrentTable();
+          this.itemToDelete = null;
+          this.inventoryToDelete = null;
+        } else {
+          this.showError("Error: " + (data.error || "Failed to delete item"));
+        }
+      })
+      .catch((error) => {
+        this.showLoading(false);
+        console.error("Delete error:", error);
+        this.showError("Error deleting item: " + error.message);
+      });
   }
 
   viewProduct(productId) {
@@ -1362,6 +1393,8 @@ class ProductsInventorySystem {
       : "none";
   }
 }
+
+
 
 // Initialize the system
 document.addEventListener("DOMContentLoaded", function () {

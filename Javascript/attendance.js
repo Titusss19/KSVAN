@@ -1,9 +1,7 @@
-// attendance.js - COMPLETE WITH DTR PDF EXPORT - FIXED
-// ============================
 // GLOBAL VARIABLES
-// ============================
 let employees = [];
 let selectedEmployee = null;
+let selectedAttendanceLog = null;
 let currentTime = new Date();
 let searchTerm = "";
 let currentAttendancePage = 1;
@@ -14,9 +12,7 @@ let systemSettings = {
   maxRegularHours: 8,
 };
 
-// ============================
 // INITIALIZATION
-// ============================
 document.addEventListener("DOMContentLoaded", function () {
   console.log("🚀 Attendance System Initializing...");
 
@@ -36,18 +32,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const addEmployeeForm = document.getElementById("addEmployeeForm");
   if (addEmployeeForm) {
-    addEmployeeForm.addEventListener("submit", function (e) {
-      e.preventDefault();
-      handleAddEmployee(e);
-    });
+    addEmployeeForm.addEventListener("submit", handleAddEmployee);
   }
 
   const editEmployeeForm = document.getElementById("editEmployeeForm");
   if (editEmployeeForm) {
-    editEmployeeForm.addEventListener("submit", function (e) {
-      e.preventDefault();
-      handleEditEmployee(e);
-    });
+    editEmployeeForm.addEventListener("submit", handleEditEmployee);
+  }
+
+  const editTimeForm = document.getElementById("editTimeForm");
+  if (editTimeForm) {
+    editTimeForm.addEventListener("submit", handleEditTime);
   }
 
   const searchInput = document.getElementById("searchInput");
@@ -70,9 +65,7 @@ document.addEventListener("DOMContentLoaded", function () {
   console.log("✅ Attendance System Ready!");
 });
 
-// ============================
 // MODAL FUNCTIONS
-// ============================
 function showModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) {
@@ -121,6 +114,7 @@ function showAddEmployeeModal() {
   showModal("addEmployeeModal");
 }
 
+// MODAL EVENT LISTENERS
 document.addEventListener("click", function (event) {
   if (event.target.classList && event.target.classList.contains("modal")) {
     event.target.classList.remove("show");
@@ -146,9 +140,7 @@ document.addEventListener("keydown", function (event) {
   }
 });
 
-// ============================
 // API FUNCTIONS
-// ============================
 async function apiRequest(endpoint, options = {}) {
   try {
     const controller = new AbortController();
@@ -183,9 +175,7 @@ async function apiRequest(endpoint, options = {}) {
   }
 }
 
-// ============================
 // LOAD FUNCTIONS
-// ============================
 async function loadSystemSettings() {
   try {
     const data = await apiRequest(
@@ -231,9 +221,7 @@ async function loadEmployees() {
   }
 }
 
-// ============================
 // ADD EMPLOYEE
-// ============================
 async function handleAddEmployee(e) {
   e.preventDefault();
 
@@ -283,7 +271,7 @@ async function handleAddEmployee(e) {
     closeModal("addEmployeeModal");
     showNotification(
       "success",
-      `${data.name} added successfully to your branch`
+      result.message || `${data.name} added successfully`
     );
     form.reset();
     await loadEmployees();
@@ -293,9 +281,7 @@ async function handleAddEmployee(e) {
   }
 }
 
-// ============================
 // EDIT EMPLOYEE
-// ============================
 function openEditEmployee(employeeId) {
   const employee = employees.find((e) => e.employee_id == employeeId);
 
@@ -379,9 +365,113 @@ async function handleEditEmployee(e) {
   }
 }
 
-// ============================
+// EDIT ATTENDANCE TIME
+async function openEditTime(logId, employeeId) {
+  try {
+    const data = await apiRequest(
+      `backend/attendance_api.php?action=getAttendanceLog&logId=${logId}`
+    );
+
+    if (data.success && data.log) {
+      selectedAttendanceLog = data.log;
+
+      document.getElementById("editTimeLogId").value = data.log.logId;
+      document.getElementById("editTimeEmployeeId").value = data.log.employeeId;
+      document.getElementById("editTimeDate").value =
+        data.log.date || getCurrentDate();
+      document.getElementById("editTimeIn").value = data.log.timeIn || "08:00";
+      document.getElementById("editTimeOut").value = data.log.timeOut || "";
+      document.getElementById("editRegularHours").value =
+        data.log.regularHours || 0;
+      document.getElementById("editOvertimeHours").value =
+        data.log.overtimeHours || 0;
+      document.getElementById("editDailyPay").value = data.log.dailyPay || 0;
+      document.getElementById("editOvertimePay").value =
+        data.log.overtimePay || 0;
+
+      showModal("editTimeModal");
+    } else {
+      throw new Error(data.error || "Failed to load attendance log");
+    }
+  } catch (error) {
+    console.error("❌ Error loading attendance log:", error);
+    showNotification(
+      "error",
+      "Failed to load attendance data: " + error.message
+    );
+  }
+}
+
+async function handleEditTime(e) {
+  e.preventDefault();
+
+  const form = e.target;
+  const formData = new FormData(form);
+  const data = Object.fromEntries(formData.entries());
+
+  if (!data.logId || !data.employeeId || !data.date || !data.timeIn) {
+    showNotification("error", "Date and Time In are required");
+    return;
+  }
+
+  if (data.timeOut && data.timeOut <= data.timeIn) {
+    showNotification("error", "Time Out must be after Time In");
+    return;
+  }
+
+  try {
+    const params = new URLSearchParams();
+    params.append("action", "updateAttendanceRecord");
+    params.append("logId", data.logId);
+    params.append("employeeId", data.employeeId);
+    params.append("date", data.date);
+    params.append("timeIn", data.timeIn);
+    params.append("timeOut", data.timeOut || "");
+    params.append("regularHours", data.regularHours || 0);
+    params.append("overtimeHours", data.overtimeHours || 0);
+    params.append("dailyPay", data.dailyPay || 0);
+    params.append("overtimePay", data.overtimePay || 0);
+
+    const result = await apiRequest("backend/attendance_api.php", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: params.toString(),
+    });
+
+    closeModal("editTimeModal");
+
+    if (result.summary) {
+      const summary = result.summary;
+      let message = `✅ Attendance record updated!\n\n`;
+      message += `Date: ${summary.date}\n`;
+      message += `Time In: ${summary.timeIn}\n`;
+      if (summary.timeOut) {
+        message += `Time Out: ${summary.timeOut}\n`;
+      }
+      message += `Total Hours: ${summary.totalHours}h\n`;
+      message += `Regular: ${summary.regularHours}h\n`;
+      message += `Overtime: ${summary.overtimeHours}h\n`;
+      message += `Daily Pay: ₱${summary.dailyPay.toFixed(2)}\n`;
+      message += `Overtime Pay: ₱${summary.overtimePay.toFixed(2)}\n`;
+      message += `Total Pay: ₱${summary.totalPay.toFixed(2)}`;
+
+      showNotification("success", message);
+    } else {
+      showNotification("success", "Attendance record updated successfully");
+    }
+
+    if (selectedEmployee) {
+      await viewEmployee(selectedEmployee.employee_id);
+    }
+  } catch (error) {
+    console.error("❌ Edit Time Error:", error);
+    showNotification("error", error.message);
+  }
+}
+
 // RESET PIN
-// ============================
 function openResetPin(employeeId) {
   const employee = employees.find((e) => e.employee_id == employeeId);
   if (!employee) {
@@ -438,14 +528,12 @@ async function handleResetPin(e) {
   }
 }
 
-// ============================
 // TIME IN/OUT
-// ============================
 function openTimeInOut(employeeId) {
   selectedEmployee = employees.find((e) => e.employee_id == employeeId);
   if (!selectedEmployee) {
     console.error("Employee not found:", employeeId);
-    showNotification("error", "Employee not found in your branch");
+    showNotification("error", "Employee not found");
     return;
   }
 
@@ -557,9 +645,342 @@ async function processTimeInOut() {
   }
 }
 
-// ============================
-// RENDER FUNCTIONS
-// ============================
+// DTR DOWNLOAD FUNCTION
+async function downloadDTR(employeeId) {
+  try {
+    console.log("Downloading DTR for employee ID:", employeeId);
+
+    if (!employeeId || employeeId === "undefined") {
+      throw new Error(
+        "Employee ID is missing. Please select an employee first."
+      );
+    }
+
+    if (isNaN(employeeId) || employeeId <= 0) {
+      throw new Error(`Invalid employee ID: ${employeeId}`);
+    }
+
+    if (typeof html2canvas === "undefined" || typeof jspdf === "undefined") {
+      showNotification(
+        "error",
+        "PDF libraries not loaded. Please refresh the page."
+      );
+      return;
+    }
+
+    showNotification("info", "Generating DTR PDF... Please wait.");
+
+    const data = await apiRequest(
+      `backend/attendance_api.php?action=getEmployee&id=${employeeId}`
+    );
+
+    if (!data.success || !data.employee) {
+      throw new Error("Failed to load employee data");
+    }
+
+    const employee = data.employee;
+    const attendance = data.attendance || [];
+
+    if (attendance.length === 0) {
+      showNotification(
+        "warning",
+        "No attendance records found for this employee."
+      );
+      return;
+    }
+
+    const totalWorkDays = attendance.filter(
+      (a) => parseFloat(a.total_hours) >= 4
+    ).length;
+    const totalHours = attendance.reduce(
+      (sum, a) => sum + (parseFloat(a.total_hours) || 0),
+      0
+    );
+    const totalRegularHours = attendance.reduce(
+      (sum, a) => sum + (parseFloat(a.regular_hours) || 0),
+      0
+    );
+    const totalOvertime = attendance.reduce(
+      (sum, a) => sum + (parseFloat(a.ot_hours) || 0),
+      0
+    );
+    const totalDailyPay = attendance.reduce(
+      (sum, a) => sum + (parseFloat(a.daily_pay) || 0),
+      0
+    );
+    const totalOvertimePay = attendance.reduce(
+      (sum, a) => sum + (parseFloat(a.ot_pay) || 0),
+      0
+    );
+    const totalPay = totalDailyPay + totalOvertimePay;
+
+    const dates = attendance.map((a) => new Date(a.date));
+    const startDate =
+      dates.length > 0 ? new Date(Math.min(...dates)) : new Date();
+    const endDate =
+      dates.length > 0 ? new Date(Math.max(...dates)) : new Date();
+
+    const periodText = `${startDate.toLocaleDateString("en-PH", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })} to ${endDate.toLocaleDateString("en-PH", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })}`;
+
+const maxRecords = 15;
+const pageRecords = attendance.slice(0, maxRecords); // First 15 records lang
+
+const { jsPDF } = jspdf;
+const pdf = new jsPDF({
+  orientation: "portrait",
+  unit: "mm",
+  format: "a4",
+});
+
+// Single page lang, no loop
+const dtrContent = document.createElement("div");
+dtrContent.style.cssText = `
+  width: 800px;
+  padding: 30px;
+  background: white;
+  font-family: 'Arial', sans-serif;
+  position: fixed;
+  left: -9999px;
+  top: 0;
+`;
+
+dtrContent.innerHTML = `
+  <div style="text-align: center; margin-bottom: 20px; border-bottom: 3px solid #dc2626; padding-bottom: 15px;">
+    <h1 style="margin: 0; color: #dc2626; font-size: 24px; font-weight: bold; letter-spacing: 2px;">K-STREET ATTENDANCE SYSTEM</h1>
+    <h2 style="margin: 8px 0 0 0; color: #64748b; font-size: 16px; font-weight: normal;">DAILY TIME RECORD (DTR)</h2>
+    <p style="margin: 5px 0 0 0; color: #94a3b8; font-size: 12px;">Period: ${periodText}</p>
+  </div>
+
+  <div style="background: #f8fafc; border-left: 4px solid #dc2626; padding: 15px 20px; margin-bottom: 20px;">
+    <table style="width: 100%; border-collapse: collapse;">
+      <tr>
+        <td style="padding: 5px 0; width: 25%;"><strong style="color: #475569;">Employee Name:</strong></td>
+        <td style="padding: 5px 0; color: #1e293b;">${employee.full_name}</td>
+        <td style="padding: 5px 0; width: 20%;"><strong style="color: #475569;">Employee ID:</strong></td>
+        <td style="padding: 5px 0; color: #1e293b;">${employee.employee_id}</td>
+      </tr>
+      <tr>
+        <td style="padding: 5px 0;"><strong style="color: #475569;">Email:</strong></td>
+        <td style="padding: 5px 0; color: #1e293b;">${employee.email}</td>
+        <td style="padding: 5px 0;"><strong style="color: #475569;">Contact:</strong></td>
+        <td style="padding: 5px 0; color: #1e293b;">${
+          employee.contact_number || "N/A"
+        }</td>
+      </tr>
+      <tr>
+        <td style="padding: 5px 0;"><strong style="color: #475569;">Branch:</strong></td>
+        <td style="padding: 5px 0; color: #1e293b;">${(
+          employee.branch || "main"
+        ).toUpperCase()}</td>
+        <td style="padding: 5px 0;"><strong style="color: #475569;">Daily Rate:</strong></td>
+        <td style="padding: 5px 0; color: #059669; font-weight: bold;">₱${parseFloat(
+          employee.daily_rate || 0
+        ).toFixed(2)}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div style="margin-bottom: 15px;">
+    <h3 style="color: #1e293b; margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Attendance Records (Latest 15 Records)</h3>
+    <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+      <thead>
+        <tr style="background: #dc2626; color: white;">
+          <th style="padding: 8px; text-align: left; border: 1px solid #b91c1c;">Date</th>
+          <th style="padding: 8px; text-align: center; border: 1px solid #b91c1c;">Time In</th>
+          <th style="padding: 8px; text-align: center; border: 1px solid #b91c1c;">Time Out</th>
+          <th style="padding: 8px; text-align: center; border: 1px solid #b91c1c;">Total Hrs</th>
+          <th style="padding: 8px; text-align: center; border: 1px solid #b91c1c;">OT Hrs</th>
+          <th style="padding: 8px; text-align: right; border: 1px solid #b91c1c;">Daily Pay</th>
+          <th style="padding: 8px; text-align: right; border: 1px solid #b91c1c;">Total Pay</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${
+          pageRecords.length > 0
+            ? pageRecords
+                .map((record, index) => {
+                  const totalHrs = parseFloat(record.total_hours || 0);
+                  const bgColor = index % 2 === 0 ? "#f8fafc" : "white";
+                  return `
+            <tr style="background: ${bgColor};">
+              <td style="padding: 6px 8px; border: 1px solid #e2e8f0; white-space: nowrap;">${formatDateShort(
+                record.date
+              )}</td>
+              <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center;">${
+                record.time_in ? formatTime(record.time_in) : "—"
+              }</td>
+              <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center;">${
+                record.time_out ? formatTime(record.time_out) : "—"
+              }</td>
+              <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center; font-weight: bold; color: ${
+                totalHrs >= 4 ? "#059669" : "#dc2626"
+              };">${totalHrs.toFixed(2)}h</td>
+              <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center; color: #d97706;">${parseFloat(
+                record.ot_hours || 0
+              ).toFixed(2)}h</td>
+              <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: right; color: #059669;">₱${parseFloat(
+                record.daily_pay || 0
+              ).toFixed(2)}</td>
+              <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #059669;">₱${parseFloat(
+                record.total_pay || 0
+              ).toFixed(2)}</td>
+            </tr>
+          `;
+                })
+                .join("")
+            : `<tr><td colspan="7" style="padding: 20px; text-align: center; color: #64748b; border: 1px solid #e2e8f0;">No records found</td></tr>`
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #059669; border-radius: 8px; padding: 15px; margin-top: 20px;">
+    <h3 style="color: #1e293b; margin: 0 0 12px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Summary (Latest 15 Records)</h3>
+    <table style="width: 100%; border-collapse: collapse;">
+      <tr>
+        <td style="padding: 8px; background: white; border-radius: 4px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #475569; font-size: 12px;">Days Worked (≥4h):</span>
+            <strong style="color: #2563eb; font-size: 18px;">${totalWorkDays} days</strong>
+          </div>
+        </td>
+        <td style="width: 10px;"></td>
+        <td style="padding: 8px; background: white; border-radius: 4px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #475569; font-size: 12px;">Total Hours:</span>
+            <strong style="color: #059669; font-size: 18px;">${totalHours.toFixed(
+              2
+            )}h</strong>
+          </div>
+        </td>
+      </tr>
+      <tr style="height: 8px;"></tr>
+      <tr>
+        <td style="padding: 8px; background: white; border-radius: 4px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #475569; font-size: 12px;">Regular Hours:</span>
+            <strong style="color: #059669; font-size: 18px;">${totalRegularHours.toFixed(
+              2
+            )}h</strong>
+          </div>
+        </td>
+        <td style="width: 10px;"></td>
+        <td style="padding: 8px; background: white; border-radius: 4px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #475569; font-size: 12px;">Overtime Hours:</span>
+            <strong style="color: #d97706; font-size: 18px;">${totalOvertime.toFixed(
+              2
+            )}h</strong>
+          </div>
+        </td>
+      </tr>
+      <tr style="height: 8px;"></tr>
+      <tr>
+        <td colspan="3" style="padding: 12px; background: white; border-radius: 4px; border: 2px solid #059669;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #1e293b; font-size: 16px; font-weight: bold;">TOTAL EARNINGS:</span>
+            <strong style="color: #059669; font-size: 24px;">₱${totalPay.toFixed(
+              2
+            )}</strong>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid #e2e8f0; text-align: center;">
+    <p style="margin: 0; color: #94a3b8; font-size: 9px;">This is a computer-generated document. No signature required.</p>
+    <p style="margin: 4px 0 0 0; color: #cbd5e1; font-size: 9px;">Generated on ${new Date().toLocaleString(
+      "en-PH"
+    )}</p>
+  </div>
+`;
+
+document.body.appendChild(dtrContent);
+
+const canvas = await html2canvas(dtrContent, {
+  scale: 2,
+  useCORS: true,
+  logging: false,
+  backgroundColor: "#ffffff",
+});
+
+document.body.removeChild(dtrContent);
+
+const imgWidth = 210;
+const imgHeight = (canvas.height * imgWidth) / canvas.width;
+const imgData = canvas.toDataURL("image/png");
+
+pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+
+// End of PDF generation - no more pages
+
+const fileName = `DTR_${employee.full_name.replace(/\s+/g, "_")}_${new Date()
+  .toISOString()
+  .slice(0, 10)}.pdf`;
+pdf.save(fileName);
+
+showNotification("success", `DTR downloaded successfully! (15 records)`);
+  } catch (error) {
+    console.error("❌ DTR Download Error:", error);
+    showNotification("error", "Failed to generate DTR: " + error.message);
+  }
+}
+
+async function downloadCurrentEmployeeDTR() {
+  try {
+    if (!cachedEmployeeData || !cachedEmployeeData.employee) {
+      showNotification(
+        "error",
+        "No employee data available. Please refresh the page or select an employee first."
+      );
+      return;
+    }
+
+    const employeeId = cachedEmployeeData.employee.employee_id;
+    if (!employeeId || employeeId <= 0) {
+      showNotification("error", "Invalid employee ID");
+      return;
+    }
+
+    console.log("Downloading DTR for employee ID:", employeeId);
+    await downloadDTR(employeeId);
+  } catch (error) {
+    console.error("❌ Error in downloadCurrentEmployeeDTR:", error);
+    showNotification("error", "Failed to download DTR: " + error.message);
+  }
+}
+
+async function downloadEmployeeDTR(employeeId, employeeName) {
+  try {
+    if (!employeeId || employeeId <= 0) {
+      showNotification("error", "Invalid employee ID for " + employeeName);
+      return;
+    }
+
+    console.log("Downloading DTR for:", employeeName, "ID:", employeeId);
+
+    showNotification(
+      "info",
+      `Generating DTR for ${employeeName}... Please wait.`
+    );
+
+    await downloadDTR(employeeId);
+  } catch (error) {
+    console.error("❌ Error downloading DTR:", error);
+    showNotification("error", "Failed to generate DTR: " + error.message);
+  }
+}
+
+// RENDER EMPLOYEE LIST
 function renderEmployeeList() {
   const container = document.getElementById("employeeList");
   if (!container) {
@@ -691,6 +1112,15 @@ function renderEmployeeList() {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                 </svg>
               </button>
+              <button onclick="downloadEmployeeDTR(${
+                emp.employee_id
+              }, '${safeName}')" 
+                      class="icon-button bg-red-50 text-red-600 hover:bg-red-100 border-red-200" 
+                      title="Download DTR">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+              </button>
               ${
                 canEdit
                   ? `
@@ -720,9 +1150,7 @@ function renderEmployeeList() {
     .join("");
 }
 
-// ============================
 // VIEW EMPLOYEE WITH PAGINATION
-// ============================
 async function viewEmployee(employeeId) {
   try {
     const data = await apiRequest(
@@ -756,11 +1184,9 @@ function renderEmployeeDetails(data) {
 
   const employee = data.employee;
   const attendance = data.attendance || [];
-  const summary = data.summary || {};
   const firstLetter = employee.full_name.charAt(0).toUpperCase();
   const branchName = employee.branch || "main";
 
-  // Store employee ID globally for download button
   window.currentViewingEmployeeId = employee.employee_id;
 
   const totalWorkDays = attendance.filter((a) => a.total_hours >= 4).length;
@@ -792,6 +1218,23 @@ function renderEmployeeDetails(data) {
       const dailyPay = parseFloat(record.daily_pay || 0);
       const recordTotalPay = parseFloat(record.total_pay || 0);
 
+      const canEdit =
+        currentUser && ["admin", "owner", "manager"].includes(currentUser.role);
+      const editButton = canEdit
+        ? `
+        <td class="py-3 px-4 text-sm whitespace-nowrap">
+          <button onclick="openEditTime(${record.log_id}, ${employee.employee_id})" 
+                  class="text-indigo-600 hover:text-indigo-900 text-xs font-medium px-2 py-1 hover:bg-indigo-50 rounded transition-colors"
+                  title="Edit Time Record">
+            <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+            </svg>
+            Edit
+          </button>
+        </td>
+      `
+        : "";
+
       attendanceRows += `
         <tr class="border-t border-slate-100 hover:bg-slate-50">
           <td class="py-3 px-4 text-sm whitespace-nowrap">${formatDate(
@@ -813,13 +1256,14 @@ function renderEmployeeDetails(data) {
           <td class="py-3 px-4 text-sm text-green-600 font-bold whitespace-nowrap">₱${recordTotalPay.toFixed(
             2
           )}</td>
+          ${editButton}
         </tr>
       `;
     });
   } else {
     attendanceRows = `
       <tr>
-        <td colspan="7" class="py-8 text-center text-slate-400">
+        <td colspan="8" class="py-8 text-center text-slate-400">
           No attendance records found
         </td>
       </tr>
@@ -880,6 +1324,29 @@ function renderEmployeeDetails(data) {
       </div>
     `;
   }
+
+  const canEdit =
+    currentUser && ["admin", "owner", "manager"].includes(currentUser.role);
+  const tableHeaders = canEdit
+    ? `
+    <th class="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Date</th>
+    <th class="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Time In</th>
+    <th class="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Time Out</th>
+    <th class="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Total Hours</th>
+    <th class="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Overtime</th>
+    <th class="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Daily Pay</th>
+    <th class="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Total Pay</th>
+    <th class="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Actions</th>
+  `
+    : `
+    <th class="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Date</th>
+    <th class="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Time In</th>
+    <th class="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Time Out</th>
+    <th class="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Total Hours</th>
+    <th class="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Overtime</th>
+    <th class="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Daily Pay</th>
+    <th class="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Total Pay</th>
+  `;
 
   content.innerHTML = `
     <div class="modal-scroll-container space-y-6 pb-6">
@@ -1014,12 +1481,21 @@ function renderEmployeeDetails(data) {
               </div>
               ${
                 attendance.length > 0
-                  ? `<button id="dtrDownloadBtn" data-employee-id="${employee.employee_id}" type="button"
+                  ? `<button onclick="downloadCurrentEmployeeDTR()" type="button"
                       class="px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap flex items-center gap-1">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                       </svg>
                       Download DTR
+                    </button>
+                    <button onclick="openPayoutModal(${
+                      employee.employee_id
+                    })" type="button"
+                      class="px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap flex items-center gap-1">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                      </svg>
+                      Pay Out
                     </button>`
                   : ""
               }
@@ -1031,13 +1507,7 @@ function renderEmployeeDetails(data) {
           <table class="w-full">
             <thead class="bg-slate-50 sticky top-0">
               <tr>
-                <th class="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Date</th>
-                <th class="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Time In</th>
-                <th class="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Time Out</th>
-                <th class="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Total Hours</th>
-                <th class="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Overtime</th>
-                <th class="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Daily Pay</th>
-                <th class="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Total Pay</th>
+                ${tableHeaders}
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
@@ -1045,19 +1515,6 @@ function renderEmployeeDetails(data) {
             </tbody>
           </table>
         </div>
-        
-        ${
-          attendance.length === 0
-            ? `
-          <div class="p-8 text-center">
-            <svg class="w-12 h-12 mx-auto text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-            <p class="mt-2 text-sm text-slate-500">No attendance records found</p>
-          </div>
-        `
-            : ""
-        }
         
         ${
           attendance.length > 0 && totalPages > 1
@@ -1071,23 +1528,9 @@ function renderEmployeeDetails(data) {
       </div>
     </div>
   `;
-
-  // Attach event listener to download button
-  setTimeout(() => {
-    const downloadBtn = document.getElementById("dtrDownloadBtn");
-    if (downloadBtn) {
-      downloadBtn.addEventListener("click", function () {
-        const empId = parseInt(this.getAttribute("data-employee-id"));
-        console.log("🔍 Download DTR clicked for Employee ID:", empId);
-        downloadDTR(empId);
-      });
-    }
-  }, 100);
 }
 
-// ============================
 // PAGINATION FUNCTIONS
-// ============================
 function changeAttendancePage(page) {
   if (!cachedEmployeeData) {
     console.error("No cached employee data available");
@@ -1116,381 +1559,7 @@ function changeAttendancePerPage(perPage) {
   }
 }
 
-// ============================
-// HELPER FUNCTIONS FOR DATE/TIME
-// ============================
-function formatDate(dateString) {
-  if (!dateString) return "N/A";
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-PH", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatTime(timeString) {
-  if (!timeString) return "—";
-  const time = new Date(timeString);
-  return time.toLocaleTimeString("en-PH", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
-}
-
-function formatDateForFilename(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-// ============================
-// DOWNLOAD DTR AS PDF - CLIENT SIDE - FIXED
-// ============================
-async function downloadDTR(employeeId) {
-  // DEBUG: Log the employee ID received
-  console.log("🔍 downloadDTR called with Employee ID:", employeeId);
-  console.log("🔍 Type of employeeId:", typeof employeeId);
-  console.log("🔍 Cached employee data:", cachedEmployeeData);
-
-  // FIX 1: Use cached data if no ID provided
-  if (!employeeId || employeeId === 0 || isNaN(employeeId)) {
-    console.warn("⚠️ No valid employee ID provided, trying cached data...");
-    if (cachedEmployeeData && cachedEmployeeData.employee) {
-      employeeId = cachedEmployeeData.employee.employee_id;
-      console.log("✅ Using cached employee ID:", employeeId);
-    } else {
-      showNotification("error", "No employee selected");
-      return;
-    }
-  }
-
-  // FIX 2: Ensure employee ID is integer
-  employeeId = parseInt(employeeId);
-  if (isNaN(employeeId) || employeeId <= 0) {
-    showNotification("error", "Invalid employee ID");
-    return;
-  }
-
-  try {
-    showNotification("info", "Generating DTR PDF...");
-
-    console.log("🔍 Making API request with ID:", employeeId);
-
-    const data = await apiRequest(
-      `backend/attendance_api.php?action=getEmployee&id=${employeeId}`
-    );
-
-    console.log("✅ API Response received:", data);
-
-    if (!data.success || !data.employee) {
-      throw new Error("Failed to load employee data");
-    }
-
-    const employee = data.employee;
-    const attendance = data.attendance || [];
-
-    const now = new Date();
-    const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endDate = now;
-
-    const totals = {
-      days: 0,
-      hours: 0,
-      regularHours: 0,
-      overtime: 0,
-      pay: 0,
-    };
-
-    attendance.forEach((record) => {
-      if (record.status === "completed") {
-        totals.days++;
-        totals.hours += parseFloat(record.total_hours || 0);
-        totals.regularHours += parseFloat(record.regular_hours || 0);
-        totals.overtime += parseFloat(record.ot_hours || 0);
-        totals.pay += parseFloat(record.total_pay || 0);
-      }
-    });
-
-    console.log("📊 Totals calculated:", totals);
-
-    const dtrHTML = generateDTRHTML(
-      employee,
-      attendance,
-      totals,
-      startDate,
-      endDate
-    );
-
-    console.log("🎨 HTML generated, creating temp div...");
-
-    const tempDiv = document.createElement("div");
-    tempDiv.style.position = "fixed";
-    tempDiv.style.left = "-9999px";
-    tempDiv.style.top = "0";
-    tempDiv.style.width = "800px";
-    tempDiv.style.backgroundColor = "white";
-    tempDiv.style.padding = "40px";
-    tempDiv.style.fontFamily = "Arial, sans-serif";
-
-    tempDiv.innerHTML = dtrHTML;
-    document.body.appendChild(tempDiv);
-
-    console.log("📸 Generating canvas...");
-
-    const canvas = await html2canvas(tempDiv, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      backgroundColor: "#ffffff",
-    });
-
-    document.body.removeChild(tempDiv);
-
-    console.log("📄 Creating PDF...");
-
-    const imgData = canvas.toDataURL("image/png");
-    const pdf = new jspdf.jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-      format: "a4",
-    });
-
-    const imgWidth = 190;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-    pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight);
-
-    const filename = `DTR_${employee.full_name.replace(
-      /\s+/g,
-      "_"
-    )}_${formatDateForFilename(endDate)}.pdf`;
-
-    console.log("💾 Saving PDF:", filename);
-
-    pdf.save(filename);
-
-    showNotification("success", "DTR PDF downloaded successfully!");
-    console.log("✅ Download complete!");
-  } catch (error) {
-    console.error("❌ Error downloading DTR:", error);
-    showNotification("error", "Failed to download DTR: " + error.message);
-  }
-}
-
-// ============================
-// GENERATE DTR HTML
-// ============================
-function generateDTRHTML(employee, attendance, totals, startDate, endDate) {
-  const branchName = employee.branch || "Main Branch";
-
-  return `
-        <div style="font-family: Arial, sans-serif; padding: 20px;">
-            <!-- Header -->
-            <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #dc2626; padding-bottom: 20px;">
-                <h1 style="color: #dc2626; font-size: 28px; margin: 0 0 10px 0; text-transform: uppercase;">
-                    K-STREET ATTENDANCE SYSTEM
-                </h1>
-                <h2 style="font-size: 20px; color: #333; margin: 0 0 10px 0;">
-                    DAILY TIME RECORD (DTR)
-                </h2>
-                <p style="color: #666; font-size: 14px; margin: 0;">
-                    Period: ${formatDate(startDate)} to ${formatDate(endDate)}
-                </p>
-            </div>
-            
-            <!-- Employee Information -->
-            <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; border-left: 4px solid #dc2626; margin-bottom: 30px;">
-                <table style="width: 100%; border-collapse: collapse;">
-                    <tr>
-                        <td style="padding: 8px 0; width: 25%; font-weight: bold; color: #666;">Employee Name:</td>
-                        <td style="padding: 8px 0; width: 25%; font-weight: bold;">${
-                          employee.full_name
-                        }</td>
-                        <td style="padding: 8px 0; width: 25%; font-weight: bold; color: #666;">Employee ID:</td>
-                        <td style="padding: 8px 0; width: 25%; font-weight: bold;">${
-                          employee.employee_id
-                        }</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 8px 0; font-weight: bold; color: #666;">Email:</td>
-                        <td style="padding: 8px 0;">${employee.email}</td>
-                        <td style="padding: 8px 0; font-weight: bold; color: #666;">Contact:</td>
-                        <td style="padding: 8px 0;">${
-                          employee.contact_number || "N/A"
-                        }</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 8px 0; font-weight: bold; color: #666;">Branch:</td>
-                        <td style="padding: 8px 0;">${branchName}</td>
-                        <td style="padding: 8px 0; font-weight: bold; color: #666;">Daily Rate:</td>
-                        <td style="padding: 8px 0; font-weight: bold; color: #16a34a;">₱${parseFloat(
-                          employee.daily_rate || 0
-                        ).toFixed(2)}</td>
-                    </tr>
-                </table>
-            </div>
-            
-            <!-- Attendance Records -->
-            <div style="margin-bottom: 30px;">
-                <h3 style="font-size: 16px; color: #333; margin-bottom: 15px; text-transform: uppercase;">Attendance Records</h3>
-                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                    <thead>
-                        <tr style="background: #dc2626; color: white;">
-                            <th style="padding: 10px; text-align: left; border: 1px solid #dc2626;">Date</th>
-                            <th style="padding: 10px; text-align: left; border: 1px solid #dc2626;">Time In</th>
-                            <th style="padding: 10px; text-align: left; border: 1px solid #dc2626;">Time Out</th>
-                            <th style="padding: 10px; text-align: center; border: 1px solid #dc2626;">Total Hours</th>
-                            <th style="padding: 10px; text-align: center; border: 1px solid #dc2626;">Overtime</th>
-                            <th style="padding: 10px; text-align: right; border: 1px solid #dc2626;">Daily Pay</th>
-                            <th style="padding: 10px; text-align: right; border: 1px solid #dc2626;">Total Pay</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${generateAttendanceRows(
-                          attendance,
-                          employee.daily_rate
-                        )}
-                    </tbody>
-                </table>
-            </div>
-            
-            <!-- Summary -->
-            <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; border: 2px solid #16a34a;">
-                <h3 style="font-size: 16px; color: #16a34a; margin: 0 0 15px 0; text-transform: uppercase;">
-                    Summary of Hours and Earnings
-                </h3>
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px;">
-                    <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; border: 1px solid #d1d5db;">
-                        <div style="color: #666; font-size: 11px; text-transform: uppercase; margin-bottom: 5px;">Days Worked</div>
-                        <div style="font-size: 24px; font-weight: bold; color: #dc2626;">${
-                          totals.days
-                        }</div>
-                        <div style="color: #666; font-size: 10px; margin-top: 5px;">Days</div>
-                    </div>
-                    <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; border: 1px solid #d1d5db;">
-                        <div style="color: #666; font-size: 11px; text-transform: uppercase; margin-bottom: 5px;">Total Hours</div>
-                        <div style="font-size: 24px; font-weight: bold; color: #2563eb;">${totals.hours.toFixed(
-                          2
-                        )}</div>
-                        <div style="color: #666; font-size: 10px; margin-top: 5px;">Hours</div>
-                    </div>
-                    <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; border: 1px solid #d1d5db;">
-                        <div style="color: #666; font-size: 11px; text-transform: uppercase; margin-bottom: 5px;">Regular Hours</div>
-                        <div style="font-size: 24px; font-weight: bold; color: #059669;">${totals.regularHours.toFixed(
-                          2
-                        )}</div>
-                        <div style="color: #666; font-size: 10px; margin-top: 5px;">Hours</div>
-                    </div>
-                    <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; border: 1px solid #d1d5db;">
-                        <div style="color: #666; font-size: 11px; text-transform: uppercase; margin-bottom: 5px;">Overtime</div>
-                        <div style="font-size: 24px; font-weight: bold; color: #f59e0b;">${totals.overtime.toFixed(
-                          2
-                        )}</div>
-                        <div style="color: #666; font-size: 10px; margin-top: 5px;">Hours</div>
-                    </div>
-                </div>
-                
-                <!-- Total Earnings -->
-                <div style="text-align: center; padding: 20px; background: white; border-radius: 8px; border: 2px solid #16a34a;">
-                    <div style="color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">
-                        Total Earnings
-                    </div>
-                    <div style="font-size: 36px; font-weight: bold; color: #16a34a;">
-                        ₱${totals.pay.toFixed(2)}
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Signature Section -->
-            <div style="margin-top: 40px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
-                <div style="text-align: center;">
-                    <div style="margin-bottom: 50px; color: #666; font-size: 12px;">Prepared by:</div>
-                    <div style="border-top: 1px solid #333; padding-top: 8px; font-weight: bold;">HR Department</div>
-                    <div style="color: #666; font-size: 11px; margin-top: 5px;">Date: ${formatDate(
-                      new Date()
-                    )}</div>
-                </div>
-                <div style="text-align: center;">
-                    <div style="margin-bottom: 50px; color: #666; font-size: 12px;">Checked by:</div>
-                    <div style="border-top: 1px solid #333; padding-top: 8px; font-weight: bold;">Manager/Supervisor</div>
-                    <div style="color: #666; font-size: 11px; margin-top: 5px;">Date: _______________</div>
-                </div>
-                <div style="text-align: center;">
-                    <div style="margin-bottom: 50px; color: #666; font-size: 12px;">Approved by:</div>
-                    <div style="border-top: 1px solid #333; padding-top: 8px; font-weight: bold;">Authorized Signatory</div>
-                    <div style="color: #666; font-size: 11px; margin-top: 5px;">Date: _______________</div>
-                </div>
-            </div>
-            
-            <!-- Footer -->
-            <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; color: #666; font-size: 11px;">
-                <p style="margin: 5px 0;">K-STREET ATTENDANCE SYSTEM</p>
-                <p style="margin: 5px 0;">Generated on: ${new Date().toLocaleString(
-                  "en-PH"
-                )}</p>
-                <p style="margin: 5px 0;">This is a computer-generated document. No signature is required.</p>
-            </div>
-        </div>
-    `;
-}
-
-// ============================
-// GENERATE ATTENDANCE ROWS
-// ============================
-function generateAttendanceRows(attendance, dailyRate) {
-  if (!attendance || attendance.length === 0) {
-    return `
-            <tr>
-                <td colspan="7" style="padding: 30px; text-align: center; color: #999; font-style: italic;">
-                    No attendance records found
-                </td>
-            </tr>
-        `;
-  }
-
-  return attendance
-    .map((record, index) => {
-      const bgColor = index % 2 === 0 ? "#f9f9f9" : "white";
-      const timeIn = record.time_in ? formatTime(record.time_in) : "—";
-      const timeOut = record.time_out ? formatTime(record.time_out) : "—";
-      const totalHours = parseFloat(record.total_hours || 0);
-      const otHours = parseFloat(record.ot_hours || 0);
-      const recordDailyPay = totalHours >= 4 ? parseFloat(dailyRate) : 0;
-      const totalPay = parseFloat(record.total_pay || 0);
-
-      return `
-            <tr style="background: ${bgColor};">
-                <td style="padding: 10px; border: 1px solid #ddd;">${formatDate(
-                  record.date
-                )}</td>
-                <td style="padding: 10px; border: 1px solid #ddd;">${timeIn}</td>
-                <td style="padding: 10px; border: 1px solid #ddd;">${timeOut}</td>
-                <td style="padding: 10px; border: 1px solid #ddd; text-align: center; font-weight: bold; color: ${
-                  totalHours >= 4 ? "#16a34a" : "#dc2626"
-                };">
-                    ${totalHours.toFixed(2)}h
-                </td>
-                <td style="padding: 10px; border: 1px solid #ddd; text-align: center; color: #f59e0b; font-weight: bold;">
-                    ${otHours.toFixed(2)}h
-                </td>
-                <td style="padding: 10px; border: 1px solid #ddd; text-align: right; font-weight: bold; color: #16a34a;">
-                    ₱${recordDailyPay.toFixed(2)}
-                </td>
-                <td style="padding: 10px; border: 1px solid #ddd; text-align: right; font-weight: bold; color: #16a34a;">
-                    ₱${totalPay.toFixed(2)}
-                </td>
-            </tr>
-        `;
-    })
-    .join("");
-}
-
-// ============================
 // DELETE EMPLOYEE
-// ============================
 async function deleteEmployee(employeeId, employeeName) {
   if (
     !confirm(
@@ -1523,9 +1592,79 @@ async function deleteEmployee(employeeId, employeeName) {
   }
 }
 
-// ============================
+// PAY OUT FUNCTIONS
+function openPayoutModal(employeeId) {
+  const employee = employees.find((e) => e.employee_id == employeeId);
+  if (!employee) {
+    showNotification("error", "Employee not found");
+    return;
+  }
+
+  const totalPay = cachedEmployeeData?.summary?.totalEarnings || 0;
+
+  if (totalPay <= 0) {
+    showNotification("error", "No earnings to pay out");
+    return;
+  }
+
+  document.getElementById("payoutEmployeeId").value = employeeId;
+  document.getElementById("payoutEmployeeName").textContent = employee.full_name;
+  document.getElementById("payoutAmount").textContent = `₱${totalPay.toFixed(2)}`;
+  document.getElementById("managerPin").value = "";
+
+  showModal("payoutModal");
+}
+
+async function handlePayout(e) {
+  e.preventDefault();
+
+  const employeeId = document.getElementById("payoutEmployeeId").value;
+  const managerPin = document.getElementById("managerPin").value;
+
+  if (!managerPin || !/^\d{4,6}$/.test(managerPin)) {
+    showNotification("error", "Invalid manager PIN");
+    return;
+  }
+
+  try {
+    const params = new URLSearchParams();
+    params.append("action", "processPayout");
+    params.append("employeeId", employeeId);
+    params.append("managerPin", managerPin);
+
+    const result = await apiRequest("backend/attendance_api.php", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: params.toString(),
+    });
+
+    closeModal("payoutModal");
+
+    if (result.summary) {
+      const summary = result.summary;
+      let message = `✅ Payout Successful!\n\n`;
+      message += `Employee: ${summary.employeeName}\n`;
+      message += `Amount Paid: ₱${summary.amountPaid.toFixed(2)}\n`;
+      message += `Records Reset: ${summary.recordsReset}\n`;
+      message += `Processed by: ${summary.processedBy}`;
+
+      showNotification("success", message);
+    } else {
+      showNotification("success", result.message || "Payout processed successfully");
+    }
+
+    if (selectedEmployee) {
+      await viewEmployee(selectedEmployee.employee_id);
+    }
+  } catch (error) {
+    console.error("❌ Payout Error:", error);
+    showNotification("error", error.message);
+  }
+}
+
 // HELPER FUNCTIONS
-// ============================
 function updateCurrentTime() {
   currentTime = new Date();
 
@@ -1610,9 +1749,45 @@ function filterEmployeesBySearch() {
   );
 }
 
-// ============================
+function formatDate(dateString) {
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-PH", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatDateShort(dateString) {
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-PH", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatTime(timeString) {
+  if (!timeString) return "—";
+  const time = new Date(timeString);
+  return time.toLocaleTimeString("en-PH", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+function getCurrentDate() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 // GLOBAL EXPORTS
-// ============================
 window.showAddEmployeeModal = showAddEmployeeModal;
 window.showModal = showModal;
 window.closeModal = closeModal;
@@ -1621,6 +1796,8 @@ window.processTimeInOut = processTimeInOut;
 window.viewEmployee = viewEmployee;
 window.deleteEmployee = deleteEmployee;
 window.downloadDTR = downloadDTR;
+window.downloadCurrentEmployeeDTR = downloadCurrentEmployeeDTR;
+window.downloadEmployeeDTR = downloadEmployeeDTR;
 window.loadEmployees = loadEmployees;
 window.openEditEmployee = openEditEmployee;
 window.handleEditEmployee = handleEditEmployee;
@@ -1629,93 +1806,9 @@ window.handleResetPin = handleResetPin;
 window.filterEmployees = filterEmployees;
 window.changeAttendancePage = changeAttendancePage;
 window.changeAttendancePerPage = changeAttendancePerPage;
+window.openEditTime = openEditTime;
+window.handleEditTime = handleEditTime;
+window.openPayoutModal = openPayoutModal;
+window.handlePayout = handlePayout;
 
-// Add CSS
-const style = document.createElement("style");
-style.textContent = `
-.branch-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 2px 8px;
-    background-color: #dbeafe;
-    color: #1e40af;
-    border-radius: 9999px;
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1;
-}
-
-.branch-badge svg {
-    width: 10px;
-    height: 10px;
-}
-
-.badge-blue {
-    background-color: #dbeafe;
-    color: #1e40af;
-    border: 1px solid #bfdbfe;
-}
-
-.badge-blue svg {
-    width: 12px;
-    height: 12px;
-}
-
-.modal-scroll-container {
-    height: calc(90vh - 100px);
-    overflow-y: auto;
-    padding-right: 8px;
-}
-
-.modal-scroll-container::-webkit-scrollbar {
-    width: 8px;
-}
-
-.modal-scroll-container::-webkit-scrollbar-track {
-    background: #f1f5f9;
-    border-radius: 4px;
-}
-
-.modal-scroll-container::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 4px;
-}
-
-.modal-scroll-container::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-}
-
-.attendance-table-container {
-    max-height: 300px;
-    overflow-y: auto;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-}
-
-.attendance-table-container table {
-    min-width: 800px;
-}
-
-.attendance-table-container::-webkit-scrollbar {
-    height: 6px;
-    width: 6px;
-}
-
-.attendance-table-container::-webkit-scrollbar-track {
-    background: #f8fafc;
-    border-radius: 3px;
-}
-
-.attendance-table-container::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 3px;
-}
-
-.attendance-table-container::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-}
-`;
-document.head.appendChild(style);
-
-console.log("✅ attendance.js loaded successfully with DTR PDF export!");
+console.log("✅ ATTENDANCE.JS WITH PAYOUT SYSTEM LOADED!");

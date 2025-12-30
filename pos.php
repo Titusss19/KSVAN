@@ -7,7 +7,21 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <link rel="stylesheet" href="css/pos.css">
-  
+    <style>
+        @keyframes fade-in {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .animate-fade-in {
+            animation: fade-in 0.3s ease-out;
+        }
+    </style>
 </head>
 <body class="bg-gray-50 overflow-x-hidden">
     <?php 
@@ -63,22 +77,21 @@
                             Product Catalog (<?php echo htmlspecialchars($user['branch'] ?? 'main'); ?> Branch)
                         </h2>
 
-              <!-- Search and Filter -->
-<div class="flex flex-col md:flex-row gap-3 md:gap-4 mb-4 md:mb-6">
-    <!-- Search bar -->
-    <div class="flex-1">
-        <input type="text" placeholder="Search products..." id="searchInput" 
-               class="w-full px-3 py-2 md:px-5 md:py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all text-sm md:text-base">
-    </div>
-    
-    <!-- Categories - LIMITED WIDTH para mag-wrap after 4 -->
-    <div class="md:w-2/3 flex flex-wrap gap-1 md:gap-2 content-start items-start" id="categoryButtons">
-        <!-- All categories - magw-wrap after 4 kasi limited width -->
-    </div>
-</div>
+                        <!-- Search and Filter -->
+                        <div class="flex flex-col md:flex-row gap-3 md:gap-4 mb-4 md:mb-6">
+                            <!-- Search bar -->
+                            <div class="flex-1">
+                                <input type="text" placeholder="Search products..." id="searchInput" 
+                                       class="w-full px-3 py-2 md:px-5 md:py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all text-sm md:text-base">
+                            </div>
+                            
+                            <!-- Categories -->
+                            <div class="md:w-2/3 flex flex-wrap gap-1 md:gap-2 content-start items-start" id="categoryButtons">
+                            </div>
+                        </div>
+                        
                         <!-- Product Grid -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-5" id="productGrid">
-                            <!-- Products will be loaded via JavaScript -->
                             <div class="text-center py-8 md:py-12 text-gray-400 col-span-full">
                                 <div class="text-3xl md:text-4xl mb-2 md:mb-3">🛒</div>
                                 <p class="text-base md:text-lg font-semibold text-gray-500">Loading products...</p>
@@ -87,17 +100,23 @@
                         
                         <!-- Pagination Container -->
                         <div id="paginationContainer" class="mt-4 md:mt-6 flex justify-center" style="display: none;">
-                            <!-- Pagination will be loaded dynamically -->
                         </div>
                     </div>
 
                     <!-- Right Panel - Order -->
                     <div class="lg:w-1/3 p-4 md:p-6 bg-gradient-to-br from-gray-50 to-white">
+                        <!-- NEW: Header with View Orders button -->
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 md:gap-0 mb-4 md:mb-6">
                             <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">Current Order</h2>
-                            <button onclick="clearCart()" class="px-3 py-1.5 md:px-5 md:py-2.5 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold rounded-xl shadow-lg transition-all text-xs sm:text-sm mt-1 sm:mt-0">
-                                Clear All
-                            </button>
+                            <div class="flex gap-2">
+                                <button onclick="showQueueModal()" class="relative px-3 py-1.5 md:px-4 md:py-2 bg-black hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow-lg transition-all text-xs sm:text-sm">
+                                    <i class="fas fa-list"></i> Orders
+                                    <span id="queueBadge" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center" style="display: none;">0</span>
+                                </button>
+                                <button onclick="clearCart()" class="px-3 py-1.5 md:px-5 md:py-2.5 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold rounded-xl shadow-lg transition-all text-xs sm:text-sm">
+                                    Clear All
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Discount Buttons -->
@@ -169,9 +188,33 @@
                             <!-- Payment Amount -->
                             <h1 class="text-black font-bold text-base md:text-lg mb-1 md:mb-2">Payment Amount</h1>
                             <div class="space-y-3 md:space-y-4">
-                                <div class="grid grid-cols-3 gap-2 md:gap-3">
+                                <div class="grid grid-cols-4 gap-2 md:gap-3">
                                     <button id="exactAmountBtn" onclick="setPaymentExact()" class="py-2.5 md:py-3.5 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-xl font-bold shadow-md hover:shadow-lg transition-all text-xs md:text-sm">
                                         Exact Amount
+                                    </button>
+                                      <button onclick="setPaymentAmount(1)" class="py-2.5 md:py-3.5 bg-red-500 text-white rounded-xl font-bold shadow-md hover:bg-red-600 hover:shadow-lg transition-all text-xs md:text-sm">
+                                        ₱1
+                                    </button>
+                                      <button onclick="setPaymentAmount(5)" class="py-2.5 md:py-3.5 bg-red-500 text-white rounded-xl font-bold shadow-md hover:bg-red-600 hover:shadow-lg transition-all text-xs md:text-sm">
+                                        ₱5
+                                    </button>
+                                      <button onclick="setPaymentAmount(10)" class="py-2.5 md:py-3.5 bg-red-500 text-white rounded-xl font-bold shadow-md hover:bg-red-600 hover:shadow-lg transition-all text-xs md:text-sm">
+                                        ₱10
+                                    </button>
+                                    <button onclick="setPaymentAmount(20)" class="py-2.5 md:py-3.5 bg-red-500 text-white rounded-xl font-bold shadow-md hover:bg-red-600 hover:shadow-lg transition-all text-xs md:text-sm">
+                                        ₱20
+                                    </button>
+                                    <button onclick="setPaymentAmount(50)" class="py-2.5 md:py-3.5 bg-red-500 text-white rounded-xl font-bold shadow-md hover:bg-red-600 hover:shadow-lg transition-all text-xs md:text-sm">
+                                        ₱50
+                                    </button>
+                                    <button onclick="setPaymentAmount(100)" class="py-2.5 md:py-3.5 bg-red-500 text-white rounded-xl font-bold shadow-md hover:bg-red-600 hover:shadow:shadow-lg transition-all text-xs md:text-sm">
+                                        ₱100
+                                    </button>
+                                    <button onclick="setPaymentAmount(200)" class="py-2.5 md:py-3.5 bg-red-500 text-white rounded-xl font-bold shadow-md hover:bg-red-600 hover:shadow-lg transition-all text-xs md:text-sm">
+                                        ₱200
+                                    </button>
+                                    <button onclick="setPaymentAmount(300)" class="py-2.5 md:py-3.5 bg-red-500 text-white rounded-xl font-bold shadow-md hover:bg-red-600 hover:shadow-lg transition-all text-xs md:text-sm">
+                                        ₱300
                                     </button>
                                     <button onclick="setPaymentAmount(500)" class="py-2.5 md:py-3.5 bg-red-500 text-white rounded-xl font-bold shadow-md hover:bg-red-600 hover:shadow-lg transition-all text-xs md:text-sm">
                                         ₱500
@@ -187,6 +230,11 @@
                                            class="w-full px-3 py-2 md:px-5 md:py-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-base md:text-lg font-semibold transition-all">
                                 </div>
 
+                                <!-- NEW: Add to Queue Button (appears when cart has items) -->
+                                <button onclick="addToQueue()" id="addToQueueBtn" style="display: none;" class="w-full bg-black text-white py-3 md:py-4 rounded-xl font-bold text-base md:text-lg hover:bg-red-600 transition-all shadow-xl hover:shadow-2xl">
+                                    <i class="fas fa-plus-circle"></i> Add to Queue
+                                </button>
+
                                 <button onclick="processPayment()" id="processPaymentBtn" class="w-full bg-red-500 text-white py-3 md:py-5 rounded-xl font-bold text-base md:text-lg hover:bg-red-700 transition-all shadow-xl hover:shadow-2xl disabled:bg-gray-300 disabled:cursor-not-allowed">
                                     Process Payment
                                 </button>
@@ -198,6 +246,7 @@
         </div>
     </main>
 
+    <!-- Existing Modals (Store Success, Addons, Payment, Receipt) remain the same -->
     <!-- Store Success Modal -->
     <div id="storeSuccessModal" class="modal">
         <div class="modal-content">
@@ -306,6 +355,58 @@
                     Save PNG
                 </button>
                 <button onclick="closeReceiptModal()" class="flex-1 bg-gradient-to-r from-gray-500 to-gray-600 text-white py-2.5 md:py-3 rounded-xl font-semibold hover:from-gray-600 hover:to-gray-700 transition-all shadow-lg hover:shadow-xl text-sm md:text-base">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW: Queue Modal -->
+    <div id="queueModal" class="modal">
+        <div class="modal-content" style="max-width: 900px; max-height: 90vh;">
+            <div class="p-4 md:p-6 bg-red-600 text-white rounded-t-3xl sticky top-0 z-10">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 class="text-xl md:text-2xl font-bold">Queued Orders</h3>
+                        <p class="text-blue-100 mt-1 text-sm md:text-base">Manage pending orders</p>
+                    </div>
+                    <button onclick="closeQueueModal()" class="text-white hover:bg-white hover:bg-opacity-20 rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center transition-all text-2xl md:text-3xl font-bold">
+                        ×
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-4 md:p-6 overflow-y-auto" style="max-height: calc(90vh - 140px);">
+                <div id="queuedOrdersContainer" class="space-y-4">
+                    <!-- Queued orders will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW: View Queue Order Modal -->
+    <div id="viewQueueModal" class="modal">
+        <div class="modal-content" style="max-width: 600px; max-height: 90vh;">
+            <div class="p-4 md:p-6 bg-red-600 text-white rounded-t-3xl sticky top-0 z-10">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 class="text-xl md:text-2xl font-bold">Order Details</h3>
+                        <p class="text-green-100 mt-1 text-sm md:text-base">View complete order information</p>
+                    </div>
+                    <button onclick="closeViewQueueModal()" class="text-white hover:bg-white hover:bg-opacity-20 rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center transition-all text-2xl md:text-3xl font-bold">
+                        ×
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-4 md:p-6 overflow-y-auto" style="max-height: calc(90vh - 140px);">
+                <div id="viewQueueContent">
+                    <!-- Order details will be populated here -->
+                </div>
+            </div>
+
+            <div class="p-4 md:p-6 border-t-2 border-gray-100">
+                <button onclick="closeViewQueueModal()" class="w-full bg-gradient-to-r from-gray-500 to-gray-600 text-white py-2.5 md:py-3 rounded-xl font-semibold hover:from-gray-600 hover:to-gray-700 transition-all shadow-lg hover:shadow-xl text-sm md:text-base">
                     Close
                 </button>
             </div>

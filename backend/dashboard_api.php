@@ -1,5 +1,5 @@
 <?php
-// backend/dashboard_api.php - CORRECT VERSION - ADMIN IN DB, OWNER IS DISPLAY ONLY
+// backend/dashboard_api.php - FIXED VERSION WITH OUTSOURCE CALCULATION
 session_start();
 
 require_once __DIR__ . '/config/database.php';
@@ -57,7 +57,7 @@ function buildBranchFilter($selectedBranch, $userBranch, $userRole) {
     return ['', []];
 }
 
-// ===== VALIDATE ROLE - NO MORE CONVERSION! =====
+// ===== VALIDATE ROLE =====
 function validateRole($inputRole, $currentUserRole) {
     $inputRole = trim(strtolower($inputRole));
     
@@ -67,7 +67,6 @@ function validateRole($inputRole, $currentUserRole) {
         return ['success' => false, 'message' => 'Invalid role specified'];
     }
     
-    // Permission check
     if ($inputRole === 'admin') {
         if ($currentUserRole !== 'admin') {
             return ['success' => false, 'message' => 'You do not have permission to create Owner accounts'];
@@ -80,11 +79,10 @@ function validateRole($inputRole, $currentUserRole) {
         }
     }
     
-    // NO CONVERSION! Store as-is in database
     return ['success' => true, 'role' => $inputRole];
 }
 
-// ===== GET DASHBOARD STATS =====
+// ===== GET DASHBOARD STATS - WITH OUTSOURCE =====
 if ($action === 'getStats') {
     $selectedBranch = $_POST['branch'] ?? 'all';
     $userBranch = getUserBranch($user);
@@ -94,6 +92,7 @@ if ($action === 'getStats') {
             'grossSales' => 0,
             'netSales' => 0,
             'voidedAmount' => 0,
+            'outSourceAmount' => 0,  // Initialize OutSource
             'todaySales' => 0,
             'todayGrossSales' => 0,
             'todayVoidedAmount' => 0,
@@ -109,6 +108,7 @@ if ($action === 'getStats') {
         
         list($whereClause, $params) = buildBranchFilter($selectedBranch, $userBranch, $user['role']);
         
+        // Get Sales Data
         $salesQuery = "SELECT 
             COALESCE(SUM(total), 0) as total_sales,
             COALESCE(SUM(CASE WHEN is_void = 1 THEN total ELSE 0 END), 0) as voided_amount,
@@ -123,12 +123,25 @@ if ($action === 'getStats') {
         if ($salesResult) {
             $stats['grossSales'] = floatval($salesResult['total_sales'] ?? 0);
             $stats['voidedAmount'] = floatval($salesResult['voided_amount'] ?? 0);
-            $stats['netSales'] = $stats['grossSales'] - $stats['voidedAmount'];
-            $stats['totalSales'] = $stats['netSales'];
             $stats['voidedOrdersCount'] = intval($salesResult['voided_count'] ?? 0);
             $stats['totalTransactions'] = intval($salesResult['total_orders'] ?? 0) - $stats['voidedOrdersCount'];
         }
         
+        // ===== GET OUTSOURCE AMOUNT =====
+        $outSourceQuery = "SELECT COALESCE(SUM(amount), 0) as outsource_total FROM outsource_records $whereClause";
+        $stmt = $pdo->prepare($outSourceQuery);
+        $stmt->execute($params);
+        $outSourceResult = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($outSourceResult) {
+            $stats['outSourceAmount'] = floatval($outSourceResult['outsource_total'] ?? 0);
+        }
+        
+        // ===== CALCULATE NET SALES = GROSS - VOIDED - OUTSOURCE =====
+        $stats['netSales'] = $stats['grossSales'] - $stats['voidedAmount'] - $stats['outSourceAmount'];
+        $stats['totalSales'] = $stats['netSales'];
+        
+        // Get Today's Data
         $today = date('Y-m-d');
         if ($whereClause) {
             $todayQuery = "SELECT 
@@ -162,6 +175,7 @@ if ($action === 'getStats') {
             $stats['todayVoidedOrdersCount'] = intval($todayResult['today_voided_count'] ?? 0);
         }
         
+        // Get Inventory Data
         try {
             $inventoryQuery = "SELECT 
                 COALESCE(SUM(total_price), 0) as total_value,
@@ -181,6 +195,7 @@ if ($action === 'getStats') {
             $stats['inventoryItemCount'] = 0;
         }
         
+        // Get Active Employees
         if ($whereClause) {
             $employeesQuery = "SELECT COUNT(*) as active_count FROM users 
                 WHERE status = 'Active' AND " . substr($whereClause, 6);
@@ -203,7 +218,7 @@ if ($action === 'getStats') {
     }
 }
 
-// ===== GET USERS - NO CONVERSION! =====
+// ===== GET USERS =====
 elseif ($action === 'getUsers') {
     $selectedBranch = $_POST['branch'] ?? 'all';
     
@@ -227,9 +242,6 @@ elseif ($action === 'getUsers') {
         
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // NO CONVERSION! Return as-is
-        // Frontend will handle display conversion
-        
         echo formatResponse(true, 'Users retrieved successfully', $users);
         
     } catch (PDOException $e) {
@@ -237,7 +249,7 @@ elseif ($action === 'getUsers') {
     }
 }
 
-// ===== ADD USER - NO CONVERSION! =====
+// ===== ADD USER =====
 elseif ($action === 'addUser') {
     if (!hasPermission($user, 'manager')) {
         echo formatResponse(false, 'Insufficient permissions');
@@ -252,9 +264,6 @@ elseif ($action === 'addUser') {
     $status = $_POST['status'] ?? 'Active';
     $branch = trim($_POST['branch'] ?? getUserBranch($user));
     $void_pin = $_POST['void_pin'] ?? '';
-    
-    error_log("=== ADD USER ===");
-    error_log("Received role: " . $inputRole);
     
     if (empty($email) || empty($password) || empty($confirmPassword)) {
         echo formatResponse(false, 'Email and password are required');
@@ -271,15 +280,12 @@ elseif ($action === 'addUser') {
         exit();
     }
     
-    // Validate role - NO CONVERSION!
     $roleValidation = validateRole($inputRole, $user['role']);
     if (!$roleValidation['success']) {
         echo formatResponse(false, $roleValidation['message']);
         exit();
     }
-    $dbRole = $roleValidation['role']; // This is "admin", "manager", or "cashier"
-    
-    error_log("Storing in DB: " . $dbRole);
+    $dbRole = $roleValidation['role'];
     
     try {
         $checkQuery = "SELECT id FROM users WHERE email = ?";
@@ -318,35 +324,19 @@ elseif ($action === 'addUser') {
             
             $pdo->commit();
             
-            // Verify
-            $verifyQuery = "SELECT id, role, email FROM users WHERE id = ?";
-            $verifyStmt = $pdo->prepare($verifyQuery);
-            $verifyStmt->execute([$userId]);
-            $verifyResult = $verifyStmt->fetch(PDO::FETCH_ASSOC);
-            
-            $actualRole = $verifyResult['role'] ?? 'NOT_FOUND';
-            
-            error_log("Verified from DB: " . $actualRole);
-            
-            echo formatResponse(true, 'User added successfully', [
-                'user_id' => $userId,
-                'input_role' => $inputRole,
-                'stored_role' => $actualRole
-            ]);
+            echo formatResponse(true, 'User added successfully', ['user_id' => $userId]);
             
         } catch (Exception $e) {
             $pdo->rollBack();
-            error_log("Insert failed: " . $e->getMessage());
             throw $e;
         }
         
     } catch (PDOException $e) {
-        error_log("Add User Error: " . $e->getMessage());
         echo formatResponse(false, 'Error adding user: ' . $e->getMessage());
     }
 }
 
-// ===== UPDATE USER - NO CONVERSION! =====
+// ===== UPDATE USER =====
 elseif ($action === 'updateUser') {
     if (!hasPermission($user, 'manager')) {
         echo formatResponse(false, 'Insufficient permissions');
@@ -361,19 +351,12 @@ elseif ($action === 'updateUser') {
     $branch = trim($_POST['branch'] ?? getUserBranch($user));
     $void_pin = $_POST['void_pin'] ?? '';
     
-    error_log("=== UPDATE USER ===");
-    error_log("User ID: " . $id);
-    error_log("Received role: " . $inputRole);
-    
-    // Validate role - NO CONVERSION!
     $roleValidation = validateRole($inputRole, $user['role']);
     if (!$roleValidation['success']) {
         echo formatResponse(false, $roleValidation['message']);
         exit();
     }
-    $dbRole = $roleValidation['role']; // This is "admin", "manager", or "cashier"
-    
-    error_log("Storing in DB: " . $dbRole);
+    $dbRole = $roleValidation['role'];
     
     try {
         $hashedVoidPin = null;
@@ -410,33 +393,16 @@ elseif ($action === 'updateUser') {
                 $stmt->execute([$email, $username, $dbRole, $status, $branch, $id]);
             }
             
-            error_log("Rows affected: " . $stmt->rowCount());
-            
             $pdo->commit();
             
-            // Verify
-            $verifyQuery = "SELECT id, role, email FROM users WHERE id = ?";
-            $verifyStmt = $pdo->prepare($verifyQuery);
-            $verifyStmt->execute([$id]);
-            $verifyResult = $verifyStmt->fetch(PDO::FETCH_ASSOC);
-            
-            $actualRole = $verifyResult['role'] ?? 'NOT_FOUND';
-            
-            error_log("Verified from DB: " . $actualRole);
-            
-            echo formatResponse(true, 'User updated successfully', [
-                'input_role' => $inputRole,
-                'stored_role' => $actualRole
-            ]);
+            echo formatResponse(true, 'User updated successfully');
             
         } catch (Exception $e) {
             $pdo->rollBack();
-            error_log("Update failed: " . $e->getMessage());
             throw $e;
         }
         
     } catch (PDOException $e) {
-        error_log("Update User Error: " . $e->getMessage());
         echo formatResponse(false, 'Error updating user: ' . $e->getMessage());
     }
 }
@@ -478,9 +444,7 @@ elseif ($action === 'deleteUser') {
     }
 }
 
-// ===== REST OF THE CODE (announcements, branches, employees, cash, etc.) =====
-// Keep all other actions unchanged...
-
+// ===== GET ANNOUNCEMENTS =====
 elseif ($action === 'getAnnouncements') {
     $selectedBranch = $_POST['branch'] ?? 'all';
     $userBranch = getUserBranch($user);
@@ -509,6 +473,7 @@ elseif ($action === 'getAnnouncements') {
     }
 }
 
+// ===== POST ANNOUNCEMENT =====
 elseif ($action === 'postAnnouncement') {
     $title = trim($_POST['title'] ?? '');
     $message = trim($_POST['message'] ?? '');
@@ -543,6 +508,7 @@ elseif ($action === 'postAnnouncement') {
     }
 }
 
+// ===== GET BRANCHES =====
 elseif ($action === 'getBranches') {
     try {
         if ($user['role'] === 'admin') {
@@ -564,6 +530,7 @@ elseif ($action === 'getBranches') {
     }
 }
 
+// ===== GET EMPLOYEES =====
 elseif ($action === 'getEmployees') {
     $selectedBranch = $_POST['branch'] ?? 'all';
     $userBranch = getUserBranch($user);
@@ -670,6 +637,7 @@ elseif ($action === 'getEmployees') {
     }
 }
 
+// ===== CASH IN =====
 elseif ($action === 'cashIn') {
     $amount = floatval($_POST['amount'] ?? 0);
     $reason = trim($_POST['reason'] ?? '');
@@ -691,16 +659,24 @@ elseif ($action === 'cashIn') {
         $stmt->execute([$userId, $branch, $amount, $reason]);
         
         if ($stmt->rowCount() > 0) {
-            echo formatResponse(true, 'Cash in recorded successfully', ['id' => $pdo->lastInsertId(), 'amount' => $amount, 'type' => 'deposit', 'reason' => $reason, 'branch' => $branch, 'user_id' => $userId, 'created_at' => date('Y-m-d H:i:s')]);
+            echo formatResponse(true, 'Cash in recorded successfully', [
+                'id' => $pdo->lastInsertId(),
+                'amount' => $amount,
+                'type' => 'deposit',
+                'reason' => $reason,
+                'branch' => $branch,
+                'user_id' => $userId,
+                'created_at' => date('Y-m-d H:i:s')
+            ]);
         } else {
             echo formatResponse(false, 'Failed to record cash in');
         }
     } catch (PDOException $e) {
-        error_log("Cash In Error: " . $e->getMessage());
         echo formatResponse(false, 'Database error: ' . $e->getMessage());
     }
 }
 
+// ===== CASH OUT =====
 elseif ($action === 'cashOut') {
     $amount = floatval($_POST['amount'] ?? 0);
     $reason = trim($_POST['reason'] ?? '');
@@ -722,12 +698,19 @@ elseif ($action === 'cashOut') {
         $stmt->execute([$userId, $branch, $amount, $reason]);
         
         if ($stmt->rowCount() > 0) {
-            echo formatResponse(true, 'Cash out recorded successfully', ['id' => $pdo->lastInsertId(), 'amount' => $amount, 'type' => 'withdrawal', 'reason' => $reason, 'branch' => $branch, 'user_id' => $userId, 'created_at' => date('Y-m-d H:i:s')]);
+            echo formatResponse(true, 'Cash out recorded successfully', [
+                'id' => $pdo->lastInsertId(),
+                'amount' => $amount,
+                'type' => 'withdrawal',
+                'reason' => $reason,
+                'branch' => $branch,
+                'user_id' => $userId,
+                'created_at' => date('Y-m-d H:i:s')
+            ]);
         } else {
             echo formatResponse(false, 'Failed to record cash out');
         }
     } catch (PDOException $e) {
-        error_log("Cash Out Error: " . $e->getMessage());
         echo formatResponse(false, 'Database error: ' . $e->getMessage());
     }
 }
@@ -742,6 +725,11 @@ elseif ($action === 'addOutSource') {
     
     if (empty($personnelName)) {
         echo formatResponse(false, 'Personnel name is required');
+        exit();
+    }
+    
+    if ($amount <= 0) {
+        echo formatResponse(false, 'Amount must be greater than 0');
         exit();
     }
     
@@ -762,7 +750,6 @@ elseif ($action === 'addOutSource') {
             echo formatResponse(false, 'Failed to add Out Source record');
         }
     } catch (PDOException $e) {
-        error_log("Add Out Source Error: " . $e->getMessage());
         echo formatResponse(false, 'Database error: ' . $e->getMessage());
     }
 }

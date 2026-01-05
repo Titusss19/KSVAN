@@ -33,29 +33,13 @@ class SalesReport {
     this.outTotalRecords = 0;
     this.outData = [];
 
-    console.log("🔍 Checking modals...");
-    console.log(
-      "receiptModal exists:",
-      !!document.getElementById("receiptModal")
-    );
-    console.log("voidModal exists:", !!document.getElementById("voidModal"));
-    console.log(
-      "cashierDetailModal exists:",
-      !!document.getElementById("cashierDetailModal")
-    );
-    console.log(
-      "loadingOverlay exists:",
-      !!document.getElementById("loadingOverlay")
-    );
-
+    console.log("🔍 Sales Report initialized");
     this.init();
   }
 
   init() {
     this.bindEvents();
     this.loadSales();
-
-    // Load branches if admin
     if (this.isAdmin()) {
       this.loadBranches();
     }
@@ -141,7 +125,6 @@ class SalesReport {
     // Cashier Pagination
     const cashierPrevBtn = document.getElementById("cashierPrevPage");
     const cashierNextBtn = document.getElementById("cashierNextPage");
-
     if (cashierPrevBtn) {
       cashierPrevBtn.addEventListener("click", () => {
         if (this.cashierCurrentPage > 1) {
@@ -150,7 +133,6 @@ class SalesReport {
         }
       });
     }
-
     if (cashierNextBtn) {
       cashierNextBtn.addEventListener("click", () => {
         if (this.cashierCurrentPage < this.cashierTotalPages) {
@@ -163,7 +145,6 @@ class SalesReport {
     // Void Pagination
     const voidPrevBtn = document.getElementById("voidPrevPage");
     const voidNextBtn = document.getElementById("voidNextPage");
-
     if (voidPrevBtn) {
       voidPrevBtn.addEventListener("click", () => {
         if (this.voidCurrentPage > 1) {
@@ -172,7 +153,6 @@ class SalesReport {
         }
       });
     }
-
     if (voidNextBtn) {
       voidNextBtn.addEventListener("click", () => {
         if (this.voidCurrentPage < this.voidTotalPages) {
@@ -185,7 +165,6 @@ class SalesReport {
     // Cashout Pagination
     const cashoutPrevBtn = document.getElementById("cashoutPrevPage");
     const cashoutNextBtn = document.getElementById("cashoutNextPage");
-
     if (cashoutPrevBtn) {
       cashoutPrevBtn.addEventListener("click", () => {
         if (this.cashoutCurrentPage > 1) {
@@ -194,7 +173,6 @@ class SalesReport {
         }
       });
     }
-
     if (cashoutNextBtn) {
       cashoutNextBtn.addEventListener("click", () => {
         if (this.cashoutCurrentPage < this.cashoutTotalPages) {
@@ -207,7 +185,6 @@ class SalesReport {
     // Out Source Pagination
     const outPrevBtn = document.getElementById("outPrevPage");
     const outNextBtn = document.getElementById("outNextPage");
-
     if (outPrevBtn) {
       outPrevBtn.addEventListener("click", () => {
         if (this.outCurrentPage > 1) {
@@ -216,7 +193,6 @@ class SalesReport {
         }
       });
     }
-
     if (outNextBtn) {
       outNextBtn.addEventListener("click", () => {
         if (this.outCurrentPage < this.outTotalPages) {
@@ -226,7 +202,7 @@ class SalesReport {
       });
     }
 
-    // Receipt modal close
+    // Modal close buttons
     const closeReceiptBtn = document.getElementById("closeReceipt");
     if (closeReceiptBtn) {
       closeReceiptBtn.addEventListener("click", () => {
@@ -241,7 +217,6 @@ class SalesReport {
       });
     }
 
-    // Void modal close
     const cancelVoidBtn = document.getElementById("cancelVoid");
     if (cancelVoidBtn) {
       cancelVoidBtn.addEventListener("click", () => {
@@ -256,7 +231,6 @@ class SalesReport {
       });
     }
 
-    // Cashier detail modal close
     const closeCashierDetailBtn = document.getElementById("closeCashierDetail");
     if (closeCashierDetailBtn) {
       closeCashierDetailBtn.addEventListener("click", () => {
@@ -278,7 +252,6 @@ class SalesReport {
       });
     }
 
-    // Out Source detail modal close
     const closeOutDetailBtn = document.getElementById("closeOutDetail");
     if (closeOutDetailBtn) {
       closeOutDetailBtn.addEventListener("click", () => {
@@ -293,7 +266,6 @@ class SalesReport {
       });
     }
 
-    // Close all modals with X button or backdrop click
     document.addEventListener("click", (e) => {
       if (
         e.target.classList.contains("modal-close") ||
@@ -304,7 +276,6 @@ class SalesReport {
           modal.classList.add("hidden");
         }
       }
-
       if (e.target.classList.contains("modal-overlay")) {
         e.target.classList.add("hidden");
       }
@@ -325,13 +296,9 @@ class SalesReport {
     }
   }
 
-  // ============================================
-  // TAB SWITCHING
-  // ============================================
   switchTab(tab) {
     this.activeTab = tab;
 
-    // Update tab buttons
     document.querySelectorAll(".tab-btn-kstreet").forEach((btn) => {
       if (btn.dataset.tab === tab) {
         btn.classList.add("active");
@@ -340,12 +307,10 @@ class SalesReport {
       }
     });
 
-    // Hide all report panes
     document.querySelectorAll(".report-pane").forEach((pane) => {
       pane.classList.add("hidden");
     });
 
-    // Show selected pane and load data
     if (tab === "sales") {
       document.getElementById("salesReport").classList.remove("hidden");
       if (this.salesData.length === 0) {
@@ -374,7 +339,6 @@ class SalesReport {
     }
   }
 
-  // Helper method
   closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
@@ -382,12 +346,8 @@ class SalesReport {
     }
   }
 
-  // ============================================
-  // LOAD SALES
-  // ============================================
   async loadSales() {
     this.showLoading(true);
-
     const params = new URLSearchParams({
       action: "sales",
       page: this.currentPage,
@@ -412,13 +372,11 @@ class SalesReport {
     try {
       const response = await fetch(`backend/salesapi.php?${params.toString()}`);
       const responseText = await response.text();
-
       let result;
       try {
         result = JSON.parse(responseText);
       } catch (e) {
         console.error("JSON Parse Error:", e);
-        console.error("Response was:", responseText);
         throw new Error("Server returned invalid response");
       }
 
@@ -443,12 +401,8 @@ class SalesReport {
     }
   }
 
-  // ============================================
-  // LOAD CASHIER SESSIONS
-  // ============================================
   async loadCashierSessions() {
     this.showLoading(true);
-
     const params = new URLSearchParams({
       action: "cashier-sessions",
       page: this.cashierCurrentPage,
@@ -471,13 +425,11 @@ class SalesReport {
     try {
       const response = await fetch(`backend/salesapi.php?${params.toString()}`);
       const responseText = await response.text();
-
       let result;
       try {
         result = JSON.parse(responseText);
       } catch (e) {
         console.error("JSON Parse Error:", e);
-        console.error("Response was:", responseText);
         throw new Error("Server returned invalid response");
       }
 
@@ -502,12 +454,8 @@ class SalesReport {
     }
   }
 
-  // ============================================
-  // LOAD VOID ORDERS
-  // ============================================
   async loadVoidOrders() {
     this.showLoading(true);
-
     const params = new URLSearchParams({
       action: "void-orders",
       page: this.voidCurrentPage,
@@ -530,7 +478,6 @@ class SalesReport {
     try {
       const response = await fetch(`backend/salesapi.php?${params.toString()}`);
       const responseText = await response.text();
-
       let result;
       try {
         result = JSON.parse(responseText);
@@ -547,7 +494,6 @@ class SalesReport {
       this.voidTotalRecords = result.pagination.total;
       this.voidTotalPages = result.pagination.pages;
 
-      // Update void count badge
       const voidCountBadge = document.getElementById("voidCount");
       if (voidCountBadge) {
         voidCountBadge.textContent = this.voidTotalRecords;
@@ -566,12 +512,8 @@ class SalesReport {
     }
   }
 
-  // ============================================
-  // LOAD CASH-OUT RECORDS
-  // ============================================
   async loadCashoutRecords() {
     this.showLoading(true);
-
     const params = new URLSearchParams({
       action: "cashout",
       page: this.cashoutCurrentPage,
@@ -594,13 +536,11 @@ class SalesReport {
     try {
       const response = await fetch(`backend/salesapi.php?${params.toString()}`);
       const responseText = await response.text();
-
       let result;
       try {
         result = JSON.parse(responseText);
       } catch (e) {
         console.error("JSON Parse Error:", e);
-        console.error("Response was:", responseText);
         throw new Error("Server returned invalid response");
       }
 
@@ -625,12 +565,8 @@ class SalesReport {
     }
   }
 
-  // ============================================
-  // LOAD OUT SOURCE RECORDS
-  // ============================================
   async loadOutSourceRecords() {
     this.showLoading(true);
-
     const params = new URLSearchParams({
       action: "outsource",
       page: this.outCurrentPage,
@@ -651,28 +587,22 @@ class SalesReport {
     }
 
     console.log(
-      "📤 Out Source Request URL:",
+      "📤 OutSource Request:",
       `backend/salesapi.php?${params.toString()}`
     );
 
     try {
       const response = await fetch(`backend/salesapi.php?${params.toString()}`);
       const responseText = await response.text();
-
-      console.log("📥 Out Source Raw Response:", responseText);
+      console.log("📥 OutSource Response:", responseText);
 
       let result;
       try {
         result = JSON.parse(responseText);
       } catch (e) {
         console.error("❌ JSON Parse Error:", e);
-        console.error("Response was:", responseText);
-        throw new Error(
-          "Server returned invalid JSON: " + responseText.substring(0, 200)
-        );
+        throw new Error("Server returned invalid JSON");
       }
-
-      console.log("📊 Out Source Parsed Result:", result);
 
       if (!result.success) {
         throw new Error(result.message || "Failed to load outsource records");
@@ -682,15 +612,15 @@ class SalesReport {
       this.outTotalRecords = result.pagination?.total || 0;
       this.outTotalPages = result.pagination?.pages || 1;
 
-      console.log("✅ Out Source Data loaded:", this.outData.length, "records");
+      console.log("✅ OutSource loaded:", this.outData.length, "records");
 
       this.renderOutSourceTable();
       this.updateOutSourcePagination();
     } catch (error) {
-      console.error("❌ Error loading outsource records:", error);
+      console.error("❌ OutSource Error:", error);
       this.showNotification(
         "error",
-        "Failed to load outsource records: " + error.message
+        "Failed to load outsource: " + error.message
       );
     } finally {
       this.showLoading(false);
@@ -701,7 +631,6 @@ class SalesReport {
     try {
       const response = await fetch("backend/salesapi.php?action=branches");
       const result = await response.json();
-
       if (result.success) {
         const branchFilter = document.getElementById("branchFilter");
         if (branchFilter) {
@@ -716,9 +645,6 @@ class SalesReport {
     }
   }
 
-  // ============================================
-  // RENDER SALES TABLE
-  // ============================================
   renderSalesTable() {
     const tbody = document.getElementById("salesTableBody");
     const emptyState = document.getElementById("salesEmptyState");
@@ -736,94 +662,72 @@ class SalesReport {
     tbody.innerHTML = this.salesData
       .map(
         (order) => `
-            <tr class="hover:bg-red-50 transition-colors duration-150">
-                <td class="px-6 py-4 text-sm font-medium text-gray-900">
-                    #${order.id}
-                    ${
-                      order.is_void
-                        ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 ml-2">VOIDED</span>'
-                        : ""
-                    }
-                </td>
-                <td class="px-6 py-4 text-sm text-gray-600">
-                    <div class="flex flex-col">
-                        <span class="font-medium text-gray-900">${this.formatDate(
-                          order.created_at
-                        )}</span>
-                        <span class="text-xs text-gray-500">${this.formatTimeOnly(
-                          order.created_at
-                        )}</span>
-                    </div>
-                </td>
-                <td class="px-6 py-4 order-details-cell">
-                    <div class="space-y-1">
-                        <div class="products-list">
-                            ${this.formatProductNames(order)}
-                        </div>
-                        <div class="order-meta">
-                            <span class="amount">₱${parseFloat(
-                              order.total
-                            ).toFixed(2)}</span>
-                            <span class="order-type-badge ${this.getOrderTypeClass(
-                              order.orderType
-                            )}">
-                                ${order.orderType}
-                            </span>
-                        </div>
-                    </div>
-                </td>
-                <td class="px-6 py-4">
-                    <div class="space-y-1">
-                        <div class="text-sm font-medium text-gray-700">
-                            ${
-                              order.cashier_name ||
-                              order.cashier_email ||
-                              "Unknown"
-                            }
-                        </div>
-                        <div class="flex items-center gap-3 text-xs text-gray-600">
-                            <div>
-                                <span class="text-gray-500">Paid: <br></span>
-                                <span class="font-semibold text-green-600">₱${parseFloat(
-                                  order.paidAmount
-                                ).toFixed(2)}</span>
-                            </div>
-                            <div>
-                                <span class="text-gray-500">Change: <br></span>
-                                <span class="font-semibold text-blue-600">₱${parseFloat(
-                                  order.changeAmount
-                                ).toFixed(2)}</span>
-                            </div>
-                        </div>
-                    </div>
-                </td>
-                <td class="px-6 py-4 text-center">
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${this.getPaymentMethodClass(
-                      order.payment_method
-                    )}">
-                        ${order.payment_method || "Cash"}
-                    </span>
-                </td>
-                <td class="px-4 py-2 text-center">
-                    <div class="flex space-x-2 justify-center">
-                        <button onclick="salesReport.viewReceipt(${
-                          order.id
-                        })" class="bg-gradient-to-r from-black to-black text-white px-4 py-2 rounded-lg hover:from-black hover:to-black transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md">
-                            View
-                        </button>
-                        ${
-                          !order.is_void
-                            ? `
-                        <button onclick="salesReport.showVoidModal(${order.id})" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md">
-                            Void
-                        </button>
-                        `
-                            : ""
-                        }
-                    </div>
-                </td>
-            </tr>
-        `
+      <tr class="hover:bg-red-50 transition-colors duration-150">
+        <td class="px-6 py-4 text-sm font-medium text-gray-900">
+          #${order.id}
+          ${
+            order.is_void
+              ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 ml-2">VOIDED</span>'
+              : ""
+          }
+        </td>
+        <td class="px-6 py-4 text-sm text-gray-600">
+          <div class="flex flex-col">
+            <span class="font-medium text-gray-900">${this.formatDate(
+              order.created_at
+            )}</span>
+            <span class="text-xs text-gray-500">${this.formatTimeOnly(
+              order.created_at
+            )}</span>
+          </div>
+        </td>
+        <td class="px-6 py-4 order-details-cell">
+          <div class="space-y-1">
+            <div class="products-list">${this.formatProductNames(order)}</div>
+            <div class="order-meta">
+              <span class="amount">₱${parseFloat(order.total).toFixed(2)}</span>
+              <span class="order-type-badge ${this.getOrderTypeClass(
+                order.orderType
+              )}">${order.orderType}</span>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4">
+          <div class="space-y-1">
+            <div class="text-sm font-medium text-gray-700">${
+              order.cashier_name || order.cashier_email || "Unknown"
+            }</div>
+            <div class="flex items-center gap-3 text-xs text-gray-600">
+              <div><span class="text-gray-500">Paid: <br></span><span class="font-semibold text-green-600">₱${parseFloat(
+                order.paidAmount
+              ).toFixed(2)}</span></div>
+              <div><span class="text-gray-500">Change: <br></span><span class="font-semibold text-blue-600">₱${parseFloat(
+                order.changeAmount
+              ).toFixed(2)}</span></div>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4 text-center">
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${this.getPaymentMethodClass(
+            order.payment_method
+          )}">
+            ${order.payment_method || "Cash"}
+          </span>
+        </td>
+        <td class="px-4 py-2 text-center">
+          <div class="flex space-x-2 justify-center">
+            <button onclick="salesReport.viewReceipt(${
+              order.id
+            })" class="bg-gradient-to-r from-black to-black text-white px-4 py-2 rounded-lg hover:from-black hover:to-black transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md">View</button>
+            ${
+              !order.is_void
+                ? `<button onclick="salesReport.showVoidModal(${order.id})" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md">Void</button>`
+                : ""
+            }
+          </div>
+        </td>
+      </tr>
+    `
       )
       .join("");
   }
@@ -843,9 +747,6 @@ class SalesReport {
     return "bg-gray-100 text-gray-800";
   }
 
-  // ============================================
-  // RENDER CASHIER TABLE
-  // ============================================
   renderCashierTable() {
     const tbody = document.getElementById("cashierTableBody");
     const emptyState = document.getElementById("cashierEmptyState");
@@ -863,105 +764,78 @@ class SalesReport {
     tbody.innerHTML = this.cashierData
       .map(
         (session) => `
-            <tr class="hover:bg-red-50 transition-colors duration-150">
+      <tr class="hover:bg-red-50 transition-colors duration-150">
+        ${
+          this.isAdmin()
+            ? `<td class="px-6 py-4 text-sm font-medium text-blue-700">${
+                session.branch || "Unknown"
+              }</td>`
+            : ""
+        }
+        <td class="px-6 py-4 text-sm font-medium text-gray-900">${
+          session.username || session.user_email || "Unknown"
+        }</td>
+        <td class="px-6 py-4 text-sm text-gray-600">
+          <div class="flex flex-col space-y-1">
+            <span class="font-medium text-gray-900">${this.formatDate(
+              session.login_time
+            )}</span>
+            <div class="flex items-center gap-2 text-xs">
+              <span class="text-green-600 font-semibold">${this.formatTimeOnly(
+                session.login_time
+              )}</span>
+              <span class="text-gray-400">→</span>
+              <span class="${
+                session.logout_time
+                  ? "text-red-600 font-semibold"
+                  : "text-orange-500 font-medium"
+              }">
                 ${
-                  this.isAdmin()
-                    ? `
-                <td class="px-6 py-4 text-sm font-medium text-blue-700">
-                    ${session.branch || "Unknown"}
-                </td>
-                `
-                    : ""
+                  session.logout_time
+                    ? this.formatTimeOnly(session.logout_time)
+                    : "Still Active"
                 }
-                <td class="px-6 py-4 text-sm font-medium text-gray-900">
-                    ${session.username || session.user_email || "Unknown"}
-                </td>
-                
-                <td class="px-6 py-4 text-sm text-gray-600">
-                    <div class="flex flex-col space-y-1">
-                        <span class="font-medium text-gray-900">${this.formatDate(
-                          session.login_time
-                        )}</span>
-                        <div class="flex items-center gap-2 text-xs">
-                            <span class="text-green-600 font-semibold">${this.formatTimeOnly(
-                              session.login_time
-                            )}</span>
-                            <span class="text-gray-400">→</span>
-                            <span class="${
-                              session.logout_time
-                                ? "text-red-600 font-semibold"
-                                : "text-orange-500 font-medium"
-                            }">
-                                ${
-                                  session.logout_time
-                                    ? this.formatTimeOnly(session.logout_time)
-                                    : "Still Active"
-                                }
-                            </span>
-                        </div>
-                    </div>
-                </td>
-                
-                <td class="px-6 py-4 text-sm text-gray-700 text-center">
-                    ${session.session_duration}
-                </td>
-                
-                <td class="px-6 py-4">
-                    <div class="space-y-1 text-xs">
-                        <div class="flex justify-between items-center">
-                            <span class="text-gray-500">Start:</span>
-                            <span class="font-semibold text-gray-700">₱${parseFloat(
-                              session.start_gross_sales
-                            ).toFixed(2)}</span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-gray-500">End:</span>
-                            <span class="font-semibold text-gray-700">₱${parseFloat(
-                              session.end_gross_sales
-                            ).toFixed(2)}</span>
-                        </div>
-                        <div class="flex justify-between items-center pt-1 border-t border-gray-200">
-                            <span class="text-green-700 font-medium">Session:</span>
-                            <span class="font-bold text-green-600">₱${parseFloat(
-                              session.session_sales
-                            ).toFixed(2)}</span>
-                        </div>
-                        <div class="flex justify-between items-center pt-1 border-t border-gray-200">
-                            <span class="text-blue-600">Discount:</span>
-                            <span class="font-semibold text-blue-600">₱${parseFloat(
-                              session.total_discount
-                            ).toFixed(2)}</span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-red-600">Void:</span>
-                            <span class="font-semibold text-red-600">
-                                ₱${parseFloat(session.total_void).toFixed(2)}
-                                ${
-                                  session.void_count > 0
-                                    ? `<span class="text-xs ml-1">(${session.void_count})</span>`
-                                    : ""
-                                }
-                            </span>
-                        </div>
-                    </div>
-                </td>
-                
-                <td class="px-4 py-2 text-center">
-                    <button onclick="salesReport.viewCashierDetails(${
-                      session.id
-                    })" class="bg-gradient-to-r from-black to-black text-white px-4 py-2 rounded-lg hover:from-black hover:to-black transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md">
-                        View Details
-                    </button>
-                </td>
-            </tr>
-        `
+              </span>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4 text-sm text-gray-700 text-center">${
+          session.session_duration
+        }</td>
+        <td class="px-6 py-4">
+          <div class="space-y-1 text-xs">
+            <div class="flex justify-between items-center"><span class="text-gray-500">Start:</span><span class="font-semibold text-gray-700">₱${parseFloat(
+              session.start_gross_sales
+            ).toFixed(2)}</span></div>
+            <div class="flex justify-between items-center"><span class="text-gray-500">End:</span><span class="font-semibold text-gray-700">₱${parseFloat(
+              session.end_gross_sales
+            ).toFixed(2)}</span></div>
+            <div class="flex justify-between items-center pt-1 border-t border-gray-200"><span class="text-green-700 font-medium">Session:</span><span class="font-bold text-green-600">₱${parseFloat(
+              session.session_sales
+            ).toFixed(2)}</span></div>
+            <div class="flex justify-between items-center pt-1 border-t border-gray-200"><span class="text-blue-600">Discount:</span><span class="font-semibold text-blue-600">₱${parseFloat(
+              session.total_discount
+            ).toFixed(2)}</span></div>
+            <div class="flex justify-between items-center"><span class="text-red-600">Void:</span><span class="font-semibold text-red-600">₱${parseFloat(
+              session.total_void
+            ).toFixed(2)} ${
+          session.void_count > 0
+            ? `<span class="text-xs ml-1">(${session.void_count})</span>`
+            : ""
+        }</span></div>
+          </div>
+        </td>
+        <td class="px-4 py-2 text-center">
+          <button onclick="salesReport.viewCashierDetails(${
+            session.id
+          })" class="bg-gradient-to-r from-black to-black text-white px-4 py-2 rounded-lg hover:from-black hover:to-black transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md">View Details</button>
+        </td>
+      </tr>
+    `
       )
       .join("");
   }
 
-  // ============================================
-  // RENDER VOID TABLE
-  // ============================================
   renderVoidTable() {
     const tbody = document.getElementById("voidTableBody");
     const emptyState = document.getElementById("voidEmptyState");
@@ -979,114 +853,86 @@ class SalesReport {
     tbody.innerHTML = this.voidData
       .map(
         (order) => `
-            <tr class="hover:bg-red-50 transition-colors duration-150">
-                <td class="px-6 py-4 text-sm font-medium text-gray-900">
-                    #${order.id}
-                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 ml-2">VOIDED</span>
-                </td>
-                ${
-                  this.isAdmin()
-                    ? `
-                <td class="px-6 py-4 text-sm font-medium text-blue-700">
-                    ${order.branch || "Unknown"}
-                </td>
-                `
-                    : ""
-                }
-                
-                <td class="px-6 py-4">
-                    <div class="space-y-1 text-xs">
-                        <div class="flex flex-col">
-                            <span class="text-red-600 font-semibold">Voided:</span>
-                            <span class="text-gray-700">${
-                              order.voided_at
-                                ? this.formatDate(order.voided_at)
-                                : "N/A"
-                            }</span>
-                            <span class="text-gray-500">${
-                              order.voided_at
-                                ? this.formatTimeOnly(order.voided_at)
-                                : ""
-                            }</span>
-                        </div>
-                        <div class="flex flex-col pt-2 border-t border-gray-200">
-                            <span class="text-gray-600 font-semibold">Original:</span>
-                            <span class="text-gray-700">${this.formatDate(
-                              order.created_at
-                            )}</span>
-                            <span class="text-gray-500">${this.formatTimeOnly(
-                              order.created_at
-                            )}</span>
-                        </div>
-                    </div>
-                </td>
-                
-                <td class="px-6 py-4">
-                    <div class="space-y-1">
-                        <div class="text-sm text-gray-700 max-w-xs">
-                            <div class="line-clamp-2" title="${this.formatProductNames(
-                              order
-                            )}">
-                                ${this.formatProductNames(order)}
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2 text-xs pt-1">
-                            <span class="font-bold text-red-600">₱${parseFloat(
-                              order.total
-                            ).toFixed(2)}</span>
-                            <span class="text-gray-400">•</span>
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                                ${order.orderType}
-                            </span>
-                        </div>
-                    </div>
-                </td>
-                
-                <td class="px-6 py-4">
-                    <div class="space-y-1 text-xs">
-                        <div class="flex flex-col">
-                            <span class="text-gray-500">Cashier:</span>
-                            <span class="text-gray-900 font-medium">${
-                              order.cashier_name ||
-                              order.cashier_email ||
-                              "Unknown"
-                            }</span>
-                        </div>
-                        <div class="flex flex-col pt-2 border-t border-gray-200">
-                            <span class="text-gray-500">Voided by:</span>
-                            <span class="text-red-600 font-medium">${
-                              order.voided_by || "Admin"
-                            }</span>
-                        </div>
-                    </div>
-                </td>
-                
-                <td class="px-6 py-4 text-sm text-gray-700">
-                    <div class="max-w-xs">
-                        ${
-                          order.void_reason
-                            ? `<span class="text-gray-800">${order.void_reason}</span>`
-                            : '<span class="text-gray-500 italic">No reason provided</span>'
-                        }
-                    </div>
-                </td>
-                
-                <td class="px-4 py-2 text-center">
-                    <button onclick="salesReport.viewReceipt(${
-                      order.id
-                    })" class="bg-gradient-to-r from-black to-black text-white px-4 py-2 rounded-lg hover:from-black hover:to-black transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md">
-                        View Receipt
-                    </button>
-                </td>
-            </tr>
-        `
+      <tr class="hover:bg-red-50 transition-colors duration-150">
+        <td class="px-6 py-4 text-sm font-medium text-gray-900">
+          #${order.id}
+          <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 ml-2">VOIDED</span>
+        </td>
+        ${
+          this.isAdmin()
+            ? `<td class="px-6 py-4 text-sm font-medium text-blue-700">${
+                order.branch || "Unknown"
+              }</td>`
+            : ""
+        }
+        <td class="px-6 py-4">
+          <div class="space-y-1 text-xs">
+            <div class="flex flex-col">
+              <span class="text-red-600 font-semibold">Voided:</span>
+              <span class="text-gray-700">${
+                order.voided_at ? this.formatDate(order.voided_at) : "N/A"
+              }</span>
+              <span class="text-gray-500">${
+                order.voided_at ? this.formatTimeOnly(order.voided_at) : ""
+              }</span>
+            </div>
+            <div class="flex flex-col pt-2 border-t border-gray-200">
+              <span class="text-gray-600 font-semibold">Original:</span>
+              <span class="text-gray-700">${this.formatDate(
+                order.created_at
+              )}</span>
+              <span class="text-gray-500">${this.formatTimeOnly(
+                order.created_at
+              )}</span>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4">
+          <div class="space-y-1">
+            <div class="text-sm text-gray-700 max-w-xs">
+              <div class="line-clamp-2" title="${this.formatProductNames(
+                order
+              )}">${this.formatProductNames(order)}</div>
+            </div>
+            <div class="flex items-center gap-2 text-xs pt-1">
+              <span class="font-bold text-red-600">₱${parseFloat(
+                order.total
+              ).toFixed(2)}</span>
+              <span class="text-gray-400">•</span>
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">${
+                order.orderType
+              }</span>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4">
+          <div class="space-y-1 text-xs">
+            <div class="flex flex-col"><span class="text-gray-500">Cashier:</span><span class="text-gray-900 font-medium">${
+              order.cashier_name || order.cashier_email || "Unknown"
+            }</span></div>
+            <div class="flex flex-col pt-2 border-t border-gray-200"><span class="text-gray-500">Voided by:</span><span class="text-red-600 font-medium">${
+              order.voided_by || "Admin"
+            }</span></div>
+          </div>
+        </td>
+        <td class="px-6 py-4 text-sm text-gray-700">
+          <div class="max-w-xs">${
+            order.void_reason
+              ? `<span class="text-gray-800">${order.void_reason}</span>`
+              : '<span class="text-gray-500 italic">No reason provided</span>'
+          }</div>
+        </td>
+        <td class="px-4 py-2 text-center">
+          <button onclick="salesReport.viewReceipt(${
+            order.id
+          })" class="bg-gradient-to-r from-black to-black text-white px-4 py-2 rounded-lg hover:from-black hover:to-black transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md">View Receipt</button>
+        </td>
+      </tr>
+    `
       )
       .join("");
   }
 
-  // ============================================
-  // RENDER CASHOUT TABLE
-  // ============================================
   renderCashoutTable() {
     const tbody = document.getElementById("cashoutTableBody");
     const emptyState = document.getElementById("cashoutEmptyState");
@@ -1117,19 +963,17 @@ class SalesReport {
         </td>
         ${
           this.isAdmin()
-            ? `
-        <td class="px-6 py-4 text-sm font-medium text-blue-700">
-          ${record.branch || "Unknown"}
-        </td>
-        `
+            ? `<td class="px-6 py-4 text-sm font-medium text-blue-700">${
+                record.branch || "Unknown"
+              }</td>`
             : ""
         }
-        <td class="px-6 py-4 text-sm text-gray-600">
-          ${this.formatDateTime(record.created_at)}
-        </td>
-        <td class="px-6 py-4 text-sm font-medium text-gray-700">
-          ${record.cashier_name || record.cashier_email || "Unknown"}
-        </td>
+        <td class="px-6 py-4 text-sm text-gray-600">${this.formatDateTime(
+          record.created_at
+        )}</td>
+        <td class="px-6 py-4 text-sm font-medium text-gray-700">${
+          record.cashier_name || record.cashier_email || "Unknown"
+        }</td>
         <td class="px-6 py-4 text-center">
           <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
             record.type === "withdrawal"
@@ -1168,11 +1012,9 @@ class SalesReport {
         </td>
         <td class="px-6 py-4 text-center">
           <div class="flex gap-2 justify-center">
-            <button onclick="salesReport.showEditCashoutModal(${record.id})" 
-                    class="text-green-600 hover:text-green-800 text-sm font-medium"
-                    title="Edit Record">
-              <i class="fas fa-edit"></i>
-            </button>
+            <button onclick="salesReport.showEditCashoutModal(${
+              record.id
+            })" class="text-green-600 hover:text-green-800 text-sm font-medium" title="Edit Record"><i class="fas fa-edit"></i></button>
           </div>
         </td>
       </tr>
@@ -1181,9 +1023,6 @@ class SalesReport {
       .join("");
   }
 
-  // ============================================
-  // RENDER OUT SOURCE TABLE
-  // ============================================
   renderOutSourceTable() {
     const tbody = document.getElementById("outTableBody");
     const emptyState = document.getElementById("outEmptyState");
@@ -1201,55 +1040,49 @@ class SalesReport {
     tbody.innerHTML = this.outData
       .map(
         (record) => `
-        <tr class="hover:bg-red-50 transition-colors duration-150">
-            <td class="px-6 py-4 text-sm text-gray-600">
-                <div class="flex flex-col">
-                    <span class="font-medium text-gray-900">${this.formatDate(
-                      record.created_at
-                    )}</span>
-                    <span class="text-xs text-gray-500">${this.formatTimeOnly(
-                      record.created_at
-                    )}</span>
-                </div>
-            </td>
-            <td class="px-6 py-4 text-sm font-bold text-right text-red-600">
-                ₱${parseFloat(record.amount || 0).toFixed(2)}
-            </td>
-            <td class="px-6 py-4">
-                <div class="text-sm text-gray-900">
-                    ${record.product_details || "No details"}
-                </div>
-            </td>
-            <td class="px-6 py-4 text-sm font-medium text-gray-700">
-                ${record.personnel_name || record.personnel_email || "Unknown"}
-            </td>
-            <td class="px-6 py-4 text-center">
-                <button onclick="salesReport.viewOutSourceDetail(${record.id})" 
-                        class="bg-gradient-to-r from-black to-black text-white px-4 py-2 rounded-lg hover:from-black hover:to-black transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md">
-                    View Details
-                </button>
-            </td>
-        </tr>
+      <tr class="hover:bg-red-50 transition-colors duration-150">
+        <td class="px-6 py-4 text-sm text-gray-600">
+          <div class="flex flex-col">
+            <span class="font-medium text-gray-900">${this.formatDate(
+              record.created_at
+            )}</span>
+            <span class="text-xs text-gray-500">${this.formatTimeOnly(
+              record.created_at
+            )}</span>
+          </div>
+        </td>
+        <td class="px-6 py-4 text-sm font-bold text-right text-red-600">₱${parseFloat(
+          record.amount || 0
+        ).toFixed(2)}</td>
+        <td class="px-6 py-4">
+          <div class="text-sm text-gray-900 max-w-md">${
+            record.product_details || "No details"
+          }</div>
+        </td>
+        <td class="px-6 py-4 text-sm font-medium text-gray-700">${
+          record.personnel_name || record.personnel_email || "Unknown"
+        }</td>
+        <td class="px-6 py-4 text-center">
+          <button onclick="salesReport.viewOutSourceDetail(${
+            record.id
+          })" class="bg-gradient-to-r from-black to-black text-white px-4 py-2 rounded-lg hover:from-black hover:to-black transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md">View Details</button>
+        </td>
+      </tr>
     `
       )
       .join("");
   }
 
-  // ============================================
-  // UPDATE PAGINATION METHODS
-  // ============================================
   updatePagination() {
     const start = (this.currentPage - 1) * this.itemsPerPage + 1;
     const end = Math.min(
       this.currentPage * this.itemsPerPage,
       this.totalRecords
     );
-
     document.getElementById("salesStart").textContent = start;
     document.getElementById("salesEnd").textContent = end;
     document.getElementById("salesTotal").textContent = this.totalRecords;
     document.getElementById("currentPage").textContent = this.currentPage;
-
     document.getElementById("prevPage").disabled = this.currentPage === 1;
     document.getElementById("nextPage").disabled =
       this.currentPage === this.totalPages;
@@ -1261,21 +1094,17 @@ class SalesReport {
       this.cashierCurrentPage * this.itemsPerPage,
       this.cashierTotalRecords
     );
-
     const cashierStartEl = document.getElementById("cashierStart");
     const cashierEndEl = document.getElementById("cashierEnd");
     const cashierTotalEl = document.getElementById("cashierTotal");
     const cashierCurrentPageEl = document.getElementById("cashierCurrentPage");
-
     if (cashierStartEl) cashierStartEl.textContent = start;
     if (cashierEndEl) cashierEndEl.textContent = end;
     if (cashierTotalEl) cashierTotalEl.textContent = this.cashierTotalRecords;
     if (cashierCurrentPageEl)
       cashierCurrentPageEl.textContent = this.cashierCurrentPage;
-
     const prevBtn = document.getElementById("cashierPrevPage");
     const nextBtn = document.getElementById("cashierNextPage");
-
     if (prevBtn) prevBtn.disabled = this.cashierCurrentPage === 1;
     if (nextBtn)
       nextBtn.disabled = this.cashierCurrentPage === this.cashierTotalPages;
@@ -1287,20 +1116,16 @@ class SalesReport {
       this.voidCurrentPage * this.itemsPerPage,
       this.voidTotalRecords
     );
-
     const voidStartEl = document.getElementById("voidStart");
     const voidEndEl = document.getElementById("voidEnd");
     const voidTotalEl = document.getElementById("voidTotal");
     const voidCurrentPageEl = document.getElementById("voidCurrentPage");
-
     if (voidStartEl) voidStartEl.textContent = start;
     if (voidEndEl) voidEndEl.textContent = end;
     if (voidTotalEl) voidTotalEl.textContent = this.voidTotalRecords;
     if (voidCurrentPageEl) voidCurrentPageEl.textContent = this.voidCurrentPage;
-
     const prevBtn = document.getElementById("voidPrevPage");
     const nextBtn = document.getElementById("voidNextPage");
-
     if (prevBtn) prevBtn.disabled = this.voidCurrentPage === 1;
     if (nextBtn)
       nextBtn.disabled = this.voidCurrentPage === this.voidTotalPages;
@@ -1312,21 +1137,17 @@ class SalesReport {
       this.cashoutCurrentPage * this.itemsPerPage,
       this.cashoutTotalRecords
     );
-
     const cashoutStartEl = document.getElementById("cashoutStart");
     const cashoutEndEl = document.getElementById("cashoutEnd");
     const cashoutTotalEl = document.getElementById("cashoutTotal");
     const cashoutCurrentPageEl = document.getElementById("cashoutCurrentPage");
-
     if (cashoutStartEl) cashoutStartEl.textContent = start;
     if (cashoutEndEl) cashoutEndEl.textContent = end;
     if (cashoutTotalEl) cashoutTotalEl.textContent = this.cashoutTotalRecords;
     if (cashoutCurrentPageEl)
       cashoutCurrentPageEl.textContent = this.cashoutCurrentPage;
-
     const prevBtn = document.getElementById("cashoutPrevPage");
     const nextBtn = document.getElementById("cashoutNextPage");
-
     if (prevBtn) prevBtn.disabled = this.cashoutCurrentPage === 1;
     if (nextBtn)
       nextBtn.disabled = this.cashoutCurrentPage === this.cashoutTotalPages;
@@ -1338,299 +1159,42 @@ class SalesReport {
       this.outCurrentPage * this.itemsPerPage,
       this.outTotalRecords
     );
-
     const outStartEl = document.getElementById("outStart");
     const outEndEl = document.getElementById("outEnd");
     const outTotalEl = document.getElementById("outTotal");
     const outCurrentPageEl = document.getElementById("outCurrentPage");
-
     if (outStartEl) outStartEl.textContent = start;
     if (outEndEl) outEndEl.textContent = end;
     if (outTotalEl) outTotalEl.textContent = this.outTotalRecords;
     if (outCurrentPageEl) outCurrentPageEl.textContent = this.outCurrentPage;
-
     const prevBtn = document.getElementById("outPrevPage");
     const nextBtn = document.getElementById("outNextPage");
-
     if (prevBtn) prevBtn.disabled = this.outCurrentPage === 1;
     if (nextBtn) nextBtn.disabled = this.outCurrentPage === this.outTotalPages;
   }
 
   // ============================================
-  // VIEW OUT SOURCE DETAIL
+  // VIEW CASHIER DETAILS - MISSING METHOD
   // ============================================
-  async viewOutSourceDetail(recordId) {
-    this.showLoading(true);
-
-    try {
-      const response = await fetch(
-        `backend/salesapi.php?action=outsource-detail&id=${recordId}`
-      );
-      const responseText = await response.text();
-
-      let result;
-      try {
-        result = JSON.parse(responseText);
-      } catch (e) {
-        throw new Error("Invalid JSON response: " + responseText);
-      }
-
-      if (!result.success) {
-        throw new Error(result.message);
-      }
-
-      const record = result.data;
-
-      // Update modal content
-      this.renderOutSourceDetailModal(record);
-
-      // Show modal
-      const modal = document.getElementById("outDetailModal");
-      if (modal) {
-        modal.classList.remove("hidden");
-      }
-    } catch (error) {
-      console.error("View Out Source Detail Error:", error);
-      this.showNotification(
-        "error",
-        "Failed to load record details: " + error.message
-      );
-    } finally {
-      this.showLoading(false);
-    }
-  }
-
-  renderOutSourceDetailModal(record) {
-    // Update modal fields
-    const elements = {
-      outDetailId: record.id,
-      outDetailBranch: record.branch || "Unknown",
-      outDetailDate: this.formatDateTime(record.created_at),
-      outDetailPersonnel:
-        record.personnel_name || record.personnel_email || "Unknown",
-      outDetailSupplier: record.supplier || "N/A",
-      outDetailQuantity: record.quantity || "0",
-      outDetailTotal: `₱${parseFloat(record.amount || 0).toFixed(2)}`,
-      outDetailNotes: record.notes || "No notes provided",
-    };
-
-    Object.entries(elements).forEach(([id, value]) => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = value;
-    });
-
-    // Product details
-    const productsEl = document.getElementById("outDetailProducts");
-    if (productsEl) {
-      productsEl.innerHTML = `
-            <div class="text-sm text-gray-900">
-                ${record.product_details || "No product details"}
-            </div>
-        `;
-    }
-  }
-
-  printOutDetail() {
-    const modal = document.getElementById("outDetailModal");
-    if (!modal) return;
-
-    const printContent = modal.querySelector(".receipt-kstreet").innerHTML;
-
-    const printWindow = window.open("", "_blank", "width=350,height=600");
-    printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Out Source Receipt</title>
-            <style>
-                * {
-                    margin: 0;
-                    padding: 0;
-                    box-sizing: border-box;
-                    font-family: 'Courier New', monospace;
-                }
-                body {
-                    width: 80mm;
-                    padding: 5mm;
-                    font-size: 12px;
-                }
-                .receipt-kstreet {
-                    width: 100%;
-                }
-                @media print {
-                    body { padding: 2mm; }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="receipt-kstreet">${printContent}</div>
-            <script>
-                window.onload = function() {
-                    setTimeout(function() {
-                        window.print();
-                    }, 300);
-                };
-            </script>
-        </body>
-        </html>
-    `);
-    printWindow.document.close();
-  }
-
-  // ============================================
-  // EXPORT OUT SOURCE TO EXCEL
-  // ============================================
-  exportOutSourceToExcel() {
-    if (this.outData.length === 0) {
-      this.showNotification("warning", "No data to export");
-      return;
-    }
-
-    const totalAmount = this.outData.reduce(
-      (sum, r) => sum + parseFloat(r.amount || 0),
-      0
-    );
-
-    const branchFilter = document.getElementById("branchFilter");
-    const currentBranch = branchFilter ? branchFilter.value : "all";
-    const branchText = currentBranch === "all" ? "All Branches" : currentBranch;
-
-    const timeRange = document.getElementById("timeRange").value;
-    const timeRangeText = this.getTimeRangeText(timeRange);
-
-    const ws_data = [];
-
-    // Header
-    ws_data.push(["K - STREET"]);
-    ws_data.push([`BRANCH: ${branchText}`]);
-    ws_data.push([`Out Source Report - Period: ${timeRangeText}`]);
-    ws_data.push([]);
-
-    // Summary
-    ws_data.push(["OUT SOURCE SUMMARY"]);
-    ws_data.push([`Total Records: ${this.outData.length}`]);
-    ws_data.push([
-      `Total Amount: ₱${totalAmount.toLocaleString("en-PH", {
-        minimumFractionDigits: 2,
-      })}`,
-    ]);
-    ws_data.push([]);
-
-    // Table Headers
-    const headers = ["Date & Time", "Amount", "Product Details", "Personnel"];
-    ws_data.push(headers);
-
-    // Data Rows
-    this.outData.forEach((record) => {
-      const row = [
-        this.formatDateTime(record.created_at),
-        parseFloat(record.amount || 0),
-        record.product_details || "No details",
-        record.personnel_name || record.personnel_email || "Unknown",
-      ];
-      ws_data.push(row);
-    });
-
-    // Footer
-    ws_data.push([]);
-    ws_data.push([`Generated: ${new Date().toLocaleString("en-PH")}`]);
-
-    // Create worksheet
-    const ws = XLSX.utils.aoa_to_sheet(ws_data);
-
-    // Apply styles
-    this.applyOutSourceExcelStyles(ws, ws_data.length);
-
-    // Set column widths
-    ws["!cols"] = [
-      { wch: 22 }, // Date & Time
-      { wch: 15 }, // Amount
-      { wch: 50 }, // Product Details
-      { wch: 25 }, // Personnel
-    ];
-
-    // Create workbook
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Out Source Report");
-
-    // Generate filename
-    const filename = `K-Street-OutSource_Report_${currentBranch}_${
-      new Date().toISOString().split("T")[0]
-    }.xlsx`;
-
-    // Download
-    XLSX.writeFile(wb, filename);
-
-    this.showNotification(
-      "success",
-      "Out Source report exported successfully!"
-    );
-  }
-
-  applyOutSourceExcelStyles(ws, totalRows) {
-    // Header style (Row 1)
-    if (ws["A1"]) {
-      ws["A1"].s = {
-        font: { bold: true, color: { rgb: "FFFFFFFF" }, size: 14 },
-        fill: { fgColor: { rgb: "FFDC2626" } },
-        alignment: { horizontal: "center", vertical: "center" },
-      };
-    }
-
-    // Summary title (Row 5)
-    if (ws["A5"]) {
-      ws["A5"].s = {
-        font: { bold: true, size: 11 },
-        fill: { fgColor: { rgb: "FFFFCDD2" } },
-        alignment: { horizontal: "left" },
-      };
-    }
-
-    // Table header row (Row 9)
-    const headerRow = 9;
-    for (let col = 0; col < 4; col++) {
-      const cellRef = XLSX.utils.encode_cell({ r: headerRow - 1, c: col });
-      if (ws[cellRef]) {
-        ws[cellRef].s = {
-          font: { bold: true, color: { rgb: "FFFFFFFF" }, size: 10 },
-          fill: { fgColor: { rgb: "FFD32F2F" } },
-          alignment: { horizontal: "center", vertical: "center" },
-        };
-      }
-    }
-  }
-
-  // ============================================
-  // CONTINUING WITH REST OF THE METHODS...
-  // (Keep all your existing methods: viewCashierDetails, viewReceipt, etc.)
-  // I'll add the remaining essential methods below:
-  // ============================================
-
   async viewCashierDetails(sessionId) {
     this.showLoading(true);
-
     try {
       const response = await fetch(
         `backend/salesapi.php?action=cashier-details&id=${sessionId}`
       );
       const responseText = await response.text();
-
       let result;
       try {
         result = JSON.parse(responseText);
       } catch (e) {
         throw new Error("Invalid JSON response: " + responseText);
       }
-
       if (!result.success) {
         throw new Error(result.message);
       }
-
       const session = result.data;
       this.selectedSession = session;
-
       this.renderCashierDetailModal(session);
-
       const modal = document.getElementById("cashierDetailModal");
       if (modal) {
         modal.classList.remove("hidden");
@@ -1639,13 +1203,16 @@ class SalesReport {
       console.error("View Cashier Details Error:", error);
       this.showNotification(
         "error",
-        "Failed to load session details: " + error.message
+        "Failed to load session: " + error.message
       );
     } finally {
       this.showLoading(false);
     }
   }
 
+  // ============================================
+  // RENDER CASHIER DETAIL MODAL - MISSING METHOD
+  // ============================================
   renderCashierDetailModal(session) {
     const cashierBranch = document.getElementById("cashierDetailBranch");
     if (cashierBranch) {
@@ -1800,6 +1367,146 @@ class SalesReport {
     }
   }
 
+  // ============================================
+  // VIEW OUT SOURCE DETAIL
+  // ============================================
+  async viewOutSourceDetail(recordId) {
+    this.showLoading(true);
+    try {
+      const response = await fetch(
+        `backend/salesapi.php?action=outsource-detail&id=${recordId}`
+      );
+      const responseText = await response.text();
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (e) {
+        throw new Error("Invalid JSON response: " + responseText);
+      }
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+      const record = result.data;
+      this.renderOutSourceDetailModal(record);
+      const modal = document.getElementById("outDetailModal");
+      if (modal) {
+        modal.classList.remove("hidden");
+      }
+    } catch (error) {
+      console.error("View OutSource Detail Error:", error);
+      this.showNotification("error", "Failed to load record: " + error.message);
+    } finally {
+      this.showLoading(false);
+    }
+  }
+
+  renderOutSourceDetailModal(record) {
+    const elements = {
+      outDetailId: record.id,
+      outDetailBranch: record.branch || "Unknown",
+      outDetailDate: this.formatDateTime(record.created_at),
+      outDetailPersonnel:
+        record.personnel_name || record.personnel_email || "Unknown",
+      outDetailTotal: `₱${parseFloat(record.amount || 0).toFixed(2)}`,
+    };
+    Object.entries(elements).forEach(([id, value]) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    });
+    const productsEl = document.getElementById("outDetailProducts");
+    if (productsEl) {
+      productsEl.innerHTML = `<div class="text-sm text-gray-900 whitespace-pre-wrap">${
+        record.product_details || "No product details"
+      }</div>`;
+    }
+  }
+
+  printOutDetail() {
+    const modal = document.getElementById("outDetailModal");
+    if (!modal) return;
+    const printContent = modal.querySelector(".receipt-kstreet").innerHTML;
+    const printWindow = window.open("", "_blank", "width=350,height=600");
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Out Source Receipt</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Courier New', monospace; }
+          body { width: 80mm; padding: 5mm; font-size: 12px; }
+          .receipt-kstreet { width: 100%; }
+          @media print { body { padding: 2mm; } }
+        </style>
+      </head>
+      <body>
+        <div class="receipt-kstreet">${printContent}</div>
+        <script>window.onload = function() { setTimeout(function() { window.print(); }, 300); };</script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  }
+
+  // ============================================
+  // EXPORT METHODS
+  // ============================================
+  exportOutSourceToExcel() {
+    if (this.outData.length === 0) {
+      this.showNotification("warning", "No data to export");
+      return;
+    }
+    const totalAmount = this.outData.reduce(
+      (sum, r) => sum + parseFloat(r.amount || 0),
+      0
+    );
+    const branchFilter = document.getElementById("branchFilter");
+    const currentBranch = branchFilter ? branchFilter.value : "all";
+    const branchText = currentBranch === "all" ? "All Branches" : currentBranch;
+    const timeRange = document.getElementById("timeRange").value;
+    const timeRangeText = this.getTimeRangeText(timeRange);
+    const ws_data = [];
+    ws_data.push(["K - STREET"]);
+    ws_data.push([`BRANCH: ${branchText}`]);
+    ws_data.push([`Out Source Report - Period: ${timeRangeText}`]);
+    ws_data.push([]);
+    ws_data.push(["OUT SOURCE SUMMARY"]);
+    ws_data.push([`Total Records: ${this.outData.length}`]);
+    ws_data.push([
+      `Total Amount: ₱${totalAmount.toLocaleString("en-PH", {
+        minimumFractionDigits: 2,
+      })}`,
+    ]);
+    ws_data.push([]);
+    const headers = ["Date & Time", "Amount", "Product Details", "Personnel"];
+    ws_data.push(headers);
+    this.outData.forEach((record) => {
+      const row = [
+        this.formatDateTime(record.created_at),
+        parseFloat(record.amount || 0),
+        record.product_details || "No details",
+        record.personnel_name || record.personnel_email || "Unknown",
+      ];
+      ws_data.push(row);
+    });
+    ws_data.push([]);
+    ws_data.push([`Generated: ${new Date().toLocaleString("en-PH")}`]);
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    ws["!cols"] = [{ wch: 22 }, { wch: 15 }, { wch: 50 }, { wch: 25 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Out Source Report");
+    const filename = `K-Street-OutSource_Report_${currentBranch}_${
+      new Date().toISOString().split("T")[0]
+    }.xlsx`;
+    XLSX.writeFile(wb, filename);
+    this.showNotification(
+      "success",
+      "Out Source report exported successfully!"
+    );
+  }
+
+  // ============================================
+  // VIEW RECEIPT - MISSING METHOD
+  // ============================================
   async viewReceipt(orderId) {
     try {
       const response = await fetch(
@@ -1903,6 +1610,9 @@ class SalesReport {
     }
   }
 
+  // ============================================
+  // VOID METHODS - MISSING METHODS
+  // ============================================
   async showVoidModal(orderId) {
     const order = this.salesData.find((o) => o.id === orderId);
     if (!order) {
@@ -2062,7 +1772,7 @@ class SalesReport {
   }
 
   // ============================================
-  // PRINT CASHIER REPORT - THERMAL PRINTER OPTIMIZED (FIXED)
+  // PRINT METHODS
   // ============================================
   printCashierReport() {
     const session = this.selectedSession;
@@ -2099,7 +1809,7 @@ class SalesReport {
     <head>
         <title>Cashier Session Report</title>
         <meta charset="UTF-8">
-       <style>
+        <style>
     /* RESET EVERYTHING */
     * {
         margin: 0 !important;
@@ -2110,26 +1820,26 @@ class SalesReport {
     }
     
     @page {
-        size: 80mm auto !important;  /* ✅ AUTO = BABABA KUNG MAHABA */
+        size: 80mm auto !important;
         margin: 0 !important;
     }
     
     html, body {
         width: 80mm !important;
-        height: auto !important;  /* ✅ AUTO HEIGHT */
+        height: auto !important;
         margin: 0 auto !important;
         padding: 0 !important;
         background: white !important;
         color: black !important;
         font-size: 16px !important;
-        overflow: visible !important;  /* ✅ PARA MAKITA LAHAT */
+        overflow: visible !important;
     }
     
     body {
         padding: 1mm !important;
         margin: 0 auto !important;
         width: 80mm !important;
-        min-height: auto !important;  /* ✅ WALANG FIXED HEIGHT */
+        min-height: auto !important;
     }
     
     .receipt {
@@ -2137,7 +1847,7 @@ class SalesReport {
         margin: 0 auto !important;
         padding: 1mm !important;
         text-align: center !important;
-        overflow: visible !important;  /* ✅ WALANG HIDDEN CONTENT */
+        overflow: visible !important;
     }
     
     /* HEADER */
@@ -2165,34 +1875,34 @@ class SalesReport {
         padding: 0 !important;
     }
     
-  /* SECTION INFO */
-.info {
-    font-size: 17px !important;
-    text-align: left !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
-    table-layout: fixed !important;  /* ✅ FIXED WIDTH */
-}
-
-.info td {
-    font-size: 17px !important;
-    padding: 0.4mm 0 !important;
-    word-wrap: break-word !important;  /* ✅ WORD WRAP */
-    overflow-wrap: break-word !important;  /* ✅ BREAK LONG TEXT */
-    white-space: normal !important;  /* ✅ ALLOW LINE BREAKS */
-}
-
-.info td:first-child {
-    width: 35% !important;  /* ✅ LABEL WIDTH */
-    font-weight: bold !important;
-    vertical-align: top !important;  /* ✅ ALIGN TOP */
-}
-
-.info td:last-child {
-    width: 65% !important;  /* ✅ VALUE WIDTH */
-    word-break: break-all !important;  /* ✅ BREAK KAHIT WALANG SPACE */
-}
+    /* SECTION INFO */
+    .info {
+        font-size: 17px !important;
+        text-align: left !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        table-layout: fixed !important;
+    }
+    
+    .info td {
+        font-size: 17px !important;
+        padding: 0.4mm 0 !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+        white-space: normal !important;
+    }
+    
+    .info td:first-child {
+        width: 35% !important;
+        font-weight: bold !important;
+        vertical-align: top !important;
+    }
+    
+    .info td:last-child {
+        width: 65% !important;
+        word-break: break-all !important;
+    }
     
     /* SECTION HEADERS */
     .section-header {
@@ -2200,7 +1910,7 @@ class SalesReport {
         font-weight: bold !important;
         text-align: left !important;
         margin: 0.4mm 0 !important;
-        page-break-after: avoid !important;  /* ✅ HINDI PUPUPUTULIN */
+        page-break-after: avoid !important;
     }
     
     /* SALES TABLE */
@@ -2210,7 +1920,7 @@ class SalesReport {
         border-collapse: collapse !important;
         margin: 0 !important;
         padding: 0 !important;
-        page-break-inside: auto !important;  /* ✅ AUTOMATIC PAGINATION */
+        page-break-inside: auto !important;
     }
     
     .sales-table td {
@@ -2220,7 +1930,7 @@ class SalesReport {
     }
     
     .sales-table tr {
-        page-break-inside: avoid !important;  /* ✅ HINDI PUTOL ANG ROW */
+        page-break-inside: avoid !important;
     }
     
     .sales-label {
@@ -2242,7 +1952,7 @@ class SalesReport {
         border-collapse: collapse !important;
         margin: 0 !important;
         padding: 0 !important;
-        page-break-inside: auto !important;  /* ✅ AUTOMATIC PAGINATION */
+        page-break-inside: auto !important;
     }
     
     .payment-table td {
@@ -2251,7 +1961,7 @@ class SalesReport {
     }
     
     .payment-table tr {
-        page-break-inside: avoid !important;  /* ✅ HINDI PUTOL ANG ROW */
+        page-break-inside: avoid !important;
     }
     
     .payment-method {
@@ -2281,18 +1991,18 @@ class SalesReport {
         border-collapse: collapse !important;
         margin: 0 !important;
         padding: 0 !important;
-        page-break-inside: auto !important;  /* ✅ AUTOMATIC PAGINATION */
+        page-break-inside: auto !important;
     }
     
     .orders-table td {
         padding: 0.4mm 0 !important;
         vertical-align: top !important;
-        word-wrap: break-word !important;  /* ✅ WORD WRAP */
-        overflow-wrap: break-word !important;  /* ✅ BREAK LONG WORDS */
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
     }
     
     .orders-table tr {
-        page-break-inside: avoid !important;  /* ✅ HINDI PUTOL ANG ROW */
+        page-break-inside: avoid !important;
     }
     
     .order-id {
@@ -2306,8 +2016,8 @@ class SalesReport {
         text-align: left !important;
         width: 50% !important;
         font-size: 14px !important;
-        word-wrap: break-word !important;  /* ✅ BABABA KUNG MAHABA */
-        white-space: normal !important;  /* ✅ ALLOW LINE BREAKS */
+        word-wrap: break-word !important;
+        white-space: normal !important;
     }
     
     .order-amount {
@@ -2362,7 +2072,7 @@ class SalesReport {
     
     /* PRINT BUTTON (FOR PREVIEW ONLY) */
     .no-print {
-        display: block !important;  /* ✅ VISIBLE SA PREVIEW */
+        display: block !important;
         text-align: center !important;
         margin-top: 10mm !important;
         padding: 5mm !important;
@@ -2371,16 +2081,16 @@ class SalesReport {
     /* PRINT SPECIFIC */
     @media print {
         .no-print {
-            display: none !important;  /* ✅ HIDDEN KAPAG PRINT */
+            display: none !important;
         }
         
         html, body {
-            overflow: visible !important;  /* ✅ MAKITA LAHAT */
+            overflow: visible !important;
         }
         
         .receipt {
             padding: 0.5mm !important;
-            overflow: visible !important;  /* ✅ WALANG NAKATAGO */
+            overflow: visible !important;
         }
         
         body {
@@ -2402,52 +2112,58 @@ class SalesReport {
             
             <div class="divider">=============================</div>
             
-          <!-- CASHIER INFORMATION -->
-<div class="section-header">CASHIER INFORMATION</div>
-<table class="info">
-    <tr>
-        <td><strong>Cashier:</strong></td>
-        <td>${
-          (session.username || session.user_email || "Unknown").length > 20
-            ? (session.username || session.user_email).substring(0, 17) + "..."
-            : session.username || session.user_email || "Unknown"
-        }
-        </td>
-    </tr>
-    <tr>
-        <td><strong>Email:</strong></td>
-        <td>${
-          session.user_email.length > 25
-            ? session.user_email.substring(0, 22) + "..."
-            : session.user_email
-        }
-        </td>
-    </tr>
-    <tr>
-        <td><strong>Branch:</strong></td>
-        <td>${session.branch || window.currentUser?.branch || "main"}</td>
-    </tr>
-    <tr>
-        <td><strong>Login:</strong></td>
-        <td style="font-size: 15px !important;">${this.formatDateTime(
-          session.login_time
-        )}</td>
-    </tr>
-    <tr>
-        <td><strong>Logout:</strong></td>
-        <td style="font-size: 15px !important;">
-            ${
-              session.logout_time
-                ? this.formatDateTime(session.logout_time)
-                : "Still Active"
-            }
-        </td>
-    </tr>
-    <tr>
-        <td><strong>Duration:</strong></td>
-        <td>${session.session_duration}</td>
-    </tr>
-</table>
+            <!-- CASHIER INFORMATION -->
+            <div class="section-header">CASHIER INFORMATION</div>
+            <table class="info">
+                <tr>
+                    <td><strong>Cashier:</strong></td>
+                    <td>${
+                      (session.username || session.user_email || "Unknown")
+                        .length > 20
+                        ? (session.username || session.user_email).substring(
+                            0,
+                            17
+                          ) + "..."
+                        : session.username || session.user_email || "Unknown"
+                    }
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>Email:</strong></td>
+                    <td>${
+                      session.user_email.length > 25
+                        ? session.user_email.substring(0, 22) + "..."
+                        : session.user_email
+                    }
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>Branch:</strong></td>
+                    <td>${
+                      session.branch || window.currentUser?.branch || "main"
+                    }</td>
+                </tr>
+                <tr>
+                    <td><strong>Login:</strong></td>
+                    <td style="font-size: 15px !important;">${this.formatDateTime(
+                      session.login_time
+                    )}</td>
+                </tr>
+                <tr>
+                    <td><strong>Logout:</strong></td>
+                    <td style="font-size: 15px !important;">
+                        ${
+                          session.logout_time
+                            ? this.formatDateTime(session.logout_time)
+                            : "Still Active"
+                        }
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>Duration:</strong></td>
+                    <td>${session.session_duration}</td>
+                </tr>
+            </table>
             
             <div class="divider">-----------------------------</div>
             
@@ -2533,17 +2249,14 @@ class SalesReport {
             </div>
         </div>
         
-        
         <!-- AUTO PRINT SCRIPT -->
         <script>
-            // AUTO PRINT
             window.onload = function() {
                 setTimeout(function() {
                     window.print();
                 }, 300);
             };
             
-            // KEYBOARD SHORTCUTS
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape') window.close();
                 if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
@@ -2636,10 +2349,6 @@ class SalesReport {
   }
 
   // ============================================
-  // PRINT RECEIPT
-  // ============================================
-
-  // ============================================
   // PRINT RECEIPT - THERMAL PRINTER OPTIMIZED
   // ============================================
   printReceipt() {
@@ -2658,12 +2367,11 @@ class SalesReport {
         <title>Receipt</title>
         <meta charset="UTF-8">
         <style>
-            /* RESET EVERYTHING */
             * {
                 margin: 0 !important;
                 padding: 0 !important;
                 box-sizing: border-box !important;
-                line-height: 1.4 !important; /* ✅ 4.0 spacing between lines */
+                line-height: 1.4 !important;
                 font-family: 'Courier New', monospace !important;
             }
             
@@ -2679,11 +2387,11 @@ class SalesReport {
                 padding: 0 !important;
                 background: white !important;
                 color: black !important;
-                font-size: 16px !important; /* BASE SIZE */
+                font-size: 16px !important;
             }
             
             body {
-                padding: 1mm !important; /* ✅ 1mm minimal */
+                padding: 1mm !important;
                 margin: 0 auto !important;
                 width: 80mm !important;
             }
@@ -2695,28 +2403,26 @@ class SalesReport {
                 text-align: center !important;
             }
             
-            /* HEADER */
             .store-name {
-                font-size: 18px !important; /* ✅ 18px bold */
+                font-size: 18px !important;
                 font-weight: bold !important;
                 text-transform: uppercase;
-                margin: 0.4mm 0 !important; /* Added 4 spacing */
+                margin: 0.4mm 0 !important;
             }
             
             .store-address {
-                font-size: 17px !important; /* ✅ 17px */
-                margin: 0.4mm 0 !important; /* Added 4 spacing */
+                font-size: 17px !important;
+                margin: 0.4mm 0 !important;
             }
             
             .divider {
                 font-size: 16px !important;
-                margin: 0.9mm 0 !important; /* ✅ 0.9mm minimal */
+                margin: 0.9mm 0 !important;
                 padding: 0 !important;
             }
             
-            /* SECTION INFO */
             .info {
-                font-size: 17px !important; /* ✅ 17px */
+                font-size: 17px !important;
                 text-align: left !important;
                 margin: 0 !important;
                 padding: 0 !important;
@@ -2724,19 +2430,17 @@ class SalesReport {
             }
             
             .info td {
-                font-size: 17px !important; /* ✅ 17px */
-                padding: 0.4mm 0 !important; /* ✅ 0.4mm-0.5mm minimal */
+                font-size: 17px !important;
+                padding: 0.4mm 0 !important;
             }
             
-            /* ITEMS HEADER */
             .items-header {
-                font-size: 17px !important; /* ✅ 17px */
+                font-size: 17px !important;
                 font-weight: bold !important;
                 text-align: left !important;
-                margin: 0.4mm 0 !important; /* Added 4 spacing */
+                margin: 0.4mm 0 !important;
             }
             
-            /* ITEMS TABLE */
             .items-table {
                 width: 100% !important;
                 font-size: 16px !important;
@@ -2746,14 +2450,14 @@ class SalesReport {
             }
             
             .items-table td {
-                padding: 0.4mm 0 !important; /* ✅ 0.4mm-0.5mm minimal */
+                padding: 0.4mm 0 !important;
                 vertical-align: top !important;
             }
             
             .item-name {
                 text-align: left !important;
                 width: 50% !important;
-                font-size: 16px !important; /* ✅ 16px BOLD */
+                font-size: 16px !important;
                 font-weight: bold !important;
             }
             
@@ -2767,41 +2471,40 @@ class SalesReport {
             .item-price {
                 text-align: right !important;
                 width: 35% !important;
-                font-size: 16px !important; /* ✅ 16px BOLD */
+                font-size: 16px !important;
                 font-weight: bold !important;
             }
             
             .item-addons {
-                font-size: 16px !important; /* ✅ 16px italic */
+                font-size: 16px !important;
                 font-style: italic !important;
                 padding-left: 2mm !important;
                 text-align: left !important;
             }
             
             .item-notes {
-                font-size: 16px !important; /* ✅ 16px italic */
+                font-size: 16px !important;
                 font-style: italic !important;
                 padding-left: 2mm !important;
                 text-align: left !important;
                 color: #666 !important;
             }
             
-            /* TOTALS */
             .totals {
                 width: 100% !important;
-                font-size: 16px !important; /* ✅ 16px BOLD */
-                margin: 0.9mm 0 0 !important; /* ✅ 0.9mm minimal */
+                font-size: 16px !important;
+                margin: 0.9mm 0 0 !important;
                 padding: 0 !important;
                 border-top: 1px solid black !important;
             }
             
             .totals td {
-                padding: 0.4mm 0 !important; /* ✅ 0.4mm-0.5mm minimal */
+                padding: 0.4mm 0 !important;
                 font-weight: bold !important;
             }
             
             .grand-total {
-                font-weight: 900 !important; /* ✅ 16px SUPER BOLD */
+                font-weight: 900 !important;
                 font-size: 16px !important;
                 border-top: 2px solid black !important;
                 border-bottom: 2px solid black !important;
@@ -2811,35 +2514,33 @@ class SalesReport {
                 font-weight: 900 !important;
             }
             
-            /* FOOTER */
             .footer {
-                font-size: 12px !important; /* ✅ 12px */
-                margin: 0.6mm 0 0 !important; /* ✅ 0.6mm-0.9mm minimal */
+                font-size: 12px !important;
+                margin: 0.6mm 0 0 !important;
                 padding: 0 !important;
             }
             
             .footer div {
-                margin: 0.4mm 0 !important; /* Added 4 spacing between footer lines */
+                margin: 0.4mm 0 !important;
             }
             
             .transaction-info {
-                font-size: 12px !important; /* ✅ 12px */
+                font-size: 12px !important;
                 color: #666 !important;
-                margin: 0.6mm 0 0 !important; /* ✅ 0.6mm-0.9mm minimal */
+                margin: 0.6mm 0 0 !important;
                 padding: 0 !important;
             }
             
             .transaction-info br {
-                margin: 0.4mm 0 !important; /* Added 4 spacing between transaction lines */
+                margin: 0.4mm 0 !important;
             }
             
-            /* VOID STAMP */
             .void-stamp {
                 color: red !important;
                 font-weight: bold !important;
                 font-size: 18px !important;
                 border: 2px solid red !important;
-                margin: 0.9mm 0 !important; /* ✅ 0.9mm minimal */
+                margin: 0.9mm 0 !important;
                 padding: 0.9mm !important;
             }
             
@@ -2851,21 +2552,18 @@ class SalesReport {
             }
             
             .void-info div {
-                margin: 0.4mm 0 !important; /* Added 4 spacing */
+                margin: 0.4mm 0 !important;
             }
             
-            /* PRINT BUTTON (FOR PREVIEW ONLY) */
             .no-print {
                 display: none !important;
             }
             
-            /* FORCE NO PAGE BREAKS */
             .receipt {
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
             }
             
-            /* PRINT SPECIFIC */
             @media print {
                 .no-print {
                     display: none !important;
@@ -3068,14 +2766,12 @@ class SalesReport {
         
         <!-- AUTO PRINT SCRIPT -->
         <script>
-            // AUTO PRINT
             window.onload = function() {
                 setTimeout(function() {
                     window.print();
                 }, 300);
             };
             
-            // KEYBOARD SHORTCUTS
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape') window.close();
                 if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
@@ -3094,25 +2790,9 @@ class SalesReport {
     printWindow.document.close();
     printWindow.focus();
   }
-  // Helper function to generate transaction code
-  generateTransactionCode(orderId) {
-    const date = new Date();
-    const timestamp = date.getTime().toString().slice(-6);
-    const random = Math.floor(Math.random() * 1000)
-      .toString()
-      .padStart(3, "0");
-    return `KST-${date.getFullYear().toString().slice(-2)}${(
-      date.getMonth() + 1
-    )
-      .toString()
-      .padStart(2, "0")}${date
-      .getDate()
-      .toString()
-      .padStart(2, "0")}-${orderId}${random}`;
-  }
 
   // ============================================
-  // EXPORT SALES TO EXCEL
+  // EXPORT TO EXCEL METHODS
   // ============================================
   exportSalesToExcel() {
     if (this.salesData.length === 0) {
@@ -3120,7 +2800,6 @@ class SalesReport {
       return;
     }
 
-    // Calculate statistics
     const totalSales = this.salesData.reduce(
       (sum, order) => sum + parseFloat(order.total),
       0
@@ -3141,7 +2820,6 @@ class SalesReport {
     }, 0);
     const avgTransaction = totalSales / this.salesData.length;
 
-    // Get branch and time range
     const branchFilter = document.getElementById("branchFilter");
     const currentBranch = branchFilter ? branchFilter.value : "all";
     const branchText = currentBranch === "all" ? "All Branches" : currentBranch;
@@ -3149,25 +2827,13 @@ class SalesReport {
     const timeRange = document.getElementById("timeRange").value;
     const timeRangeText = this.getTimeRangeText(timeRange);
 
-    // Build data array
     const ws_data = [];
 
-    // Row 1: Company Name
     ws_data.push(["K - STREET"]);
-
-    // Row 2: Branch
     ws_data.push([`BRANCH: ${branchText}`]);
-
-    // Row 3: Report Title
     ws_data.push([`Sales Report - Period: ${timeRangeText}`]);
-
-    // Row 4: Empty
     ws_data.push([]);
-
-    // Row 5: Summary Title
     ws_data.push(["SALES SUMMARY"]);
-
-    // Row 6-10: Summary Stats
     ws_data.push([
       `Total Sales: ₱${totalSales.toLocaleString("en-PH", {
         minimumFractionDigits: 2,
@@ -3188,10 +2854,8 @@ class SalesReport {
       })}`,
     ]);
 
-    // Row 11: Empty
     ws_data.push([]);
 
-    // Row 12: Table Header
     const headers = this.isAdmin()
       ? [
           "Order #",
@@ -3220,7 +2884,6 @@ class SalesReport {
         ];
     ws_data.push(headers);
 
-    // Data Rows
     this.salesData.forEach((order) => {
       const row = this.isAdmin()
         ? [
@@ -3251,17 +2914,10 @@ class SalesReport {
       ws_data.push(row);
     });
 
-    // Footer
     ws_data.push([]);
     ws_data.push([`Generated: ${new Date().toLocaleString("en-PH")}`]);
 
-    // Create worksheet
     const ws = XLSX.utils.aoa_to_sheet(ws_data);
-
-    // Apply styles
-    this.applySalesExcelStyles(ws, ws_data.length);
-
-    // Set column widths
     ws["!cols"] = this.isAdmin()
       ? [
           { wch: 10 },
@@ -3289,24 +2945,18 @@ class SalesReport {
           { wch: 22 },
         ];
 
-    // Create workbook
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Sales Report");
 
-    // Generate filename
     const filename = `K-Street-Sales_Report_${currentBranch}_${
       new Date().toISOString().split("T")[0]
     }.xlsx`;
 
-    // Download
     XLSX.writeFile(wb, filename);
 
     this.showNotification("success", "Excel file exported successfully!");
   }
 
-  // ============================================
-  // EXPORT CASHIER TO EXCEL
-  // ============================================
   exportCashierToExcel() {
     if (this.cashierData.length === 0) {
       this.showNotification("warning", "No data to export");
@@ -3336,25 +2986,12 @@ class SalesReport {
 
     const ws_data = [];
 
-    // Row 1: K-STREET Header (Red Background)
     ws_data.push(["K - STREET"]);
-
-    // Row 2: Address
     ws_data.push(["Mc Arthur Highway, Magaspac, Gerona, Tarlac"]);
-
-    // Row 3: Report Title
     ws_data.push(["CASHIER SESSION REPORT"]);
-
-    // Row 4: Branch
     ws_data.push([`BRANCH: ${branchText}`]);
-
-    // Row 5: Empty
     ws_data.push([]);
-
-    // Row 6: CASHIER INFORMATION Header
     ws_data.push(["CASHIER INFORMATION"]);
-
-    // Row 7: Summary Stats
     ws_data.push([`Total Cashier Sessions: ${totalSessions}`]);
     ws_data.push([
       `Total Gross Sales: ₱${totalGrossSales.toLocaleString("en-PH", {
@@ -3372,10 +3009,8 @@ class SalesReport {
       })}`,
     ]);
 
-    // Row 11: Empty
     ws_data.push([]);
 
-    // Row 12: Table Headers with background
     const headers = this.isAdmin()
       ? [
           "Branch",
@@ -3402,7 +3037,6 @@ class SalesReport {
         ];
     ws_data.push(headers);
 
-    // Data Rows
     this.cashierData.forEach((session) => {
       const row = this.isAdmin()
         ? [
@@ -3435,17 +3069,10 @@ class SalesReport {
       ws_data.push(row);
     });
 
-    // Footer
     ws_data.push([]);
     ws_data.push([`Generated: ${new Date().toLocaleString("en-PH")}`]);
 
-    // Create worksheet
     const ws = XLSX.utils.aoa_to_sheet(ws_data);
-
-    // Apply professional styling
-    this.applyCashierReportDesign(ws, ws_data.length, this.isAdmin());
-
-    // Set column widths
     ws["!cols"] = this.isAdmin()
       ? [
           { wch: 18 },
@@ -3471,44 +3098,18 @@ class SalesReport {
           { wch: 16 },
         ];
 
-    // Set row heights for better appearance
-    ws["!rows"] = [
-      { hpt: 30 }, // Row 1: K-STREET
-      { hpt: 16 }, // Row 2: Address
-      { hpt: 22 }, // Row 3: Title
-      { hpt: 16 }, // Row 4: Branch
-      { hpt: 10 }, // Row 5: Empty
-      { hpt: 20 }, // Row 6: Section header
-      { hpt: 16 }, // Row 7-10: Stats
-      { hpt: 16 },
-      { hpt: 16 },
-      { hpt: 16 },
-      { hpt: 10 }, // Row 11: Empty
-      { hpt: 25 }, // Row 12: Table headers
-    ];
-
-    // Create workbook
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Cashier Report");
 
-    // Generate filename
     const filename = `K-Street-Cashier_Report_${currentBranch}_${
       new Date().toISOString().split("T")[0]
     }.xlsx`;
 
-    // Download
     XLSX.writeFile(wb, filename);
 
-    this.showNotification(
-      "success",
-      "Cashier Report exported successfully with professional design!"
-    );
+    this.showNotification("success", "Cashier Report exported successfully!");
   }
 
-  // ============================================
-  // EXPORT CASHIER SESSION TO EXCEL (INDIVIDUAL) - FIXED VERSION
-  // ============================================
-  // Replace the exportCashierSessionToExcel function in your sales.js with this:
   exportCashierSessionToExcel() {
     const session = this.selectedSession;
     if (!session) {
@@ -3516,9 +3117,6 @@ class SalesReport {
       return;
     }
 
-    console.log("📊 Export Session Data:", session);
-
-    // FIX: Convert empty array or calculate from orders
     let paymentMethods = {};
 
     if (
@@ -3526,14 +3124,8 @@ class SalesReport {
       typeof session.payment_methods === "object" &&
       !Array.isArray(session.payment_methods)
     ) {
-      // Backend returned proper object
       paymentMethods = session.payment_methods;
-      console.log("✅ Using payment_methods from backend:", paymentMethods);
     } else if (session.orders && session.orders.length > 0) {
-      // Calculate from orders
-      console.log(
-        "⚠️ payment_methods empty/invalid, calculating from orders..."
-      );
       session.orders.forEach((order) => {
         const method = order.payment_method || "Cash";
         if (!paymentMethods[method]) {
@@ -3542,26 +3134,14 @@ class SalesReport {
         paymentMethods[method].count++;
         paymentMethods[method].total += parseFloat(order.total || 0);
       });
-      console.log("✅ Calculated payment_methods:", paymentMethods);
-    } else {
-      console.log("ℹ️ No orders found, showing empty payment methods table");
     }
 
     const ws_data = [];
 
-    // ROW 1: K-STREET Header
     ws_data.push(["K - STREET"]);
-
-    // ROW 2: Empty
     ws_data.push([""]);
-
-    // ROW 3: CASHIER SESSION REPORT
     ws_data.push(["CASHIER SESSION REPORT"]);
-
-    // ROW 4: CASHIER INFORMATION Header
     ws_data.push(["CASHIER INFORMATION"]);
-
-    // Cashier Info Data
     ws_data.push(["Cashier Email:", session.user_email]);
     ws_data.push(["Login Time:", this.formatDateTime(session.login_time)]);
     ws_data.push([
@@ -3575,13 +3155,8 @@ class SalesReport {
       session.session_duration || "Still Active",
     ]);
 
-    // Empty row
     ws_data.push([""]);
-
-    // SALES SUMMARY Header
     ws_data.push(["SALES SUMMARY"]);
-
-    // Sales Summary Data
     ws_data.push([
       "Starting Gross:",
       parseFloat(session.start_gross_sales || 0),
@@ -3598,29 +3173,18 @@ class SalesReport {
     ]);
     ws_data.push(["Total Void Amount:", parseFloat(session.total_void || 0)]);
 
-    // Empty row
     ws_data.push([""]);
-
-    // PAYMENT METHODS TABLE - ALWAYS SHOW
     ws_data.push(["Payment Method", "Transaction Count", "Total Amount"]);
 
     if (Object.keys(paymentMethods).length > 0) {
-      console.log("✅ Adding payment methods data");
       Object.entries(paymentMethods).forEach(([method, data]) => {
-        console.log(
-          `  - ${method}: ${data.count} transactions, ₱${data.total}`
-        );
         ws_data.push([method, data.count, parseFloat(data.total)]);
       });
     } else {
-      console.log("ℹ️ No payment methods data - showing 'No transactions' row");
       ws_data.push(["No transactions yet", 0, 0]);
     }
 
-    // Empty row after payment methods
     ws_data.push([""]);
-
-    // ORDERS DURING SESSION - ALWAYS SHOW
     ws_data.push(["ORDERS DURING SESSION"]);
 
     const orderHeaders = this.isAdmin()
@@ -3644,7 +3208,6 @@ class SalesReport {
     ws_data.push(orderHeaders);
 
     if (session.orders && session.orders.length > 0) {
-      console.log(`✅ Adding ${session.orders.length} orders`);
       session.orders.forEach((order) => {
         const row = this.isAdmin()
           ? [
@@ -3667,17 +3230,13 @@ class SalesReport {
         ws_data.push(row);
       });
     } else {
-      console.log("ℹ️ No orders - showing 'No orders' row");
       const emptyRow = this.isAdmin()
         ? ["-", "No orders during this session", 0, "-", "-", "-", "-"]
         : ["-", "No orders during this session", 0, "-", "-", "-"];
       ws_data.push(emptyRow);
     }
 
-    // Empty row
     ws_data.push([""]);
-
-    // Footer
     const generatedDate = new Date().toLocaleString("en-PH", {
       year: "numeric",
       month: "numeric",
@@ -3692,20 +3251,7 @@ class SalesReport {
       }`,
     ]);
 
-    console.log(`📄 Total rows: ${ws_data.length}`);
-
-    // Create worksheet
     const ws = XLSX.utils.aoa_to_sheet(ws_data);
-
-    // Apply styling
-    this.applyCashierSessionExactDesign(
-      ws,
-      ws_data.length,
-      session,
-      this.isAdmin()
-    );
-
-    // Set column widths
     ws["!cols"] = this.isAdmin()
       ? [
           { wch: 25 },
@@ -3725,7 +3271,6 @@ class SalesReport {
           { wch: 18 },
         ];
 
-    // Create workbook
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(
       wb,
@@ -3733,26 +3278,20 @@ class SalesReport {
       `Session_${session.user_email.split("@")[0]}`
     );
 
-    // Generate filename
     const dateStr = new Date().toISOString().split("T")[0].replace(/-/g, "");
     const cashierStr = session.user_email
       .split("@")[0]
       .replace(/[^a-zA-Z0-9]/g, "_");
     const filename = `K-STREET_Cashier_Report_${cashierStr}_${dateStr}.xlsx`;
 
-    // Download
     XLSX.writeFile(wb, filename);
 
-    console.log("✅ Excel downloaded:", filename);
     this.showNotification(
       "success",
       "Cashier session report exported successfully!"
     );
   }
 
-  // ============================================
-  // EXPORT VOID TO EXCEL
-  // ============================================
   exportVoidToExcel() {
     if (this.voidData.length === 0) {
       this.showNotification("warning", "No data to export");
@@ -3771,16 +3310,12 @@ class SalesReport {
     const timeRange = document.getElementById("timeRange").value;
     const timeRangeText = this.getTimeRangeText(timeRange);
 
-    // Build data array
     const ws_data = [];
 
-    // Header
     ws_data.push(["K - STREET"]);
     ws_data.push([`BRANCH: ${branchText}`]);
     ws_data.push([`Void Report - Period: ${timeRangeText}`]);
     ws_data.push([]);
-
-    // Summary
     ws_data.push(["VOID SUMMARY"]);
     ws_data.push([`Total Voided Transactions: ${this.voidData.length}`]);
     ws_data.push([
@@ -3790,7 +3325,6 @@ class SalesReport {
     ]);
     ws_data.push([]);
 
-    // Table Headers
     const headers = this.isAdmin()
       ? [
           "Order #",
@@ -3817,7 +3351,6 @@ class SalesReport {
         ];
     ws_data.push(headers);
 
-    // Data Rows
     this.voidData.forEach((order) => {
       const row = this.isAdmin()
         ? [
@@ -3846,17 +3379,10 @@ class SalesReport {
       ws_data.push(row);
     });
 
-    // Footer
     ws_data.push([]);
     ws_data.push([`Generated: ${new Date().toLocaleString("en-PH")}`]);
 
-    // Create worksheet
     const ws = XLSX.utils.aoa_to_sheet(ws_data);
-
-    // Apply styles
-    this.applyVoidExcelStyles(ws, ws_data.length);
-
-    // Set column widths
     ws["!cols"] = this.isAdmin()
       ? [
           { wch: 10 },
@@ -3882,603 +3408,111 @@ class SalesReport {
           { wch: 30 },
         ];
 
-    // Create workbook
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Void Report");
 
-    // Generate filename
     const filename = `K-Street-Void_Report_${currentBranch}_${
       new Date().toISOString().split("T")[0]
     }.xlsx`;
 
-    // Download
     XLSX.writeFile(wb, filename);
 
     this.showNotification("success", "Excel file exported successfully!");
   }
 
   // ============================================
-  // EXCEL STYLING HELPERS
+  // OTHER MISSING METHODS
   // ============================================
-  applySalesExcelStyles(ws, totalRows) {
-    // Header style (Row 1)
-    if (ws["A1"]) {
-      ws["A1"].s = {
-        font: { bold: true, color: { rgb: "FFFFFFFF" }, size: 14 },
-        fill: { fgColor: { rgb: "FFDC2626" } },
-        alignment: { horizontal: "center", vertical: "center" },
-      };
+  exportCashoutToExcel() {
+    if (this.cashoutData.length === 0) {
+      this.showNotification("warning", "No data to export");
+      return;
     }
 
-    // Summary title (Row 5)
-    if (ws["A5"]) {
-      ws["A5"].s = {
-        font: { bold: true, size: 11 },
-        fill: { fgColor: { rgb: "FFFFCDD2" } },
-        alignment: { horizontal: "left" },
-      };
-    }
+    const totalWithdrawal = this.cashoutData
+      .filter((r) => r.type === "withdrawal")
+      .reduce((sum, r) => sum + parseFloat(r.amount || 0), 0);
 
-    // Discount row (Row 9) - Green
-    if (ws["A9"]) {
-      ws["A9"].s = {
-        font: { bold: true, size: 10, color: { rgb: "FF15803D" } },
-        alignment: { horizontal: "left" },
-      };
-    }
+    const totalDeposit = this.cashoutData
+      .filter((r) => r.type === "deposit")
+      .reduce((sum, r) => sum + parseFloat(r.amount || 0), 0);
 
-    // Table header row
-    const headerRow = 12;
-    const numCols = this.isAdmin() ? 11 : 10;
-    for (let col = 0; col < numCols; col++) {
-      const cellRef = XLSX.utils.encode_cell({ r: headerRow - 1, c: col });
-      if (ws[cellRef]) {
-        ws[cellRef].s = {
-          font: { bold: true, color: { rgb: "FFFFFFFF" }, size: 10 },
-          fill: { fgColor: { rgb: "FFD32F2F" } },
-          alignment: { horizontal: "center", vertical: "center" },
-        };
-      }
-    }
+    const netCashflow = totalDeposit - totalWithdrawal;
+
+    const branchFilter = document.getElementById("branchFilter");
+    const currentBranch = branchFilter ? branchFilter.value : "all";
+    const branchText = currentBranch === "all" ? "All Branches" : currentBranch;
+
+    const timeRange = document.getElementById("timeRange").value;
+    const timeRangeText = this.getTimeRangeText(timeRange);
+
+    const ws_data = [];
+
+    ws_data.push(["K - STREET"]);
+    ws_data.push([`BRANCH: ${branchText}`]);
+    ws_data.push([`Cash-out Report - Period: ${timeRangeText}`]);
+    ws_data.push([]);
+    ws_data.push(["CASH-OUT SUMMARY"]);
+    ws_data.push([`Total Records: ${this.cashoutData.length}`]);
+    ws_data.push([`Total Withdrawal: ₱${totalWithdrawal.toFixed(2)}`]);
+    ws_data.push([`Total Deposit: ₱${totalDeposit.toFixed(2)}`]);
+    ws_data.push([`Net Cash Flow: ₱${netCashflow.toFixed(2)}`]);
+    ws_data.push([]);
+
+    const headers = this.isAdmin()
+      ? ["ID", "Branch", "Date", "Cashier", "Type", "Amount", "Reason"]
+      : ["ID", "Date", "Cashier", "Type", "Amount", "Reason"];
+
+    ws_data.push(headers);
+
+    this.cashoutData.forEach((record) => {
+      const row = this.isAdmin()
+        ? [
+            record.id,
+            record.branch || "Unknown",
+            this.formatDateTime(record.created_at),
+            record.cashier_name || record.cashier_email || "Unknown",
+            record.type,
+            parseFloat(record.amount),
+            record.reason || "",
+          ]
+        : [
+            record.id,
+            this.formatDateTime(record.created_at),
+            record.cashier_name || record.cashier_email || "Unknown",
+            record.type,
+            parseFloat(record.amount),
+            record.reason || "",
+          ];
+      ws_data.push(row);
+    });
+
+    ws_data.push([]);
+    ws_data.push([`Generated: ${new Date().toLocaleString("en-PH")}`]);
+
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Cash-out Report");
+
+    const filename = `K-Street-Cashout_Report_${currentBranch}_${
+      new Date().toISOString().split("T")[0]
+    }.xlsx`;
+    XLSX.writeFile(wb, filename);
+
+    this.showNotification("success", "Cash-out report exported successfully!");
   }
 
-  applyCashierReportDesign(ws, totalRows, isAdmin) {
-    const redFill = { fgColor: { rgb: "FFDC2626" } };
-    const lightRedFill = { fgColor: { rgb: "FFFFCDD2" } };
-    const greenFill = { fgColor: { rgb: "FFF1F5FE" } };
-    const headerFill = { fgColor: { rgb: "FF4472C4" } };
-    const purpleHeaderFill = { fgColor: { rgb: "FF7030A0" } };
-    const blueLightFill = { fgColor: { rgb: "FFDFE9F3" } };
-
-    const whiteFont = { color: { rgb: "FFFFFFFF" }, bold: true, size: 11 };
-    const headerFont = { color: { rgb: "FFFFFFFF" }, bold: true, size: 11 };
-    const boldFont = { bold: true, size: 11 };
-    const regularFont = { size: 10 };
-    const smallFont = { size: 9 };
-
-    const centerAlign = {
-      horizontal: "center",
-      vertical: "center",
-      wrapText: true,
-    };
-    const leftAlign = {
-      horizontal: "left",
-      vertical: "center",
-      wrapText: true,
-    };
-    const rightAlign = { horizontal: "right", vertical: "center" };
-
-    // Row 1: K-STREET Header
-    const a1 = XLSX.utils.encode_cell({ r: 0, c: 0 });
-    ws[a1].s = {
-      font: { bold: true, size: 26, color: { rgb: "FFFFFFFF" } },
-      fill: redFill,
-      alignment: centerAlign,
-      border: {
-        top: { style: "thin" },
-        bottom: { style: "thin" },
-        left: { style: "thin" },
-        right: { style: "thin" },
-      },
-    };
-    if (!ws["!merges"]) ws["!merges"] = [];
-    ws["!merges"].push({ s: { r: 0, c: 0 }, e: { r: 0, c: isAdmin ? 9 : 8 } });
-
-    // Row 2: Address
-    const a2 = XLSX.utils.encode_cell({ r: 1, c: 0 });
-    ws[a2].s = {
-      font: { size: 10, color: { rgb: "FF333333" } },
-      fill: { fgColor: { rgb: "FFFEF3C7" } },
-      alignment: centerAlign,
-      border: {
-        bottom: { style: "thin" },
-      },
-    };
-    ws["!merges"].push({ s: { r: 1, c: 0 }, e: { r: 1, c: isAdmin ? 9 : 8 } });
-
-    // Row 3: Report Title
-    const a3 = XLSX.utils.encode_cell({ r: 2, c: 0 });
-    ws[a3].s = {
-      font: { bold: true, size: 14, color: { rgb: "FFDC2626" } },
-      alignment: centerAlign,
-      border: {
-        top: { style: "thin" },
-        bottom: { style: "thin" },
-      },
-    };
-    ws["!merges"].push({ s: { r: 2, c: 0 }, e: { r: 2, c: isAdmin ? 9 : 8 } });
-
-    // Row 4: Branch
-    const a4 = XLSX.utils.encode_cell({ r: 3, c: 0 });
-    ws[a4].s = {
-      font: { size: 11, color: { rgb: "FF0E47CB" }, bold: true },
-      fill: blueLightFill,
-      alignment: centerAlign,
-      border: {
-        bottom: { style: "thin" },
-      },
-    };
-    ws["!merges"].push({ s: { r: 3, c: 0 }, e: { r: 3, c: isAdmin ? 9 : 8 } });
+  showEditCashoutModal(recordId) {
+    // Add implementation if needed
+    console.log("Edit cashout:", recordId);
+    this.showNotification("info", "Edit cashout feature coming soon");
   }
 
-  // Replace the applyCashierSessionExactDesign function in your sales.js with this:
-
-  applyCashierSessionExactDesign(ws, totalRows, session, isAdmin) {
-    // EXACT color scheme from target image
-    const redFill = { fgColor: { rgb: "FFFF0000" } };
-    const pinkFill = { fgColor: { rgb: "FFFFC7CE" } };
-    const greenFill = { fgColor: { rgb: "FFC6EFCE" } };
-    const lightGreenFill = { fgColor: { rgb: "FFE2EFDA" } };
-    const lightRedFill = { fgColor: { rgb: "FFFFC7CE" } };
-    const purpleFill = { fgColor: { rgb: "FF7030A0" } };
-    const blueFill = { fgColor: { rgb: "FFBDD7EE" } };
-    const grayFill = { fgColor: { rgb: "FFF2F2F2" } }; // For empty state
-
-    // Font styles
-    const whiteBoldFont = { color: { rgb: "FFFFFFFF" }, bold: true, size: 18 };
-    const blackBoldFont = { bold: true, size: 11, color: { rgb: "FF000000" } };
-    const regularFont = { size: 11, color: { rgb: "FF000000" } };
-    const greenFont = { bold: true, size: 11, color: { rgb: "FF00B050" } };
-    const blueFont = { bold: true, size: 11, color: { rgb: "FF0070C0" } };
-    const redFont = { bold: true, size: 11, color: { rgb: "FFFF0000" } };
-    const grayFont = { size: 10, color: { rgb: "FF666666" }, italic: true }; // For empty state
-
-    // Alignment
-    const centerAlign = { horizontal: "center", vertical: "center" };
-    const leftAlign = { horizontal: "left", vertical: "center" };
-    const rightAlign = { horizontal: "right", vertical: "center" };
-
-    // Initialize merges
-    if (!ws["!merges"]) ws["!merges"] = [];
-
-    // Helper to ensure cell exists and apply style
-    const styleCell = (row, col, style) => {
-      const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
-      if (!ws[cellRef]) ws[cellRef] = { v: "", t: "s" };
-      ws[cellRef].s = style;
-      return cellRef;
-    };
-
-    const applyBorder = (style) => {
-      return {
-        ...style,
-        border: {
-          top: { style: "thin", color: { rgb: "FF000000" } },
-          bottom: { style: "thin", color: { rgb: "FF000000" } },
-          left: { style: "thin", color: { rgb: "FF000000" } },
-          right: { style: "thin", color: { rgb: "FF000000" } },
-        },
-      };
-    };
-
-    const mergeCells = (startRow, startCol, endRow, endCol) => {
-      ws["!merges"].push({
-        s: { r: startRow, c: startCol },
-        e: { r: endRow, c: endCol },
-      });
-    };
-
-    // ROW 1: K-STREET Header (RED) - MERGE
-    styleCell(
-      0,
-      0,
-      applyBorder({
-        font: whiteBoldFont,
-        fill: redFill,
-        alignment: centerAlign,
-      })
-    );
-    mergeCells(0, 0, 0, isAdmin ? 6 : 5);
-
-    // ROW 2: Empty - MERGE
-    mergeCells(1, 0, 1, isAdmin ? 6 : 5);
-
-    // ROW 3: CASHIER SESSION REPORT - MERGE
-    styleCell(
-      2,
-      0,
-      applyBorder({
-        font: blackBoldFont,
-        alignment: centerAlign,
-      })
-    );
-    mergeCells(2, 0, 2, isAdmin ? 6 : 5);
-
-    // ROW 4: CASHIER INFORMATION Header (PINK) - MERGE
-    styleCell(
-      3,
-      0,
-      applyBorder({
-        font: blackBoldFont,
-        fill: pinkFill,
-        alignment: leftAlign,
-      })
-    );
-    mergeCells(3, 0, 3, isAdmin ? 6 : 5);
-
-    // Rows 5-8: Cashier Info Data - DON'T MERGE, style both columns
-    for (let i = 4; i <= 7; i++) {
-      styleCell(
-        i,
-        0,
-        applyBorder({
-          font: regularFont,
-          alignment: leftAlign,
-        })
-      );
-      styleCell(
-        i,
-        1,
-        applyBorder({
-          font: regularFont,
-          alignment: leftAlign,
-        })
-      );
-    }
-
-    // ROW 9: Empty - MERGE
-    mergeCells(8, 0, 8, isAdmin ? 6 : 5);
-
-    // ROW 10: SALES SUMMARY Header (GREEN) - MERGE
-    styleCell(
-      9,
-      0,
-      applyBorder({
-        font: blackBoldFont,
-        fill: greenFill,
-        alignment: leftAlign,
-      })
-    );
-    mergeCells(9, 0, 9, isAdmin ? 6 : 5);
-
-    // Row 11: Starting Gross (normal) - DON'T MERGE
-    styleCell(
-      10,
-      0,
-      applyBorder({
-        font: regularFont,
-        alignment: leftAlign,
-      })
-    );
-    styleCell(
-      10,
-      1,
-      applyBorder({
-        font: regularFont,
-        alignment: rightAlign,
-      })
-    );
-
-    // Row 12: Ending Gross (normal) - DON'T MERGE
-    styleCell(
-      11,
-      0,
-      applyBorder({
-        font: regularFont,
-        alignment: leftAlign,
-      })
-    );
-    styleCell(
-      11,
-      1,
-      applyBorder({
-        font: regularFont,
-        alignment: rightAlign,
-      })
-    );
-
-    // Row 13: Sales During (GREEN text + light green background) - DON'T MERGE
-    styleCell(
-      12,
-      0,
-      applyBorder({
-        font: greenFont,
-        fill: lightGreenFill,
-        alignment: leftAlign,
-      })
-    );
-    styleCell(
-      12,
-      1,
-      applyBorder({
-        font: greenFont,
-        fill: lightGreenFill,
-        alignment: rightAlign,
-      })
-    );
-
-    // Row 14: Total Transact (normal) - DON'T MERGE
-    styleCell(
-      13,
-      0,
-      applyBorder({
-        font: regularFont,
-        alignment: leftAlign,
-      })
-    );
-    styleCell(
-      13,
-      1,
-      applyBorder({
-        font: regularFont,
-        alignment: rightAlign,
-      })
-    );
-
-    // Row 15: Total Applied (BLUE text) - DON'T MERGE
-    styleCell(
-      14,
-      0,
-      applyBorder({
-        font: blueFont,
-        alignment: leftAlign,
-      })
-    );
-    styleCell(
-      14,
-      1,
-      applyBorder({
-        font: blueFont,
-        alignment: rightAlign,
-      })
-    );
-
-    // Row 16: Total Void Am (RED text + light pink background) - DON'T MERGE
-    styleCell(
-      15,
-      0,
-      applyBorder({
-        font: redFont,
-        fill: lightRedFill,
-        alignment: leftAlign,
-      })
-    );
-    styleCell(
-      15,
-      1,
-      applyBorder({
-        font: redFont,
-        fill: lightRedFill,
-        alignment: rightAlign,
-      })
-    );
-
-    // ROW 17: Empty - MERGE
-    mergeCells(16, 0, 16, isAdmin ? 6 : 5);
-
-    // Payment Methods Table starts at row 17 (index 17)
-    let nextRow = 17;
-
-    // Payment Methods Header Row (PURPLE) - DON'T MERGE
-    for (let col = 0; col < 3; col++) {
-      styleCell(
-        nextRow,
-        col,
-        applyBorder({
-          font: { bold: true, color: { rgb: "FFFFFFFF" }, size: 11 },
-          fill: purpleFill,
-          alignment: centerAlign,
-        })
-      );
-    }
-    nextRow++;
-
-    // Payment data rows - check if we have actual payment methods or placeholder
-    const paymentMethodsCount =
-      session.payment_methods &&
-      typeof session.payment_methods === "object" &&
-      !Array.isArray(session.payment_methods)
-        ? Object.keys(session.payment_methods).length
-        : 0;
-
-    if (paymentMethodsCount > 0) {
-      // Real payment methods data
-      Object.entries(session.payment_methods).forEach(
-        ([method, data], index) => {
-          styleCell(
-            nextRow,
-            0,
-            applyBorder({
-              font: regularFont,
-              alignment: leftAlign,
-            })
-          );
-
-          styleCell(
-            nextRow,
-            1,
-            applyBorder({
-              font: regularFont,
-              alignment: centerAlign,
-            })
-          );
-
-          styleCell(
-            nextRow,
-            2,
-            applyBorder({
-              font: regularFont,
-              alignment: rightAlign,
-            })
-          );
-
-          // Format currency
-          const cellRef = XLSX.utils.encode_cell({ r: nextRow, c: 2 });
-          if (ws[cellRef]) {
-            ws[cellRef].z = "₱#,##0.00";
-          }
-
-          nextRow++;
-        }
-      );
-    } else {
-      // No transactions - style the placeholder row
-      styleCell(
-        nextRow,
-        0,
-        applyBorder({
-          font: grayFont,
-          fill: grayFill,
-          alignment: leftAlign,
-        })
-      );
-
-      styleCell(
-        nextRow,
-        1,
-        applyBorder({
-          font: grayFont,
-          fill: grayFill,
-          alignment: centerAlign,
-        })
-      );
-
-      styleCell(
-        nextRow,
-        2,
-        applyBorder({
-          font: grayFont,
-          fill: grayFill,
-          alignment: rightAlign,
-        })
-      );
-
-      nextRow++;
-    }
-
-    // Empty row after payment methods - MERGE
-    mergeCells(nextRow, 0, nextRow, isAdmin ? 6 : 5);
-    nextRow++;
-
-    // Find ORDERS DURING SESSION row
-    let ordersStartRow = -1;
-    for (let i = 0; i < totalRows; i++) {
-      const cellRef = XLSX.utils.encode_cell({ r: i, c: 0 });
-      if (ws[cellRef] && ws[cellRef].v === "ORDERS DURING SESSION") {
-        ordersStartRow = i;
-        break;
-      }
-    }
-
-    if (ordersStartRow !== -1) {
-      // ORDERS DURING SESSION Header (BLUE) - MERGE
-      styleCell(
-        ordersStartRow,
-        0,
-        applyBorder({
-          font: blackBoldFont,
-          fill: blueFill,
-          alignment: leftAlign,
-        })
-      );
-      mergeCells(ordersStartRow, 0, ordersStartRow, isAdmin ? 6 : 5);
-
-      // Table Header Row (PURPLE) - DON'T MERGE
-      const tableHeaderRow = ordersStartRow + 1;
-      for (let col = 0; col < (isAdmin ? 7 : 6); col++) {
-        styleCell(
-          tableHeaderRow,
-          col,
-          applyBorder({
-            font: { bold: true, color: { rgb: "FFFFFFFF" }, size: 11 },
-            fill: purpleFill,
-            alignment: centerAlign,
-          })
-        );
-      }
-
-      // Order data rows or placeholder - DON'T MERGE
-      const hasOrders = session.orders && session.orders.length > 0;
-      const orderRowsCount = hasOrders ? session.orders.length : 1; // 1 for placeholder
-
-      for (let i = 0; i < orderRowsCount; i++) {
-        const row = tableHeaderRow + i + 1;
-
-        for (let col = 0; col < (isAdmin ? 7 : 6); col++) {
-          if (hasOrders) {
-            // Real order data - normal style
-            styleCell(
-              row,
-              col,
-              applyBorder({
-                font: regularFont,
-                alignment: col === 2 ? rightAlign : leftAlign, // Right-align Total Amount
-              })
-            );
-
-            // Format currency in Total Amount column (column 2)
-            if (col === 2) {
-              const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
-              if (ws[cellRef]) {
-                ws[cellRef].z = "₱#,##0.00";
-              }
-            }
-          } else {
-            // Placeholder row - gray italic style
-            styleCell(
-              row,
-              col,
-              applyBorder({
-                font: grayFont,
-                fill: grayFill,
-                alignment: col === 1 ? leftAlign : centerAlign,
-              })
-            );
-          }
-        }
-      }
-    }
-
-    // Footer row - MERGE
-    const footerRow = totalRows - 1;
-    styleCell(
-      footerRow,
-      0,
-      applyBorder({
-        font: { size: 9, color: { rgb: "FF808080" }, italic: true },
-        alignment: centerAlign,
-      })
-    );
-    mergeCells(footerRow, 0, footerRow, isAdmin ? 6 : 5);
+  confirmEditCashout() {
+    // Add implementation if needed
+    console.log("Confirm edit cashout");
   }
 
-  applyVoidExcelStyles(ws, totalRows) {
-    // Styling for void report
-    if (ws["A1"]) {
-      ws["A1"].s = {
-        font: { bold: true, color: { rgb: "FFFFFFFF" }, size: 14 },
-        fill: { fgColor: { rgb: "FFDC2626" } },
-        alignment: { horizontal: "center" },
-      };
-    }
-
-    if (ws["A5"]) {
-      ws["A5"].s = {
-        font: { bold: true, size: 11 },
-        fill: { fgColor: { rgb: "FFFFCDD2" } },
-      };
-    }
-  }
   // ============================================
   // HELPER FUNCTIONS
   // ============================================
@@ -4522,7 +3556,6 @@ class SalesReport {
     if (order.productNames && order.productNames !== "No items") {
       return order.productNames;
     }
-
     const items = this.parseItems(order.items);
     return items.map((item) => item.name).join(", ") || "No products";
   }
@@ -4531,7 +3564,6 @@ class SalesReport {
     if (!itemsString || itemsString === "[]" || itemsString === "{}") {
       return [];
     }
-
     try {
       const items = JSON.parse(itemsString);
       return Array.isArray(items) ? items : [];
@@ -4541,17 +3573,12 @@ class SalesReport {
   }
 
   getTimeRangeText(timeRange) {
-    if (timeRange === "all") {
-      return "All Time";
-    } else if (timeRange === "today") {
-      return "Today";
-    } else if (timeRange === "yesterday") {
-      return "Yesterday";
-    } else if (timeRange === "week") {
-      return "This Week";
-    } else if (timeRange === "month") {
-      return "This Month";
-    } else if (timeRange === "custom") {
+    if (timeRange === "all") return "All Time";
+    else if (timeRange === "today") return "Today";
+    else if (timeRange === "yesterday") return "Yesterday";
+    else if (timeRange === "week") return "This Week";
+    else if (timeRange === "month") return "This Month";
+    else if (timeRange === "custom") {
       const startDate = document.getElementById("startDate").value;
       const endDate = document.getElementById("endDate").value;
       return `${startDate} to ${endDate}`;
@@ -4581,74 +3608,13 @@ class SalesReport {
   }
 
   showNotification(type, message) {
-    const modal = document.getElementById("notificationModal");
-    const icon = document.getElementById("notificationIcon");
-    const title = document.getElementById("notificationTitle");
-    const msg = document.getElementById("notificationMessage");
-
-    if (!modal || !icon || !title || !msg) {
-      console.error("Notification modal elements not found");
-      alert(message);
-      return;
-    }
-
-    if (type === "success") {
-      icon.className =
-        "w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 bg-green-100";
-      icon.innerHTML = `
-        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-        </svg>
-      `;
-      title.textContent = "Success";
-      title.className = "text-lg font-bold text-green-900 mb-1";
-    } else if (type === "error") {
-      icon.className =
-        "w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 bg-red-100";
-      icon.innerHTML = `
-        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-        </svg>
-      `;
-      title.textContent = "Error";
-      title.className = "text-lg font-bold text-red-900 mb-1";
-    } else if (type === "warning") {
-      icon.className =
-        "w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 bg-yellow-100";
-      icon.innerHTML = `
-        <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-        </svg>
-      `;
-      title.textContent = "Warning";
-      title.className = "text-lg font-bold text-yellow-900 mb-1";
-    } else {
-      icon.className =
-        "w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 bg-blue-100";
-      icon.innerHTML = `
-        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-        </svg>
-      `;
-      title.textContent = "Information";
-      title.className = "text-lg font-bold text-blue-900 mb-1";
-    }
-
-    msg.textContent = message;
-    modal.classList.remove("hidden");
-  }
-
-  closeNotification() {
-    const modal = document.getElementById("notificationModal");
-    if (modal) {
-      modal.classList.add("hidden");
-    }
+    console.log(`[${type.toUpperCase()}] ${message}`);
+    alert(message);
   }
 
   showLoading(show) {
     const loading = document.getElementById("loadingOverlay");
     if (!loading) return;
-
     if (show) {
       loading.classList.remove("hidden");
       loading.classList.add("flex");

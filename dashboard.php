@@ -174,6 +174,7 @@
                     <div class="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1" id="grossSales">₱0.00</div>
                     <div class="text-xs sm:text-sm text-white mb-1 sm:mb-2">Gross Sales</div>
                     <div class="text-xs text-white font-medium" id="voidedAmount">Voided: ₱0.00</div>
+                    <div class="text-xs text-white font-medium" id="outSourceAmount">Outsource: ₱0.00</div>
                 </div>
 
                 <!-- Today Transactions -->
@@ -750,14 +751,14 @@
             <!-- Personnel Name -->
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Personnel Name *</label>
-                <input type="text" id="outPersonnelName" placeholder="Enter personnel name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                <input type="text" id="outPersonnelName" placeholder="Enter personnel name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
             </div>
 
             <!-- Products Section -->
             <div class="mb-4">
                 <div class="flex items-center justify-between mb-3">
                     <label class="block text-sm font-medium text-gray-700">Products</label>
-                    <button type="button" onclick="addProductRow()" class="text-sm text-purple-600 hover:text-purple-700 font-medium">
+                    <button type="button" onclick="addProductRow()" class="text-sm text-red-600 hover:text-black font-medium">
                         + Add Row
                     </button>
                 </div>
@@ -770,7 +771,7 @@
                 <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
                     <div class="flex justify-between items-center">
                         <span class="text-sm font-medium text-gray-700">Total Amount:</span>
-                        <span id="outTotalAmount" class="text-lg font-bold text-purple-600">₱0.00</span>
+                        <span id="outTotalAmount" class="text-lg font-bold text-red-600">₱0.00</span>
                     </div>
                 </div>
             </div>
@@ -778,7 +779,7 @@
 
         <div class="modal-footer">
             <button type="button" onclick="closeOutSourceModal()" class="btn-secondary">Cancel</button>
-            <button type="button" onclick="submitOutSource()" class="btn-primary" style="background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);">
+            <button type="button" onclick="submitOutSource()" class="btn-primary" style="background: linear-gradient(135deg, #ea3333ff 0%, #ea3333ff 100%);">
                 Submit Out Source
             </button>
         </div>

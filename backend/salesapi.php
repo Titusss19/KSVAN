@@ -1,5 +1,5 @@
 <?php
-// salesapi.php - COMPLETE WITH OUT SOURCE SUPPORT
+// salesapi.php - COMPLETE VERSION WITH OUT SOURCE
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
@@ -75,143 +75,9 @@ try {
 }
 
 // ============================================
-// GET OUT SOURCE RECORDS
-// ============================================
-function getOutSourceRecords($pdo, $user) {
-    $branch = isset($_GET['branch']) ? $_GET['branch'] : 'all';
-    $timeRange = isset($_GET['timeRange']) ? $_GET['timeRange'] : 'all';
-    $startDate = isset($_GET['startDate']) ? $_GET['startDate'] : null;
-    $endDate = isset($_GET['endDate']) ? $_GET['endDate'] : null;
-    $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-    $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
-    $offset = ($page - 1) * $limit;
-    
-    // Build WHERE clause
-    $where = ['1=1'];
-    $params = [];
-    
-    // Branch filter
-    if ($user['role'] === 'admin' || $user['role'] === 'owner') {
-        if ($branch !== 'all') {
-            $where[] = 'o.branch = :branch';
-            $params[':branch'] = $branch;
-        }
-    } else {
-        $where[] = 'o.branch = :branch';
-        $params[':branch'] = $user['branch'];
-    }
-    
-    // Time range filter
-    if ($timeRange === 'today') {
-        $where[] = 'DATE(o.created_at) = CURDATE()';
-    } elseif ($timeRange === 'yesterday') {
-        $where[] = 'DATE(o.created_at) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)';
-    } elseif ($timeRange === 'week') {
-        $where[] = 'o.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)';
-    } elseif ($timeRange === 'month') {
-        $where[] = 'o.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)';
-    } elseif ($timeRange === 'custom' && $startDate && $endDate) {
-        $where[] = 'DATE(o.created_at) BETWEEN :startDate AND :endDate';
-        $params[':startDate'] = $startDate;
-        $params[':endDate'] = $endDate;
-    }
-    
-    $whereClause = implode(' AND ', $where);
-    
-    // Get total count
-    $countSql = "SELECT COUNT(*) as total FROM outsource_records o WHERE $whereClause";
-    $countStmt = $pdo->prepare($countSql);
-    $countStmt->execute($params);
-    $total = $countStmt->fetch()['total'];
-    
-    // Get paginated data
-    $sql = "SELECT 
-                o.id,
-                o.branch,
-                o.created_at,
-                o.amount,
-                o.product_details,
-                o.personnel_name,
-                o.supplier
-            FROM outsource_records o
-            WHERE $whereClause
-            ORDER BY o.created_at DESC
-            LIMIT :limit OFFSET :offset";
-    
-    $stmt = $pdo->prepare($sql);
-    foreach ($params as $key => $value) {
-        $stmt->bindValue($key, $value);
-    }
-    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-    $stmt->execute();
-    
-    $records = $stmt->fetchAll();
-    
-    // Format data
-    foreach ($records as &$record) {
-        $record['amount'] = floatval($record['amount']);
-    }
-    
-    echo json_encode([
-        'success' => true,
-        'data' => $records,
-        'pagination' => [
-            'total' => (int)$total,
-            'page' => $page,
-            'limit' => $limit,
-            'pages' => ceil($total / $limit)
-        ]
-    ]);
-}
-
-// ============================================
-// GET OUT SOURCE DETAIL
-// ============================================
-function getOutSourceDetail($pdo, $recordId, $user) {
-    $sql = "SELECT 
-                o.id,
-                o.branch,
-                o.created_at,
-                o.amount,
-                o.product_details,
-                o.personnel_name,
-                o.supplier
-            FROM outsource_records o
-            WHERE o.id = :id";
-    
-    // Add branch restriction for non-admin
-    if ($user['role'] !== 'admin' && $user['role'] !== 'owner') {
-        $sql .= " AND o.branch = :branch";
-    }
-    
-    $stmt = $pdo->prepare($sql);
-    $stmt->bindValue(':id', $recordId, PDO::PARAM_INT);
-    if ($user['role'] !== 'admin' && $user['role'] !== 'owner') {
-        $stmt->bindValue(':branch', $user['branch']);
-    }
-    $stmt->execute();
-    
-    $record = $stmt->fetch();
-    
-    if (!$record) {
-        throw new Exception('Out Source record not found');
-    }
-    
-    // Format data
-    $record['amount'] = floatval($record['amount']);
-    
-    echo json_encode([
-        'success' => true,
-        'data' => $record
-    ]);
-}
-
-// ============================================
 // GET SALES DATA WITH FILTERS & PAGINATION
 // ============================================
 function getSales($pdo, $user) {
-    // Get filters
     $branch = isset($_GET['branch']) ? $_GET['branch'] : 'all';
     $timeRange = isset($_GET['timeRange']) ? $_GET['timeRange'] : 'all';
     $startDate = isset($_GET['startDate']) ? $_GET['startDate'] : null;
@@ -222,11 +88,9 @@ function getSales($pdo, $user) {
     $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
     $offset = ($page - 1) * $limit;
     
-    // Build WHERE clause
-    $where = ['o.is_void = 0']; // Exclude voided orders
+    $where = ['o.is_void = 0'];
     $params = [];
     
-    // Branch filter (admin sees all, others see own branch)
     if ($user['role'] === 'admin' || $user['role'] === 'owner') {
         if ($branch !== 'all') {
             $where[] = 'o.branch = :branch';
@@ -237,7 +101,6 @@ function getSales($pdo, $user) {
         $params[':branch'] = $user['branch'];
     }
     
-    // Time range filter
     if ($timeRange === 'today') {
         $where[] = 'DATE(o.created_at) = CURDATE()';
     } elseif ($timeRange === 'yesterday') {
@@ -252,13 +115,11 @@ function getSales($pdo, $user) {
         $params[':endDate'] = $endDate;
     }
     
-    // Payment method filter
     if ($paymentMethod !== 'all') {
         $where[] = 'o.payment_method = :payment';
         $params[':payment'] = $paymentMethod;
     }
     
-    // Order type filter
     if ($orderType !== 'all') {
         $where[] = 'o.orderType = :orderType';
         $params[':orderType'] = $orderType;
@@ -266,13 +127,11 @@ function getSales($pdo, $user) {
     
     $whereClause = implode(' AND ', $where);
     
-    // Get total count
     $countSql = "SELECT COUNT(*) as total FROM orders o WHERE $whereClause";
     $countStmt = $pdo->prepare($countSql);
     $countStmt->execute($params);
     $total = $countStmt->fetch()['total'];
     
-    // Get paginated data
     $sql = "SELECT 
                 o.*,
                 u.username as cashier_name,
@@ -293,7 +152,6 @@ function getSales($pdo, $user) {
     
     $sales = $stmt->fetchAll();
     
-    // Format data
     foreach ($sales as &$sale) {
         $sale['total'] = floatval($sale['total']);
         $sale['paidAmount'] = floatval($sale['paidAmount']);
@@ -326,11 +184,9 @@ function getCashierSessions($pdo, $user) {
     $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
     $offset = ($page - 1) * $limit;
     
-    // Build WHERE clause for sessions
     $where = ["s.action = 'open'"];
     $params = [];
     
-    // Branch filter
     if ($user['role'] === 'admin' || $user['role'] === 'owner') {
         if ($branch !== 'all') {
             $where[] = 's.branch = :branch';
@@ -341,7 +197,6 @@ function getCashierSessions($pdo, $user) {
         $params[':branch'] = $user['branch'];
     }
     
-    // Time range filter
     if ($timeRange === 'today') {
         $where[] = 'DATE(s.timestamp) = CURDATE()';
     } elseif ($timeRange === 'yesterday') {
@@ -358,15 +213,11 @@ function getCashierSessions($pdo, $user) {
     
     $whereClause = implode(' AND ', $where);
     
-    // Get total count
-    $countSql = "SELECT COUNT(*) as total 
-                 FROM store_status_log s 
-                 WHERE $whereClause";
+    $countSql = "SELECT COUNT(*) as total FROM store_status_log s WHERE $whereClause";
     $countStmt = $pdo->prepare($countSql);
     $countStmt->execute($params);
     $total = $countStmt->fetch()['total'];
     
-    // Get sessions with user info
     $sql = "SELECT 
                 s.id,
                 s.user_id,
@@ -391,7 +242,6 @@ function getCashierSessions($pdo, $user) {
     
     $sessions = $stmt->fetchAll();
     
-    // For each session, compute sales data
     foreach ($sessions as &$session) {
         $sessionData = computeSessionData($pdo, $session);
         $session = array_merge($session, $sessionData);
@@ -417,25 +267,14 @@ function computeSessionData($pdo, $session) {
     $loginTime = $session['login_time'];
     $branch = $session['branch'];
     
-    // Find logout time (next close action)
-    $logoutSql = "SELECT timestamp as logout_time 
-                  FROM store_status_log 
-                  WHERE user_id = :userId 
-                  AND action = 'close' 
-                  AND branch = :branch
-                  AND timestamp > :loginTime
-                  ORDER BY timestamp ASC 
-                  LIMIT 1";
+    $logoutSql = "SELECT timestamp as logout_time FROM store_status_log 
+                  WHERE user_id = :userId AND action = 'close' AND branch = :branch
+                  AND timestamp > :loginTime ORDER BY timestamp ASC LIMIT 1";
     $logoutStmt = $pdo->prepare($logoutSql);
-    $logoutStmt->execute([
-        ':userId' => $userId,
-        ':branch' => $branch,
-        ':loginTime' => $loginTime
-    ]);
+    $logoutStmt->execute([':userId' => $userId, ':branch' => $branch, ':loginTime' => $loginTime]);
     $logoutRow = $logoutStmt->fetch();
     $logoutTime = $logoutRow ? $logoutRow['logout_time'] : null;
     
-    // Calculate session duration
     if ($logoutTime) {
         $login = new DateTime($loginTime);
         $logout = new DateTime($logoutTime);
@@ -445,41 +284,23 @@ function computeSessionData($pdo, $session) {
         $sessionDuration = 'Still Active';
     }
     
-    // Get starting gross sales (before login)
-    $startSalesSql = "SELECT IFNULL(SUM(total), 0) as start_sales 
-                      FROM orders 
-                      WHERE created_at < :loginTime 
-                      AND branch = :branch 
-                      AND is_void = 0";
+    $startSalesSql = "SELECT IFNULL(SUM(total), 0) as start_sales FROM orders 
+                      WHERE created_at < :loginTime AND branch = :branch AND is_void = 0";
     $startStmt = $pdo->prepare($startSalesSql);
-    $startStmt->execute([
-        ':loginTime' => $loginTime,
-        ':branch' => $branch
-    ]);
+    $startStmt->execute([':loginTime' => $loginTime, ':branch' => $branch]);
     $startGrossSales = floatval($startStmt->fetch()['start_sales']);
     
-    // Get session sales (during shift, non-voided)
-    $sessionSalesSql = "SELECT 
-                            o.*,
-                            u.username as cashier_name
-                        FROM orders o
+    $sessionSalesSql = "SELECT o.*, u.username as cashier_name FROM orders o
                         LEFT JOIN users u ON o.userId = u.id
-                        WHERE o.userId = :userId 
-                        AND o.created_at >= :loginTime 
+                        WHERE o.userId = :userId AND o.created_at >= :loginTime 
                         AND (:logoutTime IS NULL OR o.created_at <= :logoutTime)
-                        AND o.branch = :branch 
-                        AND o.is_void = 0
+                        AND o.branch = :branch AND o.is_void = 0
                         ORDER BY o.created_at ASC";
     $sessionStmt = $pdo->prepare($sessionSalesSql);
-    $sessionStmt->execute([
-        ':userId' => $userId,
-        ':loginTime' => $loginTime,
-        ':logoutTime' => $logoutTime,
-        ':branch' => $branch
-    ]);
+    $sessionStmt->execute([':userId' => $userId, ':loginTime' => $loginTime, 
+                          ':logoutTime' => $logoutTime, ':branch' => $branch]);
     $sessionOrders = $sessionStmt->fetchAll();
     
-    // Calculate totals
     $sessionSalesTotal = 0;
     $totalDiscount = 0;
     $paymentMethods = [];
@@ -488,18 +309,13 @@ function computeSessionData($pdo, $session) {
         $amount = floatval($order['total']);
         $sessionSalesTotal += $amount;
         
-        // Calculate discount (20% discount logic)
         if ($order['discountApplied']) {
             $totalDiscount += ($amount / 0.8) * 0.2;
         }
         
-        // Payment methods breakdown
         $method = $order['payment_method'] ?: 'Cash';
         if (!isset($paymentMethods[$method])) {
-            $paymentMethods[$method] = [
-                'count' => 0,
-                'total' => 0
-            ];
+            $paymentMethods[$method] = ['count' => 0, 'total' => 0];
         }
         $paymentMethods[$method]['count']++;
         $paymentMethods[$method]['total'] += $amount;
@@ -507,22 +323,13 @@ function computeSessionData($pdo, $session) {
     
     $endGrossSales = $startGrossSales + $sessionSalesTotal;
     
-    // Get voided orders during session
-    $voidSql = "SELECT IFNULL(SUM(total), 0) as void_total,
-                       COUNT(*) as void_count
-                FROM orders 
-                WHERE userId = :userId 
-                AND created_at >= :loginTime 
+    $voidSql = "SELECT IFNULL(SUM(total), 0) as void_total, COUNT(*) as void_count
+                FROM orders WHERE userId = :userId AND created_at >= :loginTime 
                 AND (:logoutTime IS NULL OR created_at <= :logoutTime)
-                AND branch = :branch 
-                AND is_void = 1";
+                AND branch = :branch AND is_void = 1";
     $voidStmt = $pdo->prepare($voidSql);
-    $voidStmt->execute([
-        ':userId' => $userId,
-        ':loginTime' => $loginTime,
-        ':logoutTime' => $logoutTime,
-        ':branch' => $branch
-    ]);
+    $voidStmt->execute([':userId' => $userId, ':loginTime' => $loginTime, 
+                       ':logoutTime' => $logoutTime, ':branch' => $branch]);
     $voidData = $voidStmt->fetch();
     
     return [
@@ -543,21 +350,12 @@ function computeSessionData($pdo, $session) {
 // GET CASHIER SESSION DETAILS
 // ============================================
 function getCashierDetails($pdo, $sessionId, $user) {
-    // Get session info
-    $sql = "SELECT 
-                s.id,
-                s.user_id,
-                s.user_email,
-                s.timestamp as login_time,
-                s.branch,
-                s.action,
-                u.username,
-                u.email
+    $sql = "SELECT s.id, s.user_id, s.user_email, s.timestamp as login_time, 
+                   s.branch, s.action, u.username, u.email
             FROM store_status_log s
             LEFT JOIN users u ON s.user_id = u.id
             WHERE s.id = :id";
     
-    // Add branch restriction for non-admin
     if ($user['role'] !== 'admin' && $user['role'] !== 'owner') {
         $sql .= " AND s.branch = :branch";
     }
@@ -575,38 +373,26 @@ function getCashierDetails($pdo, $sessionId, $user) {
         throw new Exception('Session not found');
     }
     
-    // Compute session data
     $sessionData = computeSessionData($pdo, $session);
     $session = array_merge($session, $sessionData);
     
-    // Get all orders during session
     $loginTime = $session['login_time'];
     $logoutTime = $session['logout_time'];
     $userId = $session['user_id'];
     $branch = $session['branch'];
     
-    $ordersSql = "SELECT o.* 
-                  FROM orders o
-                  WHERE o.userId = :userId 
-                  AND o.created_at >= :loginTime 
+    $ordersSql = "SELECT o.* FROM orders o
+                  WHERE o.userId = :userId AND o.created_at >= :loginTime 
                   AND (:logoutTime IS NULL OR o.created_at <= :logoutTime)
-                  AND o.branch = :branch 
-                  AND o.is_void = 0
+                  AND o.branch = :branch AND o.is_void = 0
                   ORDER BY o.created_at ASC";
     $ordersStmt = $pdo->prepare($ordersSql);
-    $ordersStmt->execute([
-        ':userId' => $userId,
-        ':loginTime' => $loginTime,
-        ':logoutTime' => $logoutTime,
-        ':branch' => $branch
-    ]);
+    $ordersStmt->execute([':userId' => $userId, ':loginTime' => $loginTime, 
+                         ':logoutTime' => $logoutTime, ':branch' => $branch]);
     
     $session['orders'] = $ordersStmt->fetchAll();
     
-    echo json_encode([
-        'success' => true,
-        'data' => $session
-    ]);
+    echo json_encode(['success' => true, 'data' => $session]);
 }
 
 // ============================================
@@ -621,11 +407,9 @@ function getVoidOrders($pdo, $user) {
     $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
     $offset = ($page - 1) * $limit;
     
-    // Build WHERE clause
-    $where = ['o.is_void = 1']; // Only voided orders
+    $where = ['o.is_void = 1'];
     $params = [];
     
-    // Branch filter
     if ($user['role'] === 'admin' || $user['role'] === 'owner') {
         if ($branch !== 'all') {
             $where[] = 'o.branch = :branch';
@@ -636,7 +420,6 @@ function getVoidOrders($pdo, $user) {
         $params[':branch'] = $user['branch'];
     }
     
-    // Time range filter
     if ($timeRange === 'today') {
         $where[] = 'DATE(o.voided_at) = CURDATE()';
     } elseif ($timeRange === 'yesterday') {
@@ -653,17 +436,12 @@ function getVoidOrders($pdo, $user) {
     
     $whereClause = implode(' AND ', $where);
     
-    // Get total count
     $countSql = "SELECT COUNT(*) as total FROM orders o WHERE $whereClause";
     $countStmt = $pdo->prepare($countSql);
     $countStmt->execute($params);
     $total = $countStmt->fetch()['total'];
     
-    // Get paginated data
-    $sql = "SELECT 
-                o.*,
-                u.username as cashier_name,
-                u.email as cashier_email
+    $sql = "SELECT o.*, u.username as cashier_name, u.email as cashier_email
             FROM orders o
             LEFT JOIN users u ON o.userId = u.id
             WHERE $whereClause
@@ -680,7 +458,6 @@ function getVoidOrders($pdo, $user) {
     
     $voidOrders = $stmt->fetchAll();
     
-    // Format data
     foreach ($voidOrders as &$order) {
         $order['total'] = floatval($order['total']);
         $order['paidAmount'] = floatval($order['paidAmount']);
@@ -703,15 +480,11 @@ function getVoidOrders($pdo, $user) {
 // GET SINGLE ORDER
 // ============================================
 function getOrder($pdo, $orderId, $user) {
-    $sql = "SELECT 
-                o.*,
-                u.username as cashier_name,
-                u.email as cashier_email
+    $sql = "SELECT o.*, u.username as cashier_name, u.email as cashier_email
             FROM orders o
             LEFT JOIN users u ON o.userId = u.id
             WHERE o.id = :id";
     
-    // Add branch restriction for non-admin
     if ($user['role'] !== 'admin' && $user['role'] !== 'owner') {
         $sql .= " AND o.branch = :branch";
     }
@@ -729,31 +502,24 @@ function getOrder($pdo, $orderId, $user) {
         throw new Exception('Order not found');
     }
     
-    // Format data
     $order['total'] = floatval($order['total']);
     $order['paidAmount'] = floatval($order['paidAmount']);
     $order['changeAmount'] = floatval($order['changeAmount']);
     $order['discountApplied'] = (bool)$order['discountApplied'];
     $order['is_void'] = (bool)$order['is_void'];
     
-    echo json_encode([
-        'success' => true,
-        'data' => $order
-    ]);
+    echo json_encode(['success' => true, 'data' => $order]);
 }
 
 // ============================================
-// GET BRANCHES (for admin)
+// GET BRANCHES
 // ============================================
 function getBranches($pdo) {
     $sql = "SELECT DISTINCT branch FROM users WHERE branch IS NOT NULL ORDER BY branch";
     $stmt = $pdo->query($sql);
     $branches = $stmt->fetchAll(PDO::FETCH_COLUMN);
     
-    echo json_encode([
-        'success' => true,
-        'data' => $branches
-    ]);
+    echo json_encode(['success' => true, 'data' => $branches]);
 }
 
 // ============================================
@@ -767,11 +533,8 @@ function verifyManagerPin($pdo) {
         throw new Exception('PIN is required');
     }
     
-    // Find managers/owners with void_pin
-    $sql = "SELECT id, username, email, role, void_pin 
-            FROM users 
-            WHERE (role = 'manager' OR role = 'owner') 
-            AND void_pin IS NOT NULL";
+    $sql = "SELECT id, username, email, role, void_pin FROM users 
+            WHERE (role = 'manager' OR role = 'owner') AND void_pin IS NOT NULL";
     $stmt = $pdo->query($sql);
     $managers = $stmt->fetchAll();
     
@@ -779,7 +542,6 @@ function verifyManagerPin($pdo) {
         throw new Exception('No manager with PIN found');
     }
     
-    // Verify PIN against all managers
     foreach ($managers as $manager) {
         if (password_verify($pin, $manager['void_pin'])) {
             echo json_encode([
@@ -811,7 +573,6 @@ function voidOrder($pdo, $user) {
         throw new Exception('Order ID and reason are required');
     }
     
-    // Get order
     $sql = "SELECT * FROM orders WHERE id = :id";
     if ($user['role'] !== 'admin' && $user['role'] !== 'owner') {
         $sql .= " AND branch = :branch";
@@ -833,28 +594,17 @@ function voidOrder($pdo, $user) {
         throw new Exception('Order already voided');
     }
     
-    // Determine who voided it
     $voidedBy = $user['username'] ?? $user['email'];
     
-    // If cashier and manager info provided
     if ($user['role'] === 'cashier' && $managerInfo) {
         $voidedBy = ($managerInfo['username'] ?? $managerInfo['email']) . ' (authorized ' . $voidedBy . ')';
     }
     
-    // Update order
-    $updateSql = "UPDATE orders 
-                  SET is_void = 1,
-                      void_reason = :reason,
-                      voided_by = :voidedBy,
-                      voided_at = NOW()
-                  WHERE id = :id";
+    $updateSql = "UPDATE orders SET is_void = 1, void_reason = :reason, 
+                  voided_by = :voidedBy, voided_at = NOW() WHERE id = :id";
     
     $updateStmt = $pdo->prepare($updateSql);
-    $updateStmt->execute([
-        ':reason' => $reason,
-        ':voidedBy' => $voidedBy,
-        ':id' => $orderId
-    ]);
+    $updateStmt->execute([':reason' => $reason, ':voidedBy' => $voidedBy, ':id' => $orderId]);
     
     echo json_encode([
         'success' => true,
@@ -875,11 +625,9 @@ function getCashoutRecords($pdo, $user) {
     $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
     $offset = ($page - 1) * $limit;
     
-    // Build WHERE clause
     $where = ['1=1'];
     $params = [];
     
-    // Branch filter
     if ($user['role'] === 'admin' || $user['role'] === 'owner') {
         if ($branch !== 'all') {
             $where[] = 'c.branch = :branch';
@@ -890,7 +638,6 @@ function getCashoutRecords($pdo, $user) {
         $params[':branch'] = $user['branch'];
     }
     
-    // Time range filter
     if ($timeRange === 'today') {
         $where[] = 'DATE(c.created_at) = CURDATE()';
     } elseif ($timeRange === 'yesterday') {
@@ -907,25 +654,16 @@ function getCashoutRecords($pdo, $user) {
     
     $whereClause = implode(' AND ', $where);
     
-    // Get total count
     $countSql = "SELECT COUNT(*) as total FROM cashout c WHERE $whereClause";
     $countStmt = $pdo->prepare($countSql);
     $countStmt->execute($params);
     $total = $countStmt->fetch()['total'];
     
-    // Get cashout records
-    $sql = "SELECT 
-                c.*,
-                u.username as cashier_name,
-                u.email as cashier_email,
-                s.timestamp as session_login_time,
-                (SELECT timestamp FROM store_status_log 
-                 WHERE user_id = s.user_id 
-                 AND action = 'close' 
-                 AND branch = s.branch
-                 AND timestamp > s.timestamp
-                 ORDER BY timestamp ASC 
-                 LIMIT 1) as session_logout_time
+    $sql = "SELECT c.*, u.username as cashier_name, u.email as cashier_email,
+                   s.timestamp as session_login_time,
+                   (SELECT timestamp FROM store_status_log 
+                    WHERE user_id = s.user_id AND action = 'close' AND branch = s.branch
+                    AND timestamp > s.timestamp ORDER BY timestamp ASC LIMIT 1) as session_logout_time
             FROM cashout c
             LEFT JOIN users u ON c.user_id = u.id
             LEFT JOIN store_status_log s ON c.cashier_session_id = s.id
@@ -943,7 +681,6 @@ function getCashoutRecords($pdo, $user) {
     
     $cashouts = $stmt->fetchAll();
     
-    // Format data
     foreach ($cashouts as &$cashout) {
         $cashout['amount'] = floatval($cashout['amount']);
     }
@@ -961,7 +698,7 @@ function getCashoutRecords($pdo, $user) {
 }
 
 // ============================================
-// RECORD CASH-OUT (POST)
+// RECORD CASH-OUT
 // ============================================
 function recordCashout($pdo, $user) {
     $input = json_decode(file_get_contents('php://input'), true);
@@ -975,46 +712,34 @@ function recordCashout($pdo, $user) {
     }
     
     if (!in_array($type, ['withdrawal', 'deposit'])) {
-        throw new Exception('Invalid type. Must be withdrawal or deposit');
+        throw new Exception('Invalid type');
     }
     
     if ($amount <= 0) {
         throw new Exception('Amount must be greater than 0');
     }
     
-    // Get current active session for this user
-    $sessionSql = "SELECT s.id 
-                   FROM store_status_log s
-                   WHERE s.user_id = :userId 
-                   AND s.action = 'open'
-                   AND s.branch = :branch
+    $sessionSql = "SELECT s.id FROM store_status_log s
+                   WHERE s.user_id = :userId AND s.action = 'open' AND s.branch = :branch
                    AND NOT EXISTS (
                        SELECT 1 FROM store_status_log s2 
-                       WHERE s2.user_id = s.user_id 
-                       AND s2.action = 'close' 
-                       AND s2.branch = s.branch
-                       AND s2.timestamp > s.timestamp
+                       WHERE s2.user_id = s.user_id AND s2.action = 'close' 
+                       AND s2.branch = s.branch AND s2.timestamp > s.timestamp
                    )
-                   ORDER BY s.timestamp DESC 
-                   LIMIT 1";
+                   ORDER BY s.timestamp DESC LIMIT 1";
     
     $sessionStmt = $pdo->prepare($sessionSql);
-    $sessionStmt->execute([
-        ':userId' => $user['id'],
-        ':branch' => $user['branch']
-    ]);
+    $sessionStmt->execute([':userId' => $user['id'], ':branch' => $user['branch']]);
     
     $session = $sessionStmt->fetch();
     
     if (!$session) {
-        throw new Exception('No active cashier session found. Please open POS first.');
+        throw new Exception('No active cashier session found');
     }
     
-    // Insert cashout record
     $insertSql = "INSERT INTO cashout 
                   (cashier_session_id, user_id, branch, amount, type, reason, created_at) 
-                  VALUES 
-                  (:sessionId, :userId, :branch, :amount, :type, :reason, NOW())";
+                  VALUES (:sessionId, :userId, :branch, :amount, :type, :reason, NOW())";
     
     $insertStmt = $pdo->prepare($insertSql);
     $insertStmt->execute([
@@ -1026,14 +751,10 @@ function recordCashout($pdo, $user) {
         ':reason' => $reason
     ]);
     
-    $cashoutId = $pdo->lastInsertId();
-    
     echo json_encode([
         'success' => true,
         'message' => 'Cash-out recorded successfully',
-        'id' => $cashoutId,
-        'type' => $type,
-        'amount' => floatval($amount)
+        'id' => $pdo->lastInsertId()
     ]);
 }
 
@@ -1048,11 +769,8 @@ function verifyOwnerPin($pdo) {
         throw new Exception('PIN is required');
     }
     
-    // Find owner with void_pin
-    $sql = "SELECT id, username, email, role, void_pin 
-            FROM users 
-            WHERE role = 'owner' 
-            AND void_pin IS NOT NULL";
+    $sql = "SELECT id, username, email, role, void_pin FROM users 
+            WHERE role = 'owner' AND void_pin IS NOT NULL";
     $stmt = $pdo->query($sql);
     $owners = $stmt->fetchAll();
     
@@ -1060,7 +778,6 @@ function verifyOwnerPin($pdo) {
         throw new Exception('No owner with PIN found');
     }
     
-    // Verify PIN against all owners
     foreach ($owners as $owner) {
         if (password_verify($pin, $owner['void_pin'])) {
             echo json_encode([
@@ -1096,15 +813,6 @@ function editCashout($pdo, $user) {
         throw new Exception('All fields are required');
     }
     
-    if (!in_array($type, ['withdrawal', 'deposit'])) {
-        throw new Exception('Invalid type');
-    }
-    
-    if ($amount <= 0) {
-        throw new Exception('Amount must be greater than 0');
-    }
-    
-    // Check if cashout exists
     $checkSql = "SELECT * FROM cashout WHERE id = :id";
     $checkStmt = $pdo->prepare($checkSql);
     $checkStmt->execute([':id' => $cashoutId]);
@@ -1114,14 +822,9 @@ function editCashout($pdo, $user) {
         throw new Exception('Cash-out record not found');
     }
     
-    // Update cashout
     $updateSql = "UPDATE cashout 
-                  SET type = :type,
-                      amount = :amount,
-                      reason = :reason,
-                      edited_by = :editedBy,
-                      edited_at = NOW(),
-                      edit_reason = :editReason
+                  SET type = :type, amount = :amount, reason = :reason,
+                      edited_by = :editedBy, edited_at = NOW(), edit_reason = :editReason
                   WHERE id = :id";
     
     $editedBy = ($ownerInfo['username'] ?? $ownerInfo['email']) . ' (Owner)';
@@ -1138,8 +841,130 @@ function editCashout($pdo, $user) {
     
     echo json_encode([
         'success' => true,
-        'message' => 'Cash-out record updated successfully',
-        'id' => $cashoutId
+        'message' => 'Cash-out record updated successfully'
+    ]);
+}
+
+// ============================================
+// GET OUT SOURCE RECORDS
+// ============================================
+function getOutSourceRecords($pdo, $user) {
+    $branch = isset($_GET['branch']) ? $_GET['branch'] : 'all';
+    $timeRange = isset($_GET['timeRange']) ? $_GET['timeRange'] : 'all';
+    $startDate = isset($_GET['startDate']) ? $_GET['startDate'] : null;
+    $endDate = isset($_GET['endDate']) ? $_GET['endDate'] : null;
+    $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+    $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+    $offset = ($page - 1) * $limit;
+    
+    $where = ['1=1'];
+    $params = [];
+    
+    if ($user['role'] === 'admin' || $user['role'] === 'owner') {
+        if ($branch !== 'all') {
+            $where[] = 'o.branch = :branch';
+            $params[':branch'] = $branch;
+        }
+    } else {
+        $where[] = 'o.branch = :branch';
+        $params[':branch'] = $user['branch'];
+    }
+    
+    if ($timeRange === 'today') {
+        $where[] = 'DATE(o.created_at) = CURDATE()';
+    } elseif ($timeRange === 'yesterday') {
+        $where[] = 'DATE(o.created_at) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)';
+    } elseif ($timeRange === 'week') {
+        $where[] = 'o.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)';
+    } elseif ($timeRange === 'month') {
+        $where[] = 'o.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)';
+    } elseif ($timeRange === 'custom' && $startDate && $endDate) {
+        $where[] = 'DATE(o.created_at) BETWEEN :startDate AND :endDate';
+        $params[':startDate'] = $startDate;
+        $params[':endDate'] = $endDate;
+    }
+    
+    $whereClause = implode(' AND ', $where);
+    
+    $countSql = "SELECT COUNT(*) as total FROM outsource_records o WHERE $whereClause";
+    $countStmt = $pdo->prepare($countSql);
+    $countStmt->execute($params);
+    $total = $countStmt->fetch()['total'];
+    
+    $sql = "SELECT 
+                o.id,
+                o.branch,
+                o.created_at,
+                o.amount,
+                o.product_details,
+                o.personnel_name
+            FROM outsource_records o
+            WHERE $whereClause
+            ORDER BY o.created_at DESC
+            LIMIT :limit OFFSET :offset";
+    
+    $stmt = $pdo->prepare($sql);
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
+    
+    $records = $stmt->fetchAll();
+    
+    foreach ($records as &$record) {
+        $record['amount'] = floatval($record['amount']);
+    }
+    
+    echo json_encode([
+        'success' => true,
+        'data' => $records,
+        'pagination' => [
+            'total' => (int)$total,
+            'page' => $page,
+            'limit' => $limit,
+            'pages' => ceil($total / $limit)
+        ]
+    ]);
+}
+
+// ============================================
+// GET OUT SOURCE DETAIL
+// ============================================
+function getOutSourceDetail($pdo, $recordId, $user) {
+    $sql = "SELECT 
+                o.id,
+                o.branch,
+                o.created_at,
+                o.amount,
+                o.product_details,
+                o.personnel_name
+            FROM outsource_records o
+            WHERE o.id = :id";
+    
+    if ($user['role'] !== 'admin' && $user['role'] !== 'owner') {
+        $sql .= " AND o.branch = :branch";
+    }
+    
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindValue(':id', $recordId, PDO::PARAM_INT);
+    if ($user['role'] !== 'admin' && $user['role'] !== 'owner') {
+        $stmt->bindValue(':branch', $user['branch']);
+    }
+    $stmt->execute();
+    
+    $record = $stmt->fetch();
+    
+    if (!$record) {
+        throw new Exception('Out Source record not found');
+    }
+    
+    $record['amount'] = floatval($record['amount']);
+    
+    echo json_encode([
+        'success' => true,
+        'data' => $record
     ]);
 }
 ?>

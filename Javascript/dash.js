@@ -678,6 +678,7 @@ async function loadStats() {
   }
 }
 
+
 function updateStatsDisplay() {
   if (!appState.stats) return;
   const stats = appState.stats;
@@ -685,6 +686,7 @@ function updateStatsDisplay() {
     netSales: formatPeso(stats.grossSales),
     grossSales: formatPeso(stats.netSales),
     voidedAmount: `Voided: -₱${formatNumber(stats.voidedAmount)}`,
+    outSourceAmount: `Outsource: -₱${formatNumber(stats.outSourceAmount || 0)}`,
     todayTransactions: formatNumber(stats.todayTransactions),
     todaySales: formatPeso(stats.todaySales),
     inventoryValue: formatPeso(stats.inventoryValue),

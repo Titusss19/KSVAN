@@ -554,9 +554,13 @@ function getEmployees($pdo, $currentUser) {
     ]);
 }
 
+
 // ==========================================
-// GET SINGLE EMPLOYEE - CHECK BRANCH
+// FIXED GET EMPLOYEE - FETCH ALL RECORDS (NO DATE FILTER BY DEFAULT)
 // ==========================================
+
+// REPLACE THE getEmployee() FUNCTION IN attendance_api.php WITH THIS:
+
 function getEmployee($pdo, $currentUser) {
     $employeeId = intval($_GET['id'] ?? 0);
     
@@ -566,6 +570,7 @@ function getEmployee($pdo, $currentUser) {
 
     $userBranch = $currentUser['branch'] ?? 'main';
 
+    // Get employee info
     $stmt = $pdo->prepare("SELECT * FROM employees WHERE employee_id = ? AND branch = ?");
     $stmt->execute([$employeeId, $userBranch]);
     $employee = $stmt->fetch();
@@ -574,6 +579,7 @@ function getEmployee($pdo, $currentUser) {
         throw new Exception('Employee not found in your branch');
     }
 
+    // Check if currently on duty
     $stmt = $pdo->prepare("
         SELECT * FROM attendance_logs 
         WHERE employee_id = ? 
@@ -587,22 +593,22 @@ function getEmployee($pdo, $currentUser) {
     $todayLog = $stmt->fetch();
     $employee['is_on_duty'] = $todayLog ? true : false;
 
-    $startDate = $_GET['startDate'] ?? date('Y-m-01');
-    $endDate = $_GET['endDate'] ?? date('Y-m-d');
-
+    // ✅ REMOVED DATE FILTER - FETCH ALL RECORDS
+    // Old code was filtering by date range, causing old records to disappear
+    
     $stmt = $pdo->prepare("
         SELECT 
             log_id, date, time_in, time_out,
             total_hours, regular_hours, ot_hours,
             daily_pay, ot_pay, total_pay, status
         FROM attendance_logs
-        WHERE employee_id = ? 
-        AND date BETWEEN ? AND ?
+        WHERE employee_id = ?
         ORDER BY date DESC, time_in DESC
     ");
-    $stmt->execute([$employeeId, $startDate, $endDate]);
+    $stmt->execute([$employeeId]);
     $attendanceRecords = $stmt->fetchAll();
 
+    // Calculate totals from ALL records
     $totalRegularHours = 0;
     $totalOvertimeHours = 0;
     $totalDailyPay = 0;
@@ -617,8 +623,11 @@ function getEmployee($pdo, $currentUser) {
         }
     }
 
+    // Count unique worked days (total_hours >= 4)
     $completedDates = array_unique(array_column(
-        array_filter($attendanceRecords, fn($r) => $r['status'] === 'completed'),
+        array_filter($attendanceRecords, fn($r) => 
+            $r['status'] === 'completed' && floatval($r['total_hours']) >= 4
+        ),
         'date'
     ));
     $daysWorked = count($completedDates);
@@ -634,10 +643,10 @@ function getEmployee($pdo, $currentUser) {
             'totalDailyPay' => round($totalDailyPay, 2),
             'totalOtPay' => round($totalOtPay, 2),
             'totalEarnings' => round($totalDailyPay + $totalOtPay, 2)
-        ]
+        ],
+        'totalRecords' => count($attendanceRecords)
     ]);
 }
-
 // ==========================================
 // UPDATE EMPLOYEE - WITH BRANCH EDIT
 // ==========================================

@@ -1782,17 +1782,20 @@ function renderQueuedOrders() {
                 order.total
               ).toFixed(2)}</p>
             </div>
-            <div class="flex gap-2">
-              <button onclick="viewQueuedOrder(${index})" class="px-4 py-2 bg-black text-white rounded-lg hover:bg-red-600 transition-all text-sm font-semibold">
-                <i class="fas fa-eye"></i> View
-              </button>
-              <button onclick="loadQueuedOrderToCart(${index})" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all text-sm font-semibold">
-                <i class="fas fa-shopping-cart"></i> Process
-              </button>
-              <button onclick="deleteQueuedOrder(${index})" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all text-sm font-semibold">
-                <i class="fas fa-trash"></i> Delete
-              </button>
-            </div>
+           <div class="flex gap-2">
+  <button onclick="printQueueReceipt(${index})" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all text-sm font-semibold">
+    <i class="fas fa-print"></i> Print
+  </button>
+  <button onclick="viewQueuedOrder(${index})" class="px-4 py-2 bg-black text-white rounded-lg hover:bg-red-600 transition-all text-sm font-semibold">
+    <i class="fas fa-eye"></i> View
+  </button>
+  <button onclick="loadQueuedOrderToCart(${index})" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all text-sm font-semibold">
+    <i class="fas fa-shopping-cart"></i> Process
+  </button>
+  <button onclick="deleteQueuedOrder(${index})" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all text-sm font-semibold">
+    <i class="fas fa-trash"></i> Delete
+  </button>
+</div>
           </div>
         </div>
       `;
@@ -3086,6 +3089,452 @@ function generateReceiptItems() {
     }
 
     // Special instructions
+    if (item.specialInstructions) {
+      html += `
+        <tr>
+            <td colspan="3" class="item-notes">
+                Note: ${item.specialInstructions}
+            </td>
+        </tr>
+      `;
+    }
+  });
+
+  return html;
+}
+
+// ============================
+// NEW: PRINT QUEUE RECEIPT FUNCTION
+// ============================
+function printQueueReceipt(index) {
+  const order = queuedOrders[index];
+  if (!order) return;
+
+  // Parse items
+  let items = [];
+  try {
+    items = typeof order.items === "string" ? JSON.parse(order.items) : order.items;
+  } catch (e) {
+    console.error("Error parsing items:", e);
+    return;
+  }
+
+  const subtotal = parseFloat(order.subtotal);
+  const total = parseFloat(order.total);
+  const discountApplied = order.discount_applied === 1;
+  const employeeDiscountApplied = order.employee_discount_applied === 1;
+
+  // Generate unique transaction ID
+  const transactionId = generateTransactionCode();
+
+  const printHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Queue Receipt - Table ${order.table_number}</title>
+        <meta charset="UTF-8">
+        <style>
+            * {
+                margin: 0 !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+                line-height: 1.4 !important;
+                font-family: 'Courier New', monospace !important;
+            }
+            
+            @page {
+                size: 80mm auto !important;
+                margin: 0 !important;
+            }
+            
+            html, body {
+                width: 80mm !important;
+                height: auto !important;
+                margin: 0 auto !important;
+                padding: 0 !important;
+                background: white !important;
+                color: black !important;
+                font-size: 16px !important;
+            }
+            
+            body {
+                padding: 1mm !important;
+                margin: 0 auto !important;
+                width: 80mm !important;
+            }
+            
+            .receipt {
+                width: 80mm !important;
+                margin: 0 auto !important;
+                padding: 1mm !important;
+                text-align: center !important;
+            }
+            
+            .store-name {
+                font-size: 18px !important;
+                font-weight: bold !important;
+                text-transform: uppercase;
+                margin: 0.4mm 0 !important;
+            }
+            
+            .store-address {
+                font-size: 17px !important;
+                margin: 0.4mm 0 !important;
+            }
+            
+            .divider {
+                font-size: 16px !important;
+                margin: 0.9mm 0 !important;
+                padding: 0 !important;
+            }
+            
+            /* ON QUEUE BANNER */
+            .queue-banner {
+                background: white !important;
+                border: 2px solid white !important;
+                padding: 3mm !important;
+                margin: 2mm 0 !important;
+                border-radius: 2mm !important;
+            }
+            
+            .queue-text {
+                font-size: 20px !important;
+                font-weight: 900 !important;
+                color: black !important;
+                letter-spacing: 2px !important;
+            }
+            
+            .table-number {
+                font-size: 24px !important;
+                font-weight: 900 !important;
+                color: black !important;
+                margin: 1mm 0 !important;
+            }
+            
+            .info {
+                font-size: 17px !important;
+                text-align: left !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+            }
+            
+            .info td {
+                font-size: 17px !important;
+                padding: 0.4mm 0 !important;
+            }
+            
+            .items-header {
+                font-size: 17px !important;
+                font-weight: bold !important;
+                text-align: left !important;
+                margin: 0.4mm 0 !important;
+            }
+            
+            .items-table {
+                width: 100% !important;
+                font-size: 16px !important;
+                border-collapse: collapse !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            
+            .items-table td {
+                padding: 0.4mm 0 !important;
+                vertical-align: top !important;
+            }
+            
+            .item-name {
+                text-align: left !important;
+                width: 50% !important;
+                font-size: 16px !important;
+                font-weight: bold !important;
+            }
+            
+            .item-qty {
+                text-align: center !important;
+                width: 15% !important;
+                font-size: 16px !important;
+                font-weight: bold !important;
+            }
+            
+            .item-price {
+                text-align: right !important;
+                width: 35% !important;
+                font-size: 16px !important;
+                font-weight: bold !important;
+            }
+            
+            .item-addons {
+                font-size: 16px !important;
+                font-style: italic !important;
+                padding-left: 2mm !important;
+                text-align: left !important;
+            }
+            
+            .item-notes {
+                font-size: 16px !important;
+                font-style: italic !important;
+                padding-left: 2mm !important;
+                text-align: left !important;
+                color: #666 !important;
+            }
+            
+            .totals {
+                width: 100% !important;
+                font-size: 16px !important;
+                margin: 0.9mm 0 0 !important;
+                padding: 0 !important;
+                border-top: 1px solid black !important;
+            }
+            
+            .totals td {
+                padding: 0.4mm 0 !important;
+                font-weight: bold !important;
+            }
+            
+            .grand-total {
+                font-weight: 900 !important;
+                font-size: 16px !important;
+                border-top: 2px solid black !important;
+                border-bottom: 2px solid black !important;
+            }
+            
+            .grand-total td {
+                font-weight: 900 !important;
+            }
+            
+            .footer {
+                font-size: 12px !important;
+                margin: 0.6mm 0 0 !important;
+                padding: 0 !important;
+            }
+            
+            .footer div {
+                margin: 0.4mm 0 !important;
+            }
+            
+            .transaction-info {
+                font-size: 12px !important;
+                color: #666 !important;
+                margin: 0.6mm 0 0 !important;
+                padding: 0 !important;
+            }
+            
+            .discount-row {
+                color: #dc2626 !important;
+                font-weight: bold !important;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+            
+            .receipt {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            
+            @media print {
+                .no-print {
+                    display: none !important;
+                }
+                
+                .receipt {
+                    padding: 0.5mm !important;
+                }
+                
+                body {
+                    padding: 0.5mm !important;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="receipt">
+            <div class="store-name">K-STREET TARLAC</div>
+            <div class="store-address">Mc Arthur Highway, Magaspac</div>
+            <div class="store-address">Gerona, Tarlac</div>
+            
+            <div class="divider">=============================</div>
+            
+            <!-- ON QUEUE BANNER -->
+            <div class="queue-banner">
+                <div class="table-number">TABLE ${order.table_number}</div>
+            </div>
+            
+            <div class="divider">=============================</div>
+            
+            <table class="info">
+                <tr>
+                    <td><strong>Cashier:</strong></td>
+                    <td>${currentUser?.username || currentUser?.email || "Unknown"}</td>
+                </tr>
+                <tr>
+                    <td><strong>Type:</strong></td>
+                    <td>${order.order_type}</td>
+                </tr>
+                <tr>
+                    <td><strong>Queue Time:</strong></td>
+                    <td>${new Date(order.timestamp).toLocaleString("en-PH", {
+                      year: "numeric",
+                      month: "2-digit",
+                      day: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: true,
+                      timeZone: "Asia/Manila",
+                    })}</td>
+                </tr>
+            </table>
+            
+            <div class="divider">-----------------------------</div>
+            
+            <div class="items-header">ORDER ITEMS:</div>
+            <table class="items-table">
+                ${generateQueueReceiptItems(items)}
+            </table>
+            
+            <div class="divider">-----------------------------</div>
+            
+            <table class="totals">
+                <tr>
+                    <td style="text-align: left; width: 60%;">Subtotal:</td>
+                    <td style="text-align: right; width: 40%;">₱${subtotal.toFixed(2)}</td>
+                </tr>
+                ${discountApplied ? `
+                <tr class="discount-row">
+                    <td style="text-align: left;">PWD/Senior Disc (20%):</td>
+                    <td style="text-align: right;">-₱${(subtotal * 0.2).toFixed(2)}</td>
+                </tr>
+                ` : ""}
+                ${employeeDiscountApplied ? `
+                <tr class="discount-row">
+                    <td style="text-align: left;">Employee Disc (5%):</td>
+                    <td style="text-align: right;">-₱${(subtotal * 0.05).toFixed(2)}</td>
+                </tr>
+                ` : ""}
+                <tr class="grand-total">
+                    <td style="text-align: left; width: 60%;">TOTAL:</td>
+                    <td style="text-align: right; width: 40%;">₱${total.toFixed(2)}</td>
+                </tr>
+            </table>
+            
+            <div class="divider">=============================</div>
+            
+            <div class="footer">
+                <div style="font-weight: bold; font-size: 14px !important; color: black !important;">PENDING PAYMENT</div>
+                <div style="margin-top: 2mm !important;">This order is in queue</div>
+                <div>Please process payment when ready</div>
+            </div>
+            
+            <div class="transaction-info">
+                <div>Queue ID: ${transactionId}</div>
+                <div>Printed: ${new Date().toLocaleString("en-PH", {
+                  year: "numeric",
+                  month: "2-digit",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false,
+                }).replace(",", "")}</div>
+            </div>
+        </div>
+        
+        <div class="no-print" style="text-align: center; margin-top: 5mm;">
+            <button onclick="window.print()" style="
+                padding: 5px 10px;
+                background: #dc2626;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                font-size: 11px;
+                cursor: pointer;
+                margin: 2px;
+            ">
+                🖨️ Print
+            </button>
+            <button onclick="window.close()" style="
+                padding: 5px 10px;
+                background: #6b7280;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                font-size: 11px;
+                cursor: pointer;
+                margin: 2px;
+            ">
+                ✕ Close
+            </button>
+        </div>
+        
+        <script>
+            window.onload = function() {
+                setTimeout(function() {
+                    window.print();
+                }, 300);
+            };
+            
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') window.close();
+                if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+                    e.preventDefault();
+                    window.print();
+                }
+            });
+        </script>
+    </body>
+    </html>
+    `;
+
+  const printWindow = window.open("", "_blank", "width=350,height=600");
+  printWindow.document.write(printHTML);
+  printWindow.document.close();
+  printWindow.focus();
+}
+
+// NEW FUNCTION: generateQueueReceiptItems()
+function generateQueueReceiptItems(items) {
+  let html = "";
+
+  items.forEach((item, index) => {
+    let itemName = item.name;
+
+    if (item.selectedUpgrade) {
+      if (item.selectedUpgrade.description_type === "k-street product") {
+        itemName = `[${item.selectedUpgrade.name} COMPLETE]`;
+      } else {
+        itemName = `[${item.selectedUpgrade.name} UPGRADE]`;
+      }
+    }
+
+    if (item.selectedFlavors && item.selectedFlavors.length > 0) {
+      const flavorNames = item.selectedFlavors.map((f) => f.name).join(", ");
+      itemName += ` [FLAVORS: ${flavorNames}]`;
+    }
+
+    const itemPrice = parseFloat(item.finalPrice || item.price);
+    const itemTotal = (itemPrice * item.quantity).toFixed(2);
+
+    html += `
+      <tr>
+          <td class="item-name">${itemName}</td>
+          <td class="item-qty">x${item.quantity}</td>
+          <td class="item-price">₱${itemTotal}</td>
+      </tr>
+    `;
+
+    if (item.selectedAddons && item.selectedAddons.length > 0) {
+      const addonNames = item.selectedAddons.map((a) => a.name).join(", ");
+      html += `
+        <tr>
+            <td colspan="3" class="item-addons">
+                + ${addonNames}
+            </td>
+        </tr>
+      `;
+    }
+
     if (item.specialInstructions) {
       html += `
         <tr>

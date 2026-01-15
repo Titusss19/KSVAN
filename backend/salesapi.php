@@ -319,6 +319,22 @@ function computeSessionData($pdo, $session) {
         }
         $paymentMethods[$method]['count']++;
         $paymentMethods[$method]['total'] += $amount;
+        
+        // Handle Gcash + Cash split tracking
+        if ($method === 'Gcash + Cash' && isset($order['productNames'])) {
+            // Try to extract Gcash and Cash amounts from productNames
+            if (preg_match('/\[Gcash: ₱([\d.]+) \+ Cash: ₱([\d.]+)\]/', $order['productNames'], $matches)) {
+                $gcashAmount = floatval($matches[1]);
+                $cashAmount = floatval($matches[2]);
+                
+                if (!isset($paymentMethods[$method]['gcash_total'])) {
+                    $paymentMethods[$method]['gcash_total'] = 0;
+                    $paymentMethods[$method]['cash_total'] = 0;
+                }
+                $paymentMethods[$method]['gcash_total'] += $gcashAmount;
+                $paymentMethods[$method]['cash_total'] += $cashAmount;
+            }
+        }
     }
     
     $endGrossSales = $startGrossSales + $sessionSalesTotal;
@@ -351,7 +367,7 @@ function computeSessionData($pdo, $session) {
 // ============================================
 function getCashierDetails($pdo, $sessionId, $user) {
     $sql = "SELECT s.id, s.user_id, s.user_email, s.timestamp as login_time, 
-                   s.branch, s.action, u.username, u.email
+                   s.branch, s.action, s.initial_cash_amount, u.username, u.email
             FROM store_status_log s
             LEFT JOIN users u ON s.user_id = u.id
             WHERE s.id = :id";

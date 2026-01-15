@@ -28,6 +28,7 @@ let receiptContent = "";
 let orderSaved = false;
 let currentPage = 1;
 let itemsPerPage = 9;
+let initialCashAmount = 0;
 
 // NEW: Queue Management Variables
 let queuedOrders = [];
@@ -190,7 +191,7 @@ function setOrderType(type) {
 }
 
 // ============================
-// STORE STATUS FUNCTIONS - FIXED TIMEZONE
+// STORE STATUS FUNCTIONS - FIXED
 // ============================
 async function checkCurrentStoreStatus() {
   try {
@@ -211,13 +212,16 @@ async function checkCurrentStoreStatus() {
     );
 
     const data = await response.json();
+    console.log("Store status data:", data);
 
     storeOpen = data.isOpen || false;
+    console.log("Setting storeOpen to:", storeOpen);
     updateStoreToggleButton();
     renderProducts();
 
     if (data.lastAction) {
       lastActionTime = data.lastAction.timestamp;
+      initialCashAmount = data.lastAction.initial_cash_amount || 0; // ← NEW LINE
       updateLastActionTime();
     }
   } catch (error) {
@@ -228,16 +232,160 @@ async function checkCurrentStoreStatus() {
   }
 }
 
-async function handleStoreToggle() {
-  if (!currentUser) {
+// ============================
+// FIXED: INITIAL CASH AMOUNT MODAL
+// ============================
+function showInitialCashModal() {
+  const modalHTML = `
+    <div id="initialCashModal" class="modal active">
+      <div class="modal-content animate-fade-in" style="max-width: 500px;">
+        <div class="p-6 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-t-3xl">
+          <h3 class="text-2xl font-bold">Opening Store</h3>
+          <p class="text-red-100 mt-2">Please enter your initial cash amount (Changing Funds)</p>
+        </div>
+        
+        <div class="p-6">
+          <div class="mb-6">
+            <label class="block text-sm font-bold text-gray-700 mb-2">
+              Initial Cash Amount (₱) <span class="text-red-500">*</span>
+            </label>
+            <input 
+              type="number" 
+              id="initialCashInput" 
+              placeholder="Enter amount (e.g., 2000)" 
+              min="0"
+              step="0.01"
+              class="w-full px-5 py-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-lg font-semibold transition-all"
+              autofocus
+            />
+            <p class="text-xs text-gray-500 mt-2">
+              <i class="fas fa-info-circle"></i> Enter the total cash you have when starting your shift
+            </p>
+          </div>
+          
+          <div class="mb-6">
+            <p class="text-sm font-semibold text-gray-700 mb-3">Quick Select:</p>
+            <div class="grid grid-cols-4 gap-2">
+              <button onclick="setInitialCash(500)" class="py-3 bg-gray-100 hover:bg-red-100 text-gray-700 hover:text-red-600 rounded-lg font-semibold transition-all shadow-sm hover:shadow-md">
+                ₱500
+              </button>
+              <button onclick="setInitialCash(1000)" class="py-3 bg-gray-100 hover:bg-red-100 text-gray-700 hover:text-red-600 rounded-lg font-semibold transition-all shadow-sm hover:shadow-md">
+                ₱1,000
+              </button>
+              <button onclick="setInitialCash(2000)" class="py-3 bg-gray-100 hover:bg-red-100 text-gray-700 hover:text-red-600 rounded-lg font-semibold transition-all shadow-sm hover:shadow-md">
+                ₱2,000
+              </button>
+              <button onclick="setInitialCash(5000)" class="py-3 bg-gray-100 hover:bg-red-100 text-gray-700 hover:text-red-600 rounded-lg font-semibold transition-all shadow-sm hover:shadow-md">
+                ₱5,000
+              </button>
+            </div>
+          </div>
+          
+          <div class="flex gap-3">
+            <button onclick="cancelInitialCash()" class="flex-1 py-3.5 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-all shadow-md">
+              <i class="fas fa-times"></i> Cancel
+            </button>
+            <button onclick="confirmInitialCash()" class="flex-1 py-3.5 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-xl font-semibold hover:from-red-700 hover:to-red-600 transition-all shadow-lg hover:shadow-xl">
+              <i class="fas fa-check"></i> Open Store
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const existingModal = document.getElementById("initialCashModal");
+  if (existingModal) {
+    existingModal.remove();
+  }
+
+  document.body.insertAdjacentHTML("beforeend", modalHTML);
+
+  setTimeout(() => {
+    document.getElementById("initialCashInput").focus();
+  }, 100);
+
+  document
+    .getElementById("initialCashInput")
+    .addEventListener("keypress", function (e) {
+      if (e.key === "Enter") {
+        confirmInitialCash();
+      }
+    });
+}
+
+function setInitialCash(amount) {
+  document.getElementById("initialCashInput").value = amount;
+  document.getElementById("initialCashInput").focus();
+}
+
+function cancelInitialCash() {
+  const modal = document.getElementById("initialCashModal");
+  if (modal) {
+    modal.remove();
+  }
+  initialCashAmount = 0;
+}
+
+async function confirmInitialCash() {
+  const input = document.getElementById("initialCashInput");
+  const amount = parseFloat(input.value);
+
+  if (isNaN(amount) || amount < 0) {
+    alert("⚠️ Please enter a valid amount (must be 0 or greater)");
+    input.focus();
     return;
   }
 
-  const newStatus = !storeOpen;
-  const action = newStatus ? "open" : "close";
+  if (amount === 0) {
+    const confirmed = confirm(
+      "Are you sure you want to open with ₱0.00 initial cash?"
+    );
+    if (!confirmed) {
+      input.focus();
+      return;
+    }
+  }
+
+  initialCashAmount = amount;
+
+  const modal = document.getElementById("initialCashModal");
+  if (modal) {
+    modal.remove();
+  }
+
+  await proceedWithStoreAction("open", initialCashAmount);
+}
+
+async function handleStoreToggle() {
+  console.log("Store toggle clicked. Current status:", storeOpen);
+
+  if (!currentUser) {
+    alert("Please login first");
+    return;
+  }
+
+  if (!storeOpen) {
+    console.log("Store is closed, opening...");
+    showInitialCashModal(); // ← CHANGED: Show modal instead of direct action
+    return;
+  }
+
+  console.log("Store is open, closing...");
+
+  const salesData = await getShiftSales(); // ← NEW: Get sales data
+
+  if (salesData && salesData.success) {
+    showClosingConfirmation(salesData); // ← NEW: Show closing confirmation
+  } else {
+    await proceedWithStoreAction("close", 0);
+  }
+}
+
+async function proceedWithStoreAction(action, cashAmount) {
+  console.log("Proceeding with store action:", action, "Cash:", cashAmount);
 
   try {
-    // Get current time in Philippines timezone
     const now = new Date();
     const phTimeString = now.toLocaleTimeString("en-PH", {
       hour: "2-digit",
@@ -264,24 +412,27 @@ async function handleStoreToggle() {
           userId: currentUser.id,
           userEmail: currentUser.email,
           action: action,
+          initialCashAmount: cashAmount,
         }),
       }
     );
 
     const data = await response.json();
+    console.log("Store action response:", data);
 
     if (data.success) {
-      storeOpen = newStatus;
+      storeOpen = action === "open";
+      console.log("Store status updated to:", storeOpen);
+
       updateStoreToggleButton();
       renderProducts();
 
-      // Use Philippine time directly from browser
       const actionTime = phTimeString;
 
       lastActionTime = new Date().toISOString();
       updateLastActionTime();
 
-      showStoreSuccessModal(newStatus, actionTime);
+      showStoreSuccessModal(storeOpen, actionTime, cashAmount); // ← CHANGED: Pass cashAmount
     } else {
       alert(
         "Failed to update store status: " + (data.message || "Unknown error")
@@ -295,21 +446,33 @@ async function handleStoreToggle() {
 
 function updateStoreToggleButton() {
   const btn = document.getElementById("storeToggleBtn");
-  btn.textContent = storeOpen ? "OPEN" : "CLOSED";
-  btn.className = storeOpen
-    ? "px-4 py-1.5 rounded-full text-sm font-semibold transition-all shadow-lg bg-white text-black hover:bg-red-50"
-    : "px-4 py-1.5 rounded-full text-sm font-semibold transition-all shadow-lg bg-black text-white hover:bg-gray-800";
+  console.log("Updating button. Store open:", storeOpen);
+
+  if (storeOpen) {
+    btn.textContent = "OPEN";
+    btn.className =
+      "px-4 py-1.5 rounded-full text-sm font-semibold transition-all shadow-lg bg-white text-black hover:bg-red-50";
+  } else {
+    btn.textContent = "CLOSED";
+    btn.className =
+      "px-4 py-1.5 rounded-full text-sm font-semibold transition-all shadow-lg bg-black text-white hover:bg-gray-800";
+  }
 }
 
 function updateLastActionTime() {
   if (lastActionTime) {
-    document.getElementById("lastActionTime").textContent = `${
+    const displayText = `${
       storeOpen ? "Opened" : "Closed"
     } at ${formatStoreTime(lastActionTime)}`;
+    if (storeOpen && initialCashAmount > 0) {
+      document.getElementById("lastActionTime").textContent = `${displayText}`;
+    } else {
+      document.getElementById("lastActionTime").textContent = displayText;
+    }
   }
 }
 
-function showStoreSuccessModal(isOpen, actionTime) {
+function showStoreSuccessModal(isOpen, actionTime, cashAmount = 0) { // ← CHANGED: Added cashAmount parameter
   const modal = document.getElementById("storeSuccessModal");
   const header = document.getElementById("storeModalHeader");
   const title = document.getElementById("storeModalTitle");
@@ -317,45 +480,81 @@ function showStoreSuccessModal(isOpen, actionTime) {
   const icon = document.getElementById("storeModalIcon");
   const message = document.getElementById("storeModalMessage");
   const timeBox = document.getElementById("storeModalTimeBox");
-  const timeLabel = document.getElementById("storeModalTimeLabel");
-  const timeValue = document.getElementById("storeActionTime");
   const btn = document.getElementById("storeModalBtn");
 
   if (isOpen) {
     header.className =
       "p-6 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-t-3xl";
-    title.textContent = "Store Opened Successfully!";
-    subtitle.textContent = "Welcome to K-Street POS";
-    icon.textContent = "✓";
-    icon.className = "text-7xl mb-4 text-red-500";
-    message.textContent = "Your store is now open for business!";
-    timeBox.className =
-      "bg-gradient-to-r from-red-50 to-red-50 border-2 border-red-200 rounded-2xl p-5 mt-4";
-    timeLabel.textContent = "Store Opened At:";
-    timeLabel.className = "text-red-800 font-semibold text-lg mb-1";
-    timeValue.className = "text-red-600 font-bold text-3xl";
+    title.textContent = "Store Opened Successfully";
+    subtitle.textContent = "Your store is now operational";
+    icon.innerHTML =
+      '<svg class="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>';
+    icon.className =
+      "w-16 h-16 mx-auto rounded-full bg-emerald-100 flex items-center justify-center mb-4";
+    message.textContent = "Your store is now open for business";
+
+    // ← NEW: Display initial cash amount
+    timeBox.innerHTML = `
+      <div class="bg-slate-50 border-2 border-slate-200 rounded-2xl p-5 mt-4">
+        <p class="font-medium text-slate-600 text-base mb-1">Store Opened At</p>
+        <p class="font-bold text-2xl text-slate-900 mb-4">${actionTime}</p>
+        <div class="border-t-2 border-slate-300 pt-4">
+          <p class="font-medium text-slate-600 text-base mb-1">Initial Cash Amount</p>
+          <p class="font-bold text-3xl text-emerald-600">₱${cashAmount.toLocaleString(
+            "en-PH",
+            { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+          )}</p>
+          <p class="text-xs text-gray-500 mt-2">Changing Funds for this shift</p>
+        </div>
+      </div>
+    `;
+
     btn.className =
-      "flex-1 py-3.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-semibold hover:from-red-600 hover:to-red-700 transition-all shadow-lg hover:shadow-xl";
-    btn.textContent = "Start Selling!";
+      "flex-1 py-3.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl";
+    btn.textContent = "Start Selling";
   } else {
+    const salesData = window.currentShiftSales; // ← NEW: Get sales data
+
     header.className =
       "p-6 bg-gradient-to-r from-black to-black text-white rounded-t-3xl";
     title.textContent = "Store Closed Successfully!";
     subtitle.textContent = "Thank you for using K-Street POS";
-    icon.textContent = "🔒";
-    icon.className = "text-7xl mb-4 text-gray-500";
     message.textContent = "Your store is now closed for the day.";
-    timeBox.className =
-      "bg-gradient-to-r from-gray-50 to-gray-50 border-2 border-gray-200 rounded-2xl p-5 mt-4";
-    timeLabel.textContent = "Store Closed At:";
-    timeLabel.className = "text-gray-800 font-semibold text-lg mb-1";
-    timeValue.className = "text-gray-600 font-bold text-3xl";
+
+    // ← NEW: Display sales summary if available
+    if (salesData && salesData.success) {
+      timeBox.innerHTML = `
+        <div class="bg-gradient-to-r from-gray-50 to-gray-50 border-2 border-gray-200 rounded-2xl p-5 mt-4">
+          <p class="text-gray-800 font-semibold text-lg mb-1">Store Closed At:</p>
+          <p class="text-gray-600 font-bold text-3xl mb-4">${actionTime}</p>
+          <div class="border-t-2 border-gray-300 pt-4">
+            <p class="text-sm text-gray-600 mb-1">Total Sales: <span class="font-bold text-green-600">₱${salesData.totalSales.toLocaleString(
+              "en-PH",
+              { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+            )}</span></p>
+            <p class="text-sm text-gray-600">Total Cash: <span class="font-bold text-blue-600">₱${salesData.totalCash.toLocaleString(
+              "en-PH",
+              { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+            )}</span></p>
+          </div>
+        </div>
+      `;
+    } else {
+      timeBox.innerHTML = `
+        <div class="bg-gradient-to-r from-gray-50 to-gray-50 border-2 border-gray-200 rounded-2xl p-5 mt-4">
+          <p class="text-gray-800 font-semibold text-lg mb-1">Store Closed At:</p>
+          <p class="text-gray-600 font-bold text-3xl">${actionTime}</p>
+        </div>
+      `;
+    }
+
     btn.className =
       "flex-1 py-3.5 bg-gradient-to-r from-black to-black text-white rounded-xl font-semibold hover:from-gray-700 hover:to-gray-800 transition-all shadow-lg hover:shadow-xl";
     btn.textContent = "Got It!";
+
+    window.currentShiftSales = null;
   }
 
-  timeValue.textContent = actionTime;
   modal.classList.add("active");
 }
 
@@ -383,6 +582,183 @@ function closeStoreModal() {
     pwdBtn.style.cursor = "not-allowed";
     empBtn.style.cursor = "not-allowed";
   }
+}
+
+// ============================
+// NEW FUNCTIONS: SHIFT SALES & CLOSING
+// ============================
+async function getShiftSales() {
+  try {
+    const response = await fetch(
+      `backend/pos_api.php?action=get_shift_sales&userId=${currentUser.id}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "X-User": JSON.stringify({
+            id: currentUser.id,
+            email: currentUser.email,
+            role: currentUser.role || "cashier",
+            branch: currentUser.branch || "main",
+          }),
+        },
+      }
+    );
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching shift sales:", error);
+    return null;
+  }
+}
+
+function showClosingConfirmation(salesData) {
+  const modalHTML = `
+    <div id="closingConfirmModal" class="modal active">
+      <div class="modal-content animate-fade-in" style="max-width: 600px;">
+        <div class="p-6 bg-gradient-to-r from-black to-gray-900 text-white rounded-t-3xl">
+          <h3 class="text-2xl font-bold">Closing Store</h3>
+          <p class="text-gray-300 mt-2">Review your shift summary before closing</p>
+        </div>
+        
+        <div class="p-6">
+          <div class="bg-gray-50 rounded-xl p-4 mb-6">
+            <h4 class="font-bold text-gray-800 mb-4 text-lg">Shift Summary</h4>
+            
+            <div class="flex justify-between items-center py-2 border-b border-gray-200">
+              <span class="text-gray-600">Initial Cash (Opening):</span>
+              <span class="font-bold text-gray-800">₱${salesData.initialCash.toLocaleString(
+                "en-PH",
+                { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+              )}</span>
+            </div>
+            
+            <div class="flex justify-between items-center py-2 border-b border-gray-200">
+              <span class="text-gray-600">Total Sales (${
+                salesData.orderCount
+              } orders):</span>
+              <span class="font-bold text-green-600">₱${salesData.totalSales.toLocaleString(
+                "en-PH",
+                { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+              )}</span>
+            </div>
+            
+            <div class="ml-4 mt-2 space-y-1">
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-500">• Cash Sales:</span>
+                <span class="text-gray-700">₱${salesData.cashSales.toLocaleString(
+                  "en-PH",
+                  { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                )}</span>
+              </div>
+              ${
+                salesData.gcashSales > 0
+                  ? `
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-500">• Gcash Sales:</span>
+                <span class="text-gray-700">₱${salesData.gcashSales.toLocaleString(
+                  "en-PH",
+                  { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                )}</span>
+              </div>
+              `
+                  : ""
+              }
+              ${
+                salesData.gcashCashSales > 0
+                  ? `
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-500">• Gcash + Cash Sales:</span>
+                <span class="text-gray-700">₱${salesData.gcashCashSales.toLocaleString(
+                  "en-PH",
+                  { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                )}</span>
+              </div>
+              `
+                  : ""
+              }
+              ${
+                salesData.grabSales > 0
+                  ? `
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-500">• Grab Sales:</span>
+                <span class="text-gray-700">₱${salesData.grabSales.toLocaleString(
+                  "en-PH",
+                  { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                )}</span>
+              </div>
+              `
+                  : ""
+              }
+            </div>
+            
+            <div class="flex justify-between items-center py-3 mt-3 border-t-2 border-gray-300 bg-blue-50 rounded-lg px-3">
+              <span class="font-bold text-gray-800 text-lg">Total Cash in Drawer:</span>
+              <span class="font-bold text-blue-600 text-2xl">₱${salesData.totalCash.toLocaleString(
+                "en-PH",
+                { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+              )}</span>
+            </div>
+            
+            <p class="text-xs text-gray-500 mt-2 text-center">
+              Initial (₱${salesData.initialCash.toFixed(
+                2
+              )}) + Cash Sales (₱${salesData.cashSales.toFixed(2)})
+            </p>
+          </div>
+          
+          <div class="bg-amber-50 border-l-4 border-amber-500 p-4 mb-6">
+            <div class="flex items-start">
+              <i class="fas fa-exclamation-triangle text-amber-500 mt-1 mr-3"></i>
+              <div>
+                <p class="font-semibold text-amber-800">Please verify your cash drawer matches the total above</p>
+                <p class="text-sm text-amber-700 mt-1">Count all cash and ensure it equals ₱${salesData.totalCash.toLocaleString(
+                  "en-PH",
+                  { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                )}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="flex gap-3">
+            <button onclick="cancelClosing()" class="flex-1 py-3.5 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-all shadow-md">
+              <i class="fas fa-times"></i> Cancel
+            </button>
+            <button onclick="confirmClosing()" class="flex-1 py-3.5 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-xl font-semibold hover:from-red-700 hover:to-red-600 transition-all shadow-lg hover:shadow-xl">
+              <i class="fas fa-check"></i> Close Store
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const existingModal = document.getElementById("closingConfirmModal");
+  if (existingModal) {
+    existingModal.remove();
+  }
+
+  document.body.insertAdjacentHTML("beforeend", modalHTML);
+
+  window.currentShiftSales = salesData;
+}
+
+function cancelClosing() {
+  const modal = document.getElementById("closingConfirmModal");
+  if (modal) {
+    modal.remove();
+  }
+  window.currentShiftSales = null;
+}
+
+async function confirmClosing() {
+  const modal = document.getElementById("closingConfirmModal");
+  if (modal) {
+    modal.remove();
+  }
+
+  await proceedWithStoreAction("close", 0);
 }
 
 // ============================
@@ -2145,6 +2521,15 @@ function calculateChange() {
   return Math.max(0, change);
 }
 
+function updateChangeAmount() {
+  // Update the paymentAmount variable from the input field
+  const inputValue = document.getElementById("paymentInput").value;
+  paymentAmount = inputValue;
+  
+  // Update the totals display
+  updateTotals();
+}
+
 function updateTotals() {
   const subtotal = calculateSubtotal();
   const total = calculateTotal();
@@ -2313,6 +2698,233 @@ function setPaymentAmount(amount) {
   updateTotals();
 }
 
+function showSplitPaymentModal(total, paidAmount) {
+  const modalHTML = `
+    <div id="splitPaymentModal" class="modal active">
+      <div class="modal-content animate-fade-in" style="max-width: 500px;">
+        <div class="p-6 bg-gradient-to-r from-black to-gray-900 text-white rounded-t-3xl">
+          <h3 class="text-2xl font-bold">Split Payment</h3>
+          <p class="text-gray-300 mt-2">Enter Gcash amount (rest will be Cash)</p>
+        </div>
+        
+        <div class="p-6">
+          <div class="space-y-4">
+            <div>
+              <label class="block text-gray-700 font-bold mb-2">Total Amount:</label>
+              <div class="bg-gray-100 p-4 rounded-lg border-2 border-gray-300">
+                <span class="text-2xl font-bold text-gray-800">₱${total.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+            </div>
+            
+            <div>
+              <label class="block text-gray-700 font-bold mb-2">Gcash Amount:</label>
+              <input 
+                type="number" 
+                id="gcashAmountInput" 
+                class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-black focus:outline-none text-lg"
+                placeholder="Enter Gcash amount"
+                step="0.01"
+                min="0"
+                max="${total}"
+                value="0"
+              />
+            </div>
+            
+            <div>
+              <label class="block text-gray-700 font-bold mb-2">Cash Amount:</label>
+              <div class="bg-blue-50 p-4 rounded-lg border-2 border-blue-300">
+                <span class="text-2xl font-bold text-blue-600" id="cashAmountDisplay">₱${total.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="flex gap-3 mt-6">
+            <button 
+              onclick="closeSplitPaymentModal()" 
+              class="flex-1 py-3 bg-gray-300 text-gray-800 rounded-lg font-bold hover:bg-gray-400 transition"
+            >
+              Cancel
+            </button>
+            <button 
+              onclick="confirmSplitPayment(${total}, ${paidAmount})" 
+              class="flex-1 py-3 bg-black text-white rounded-lg font-bold hover:bg-gray-800 transition"
+            >
+              Confirm
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  
+  // Update cash amount in real-time as user types
+  const gcashInput = document.getElementById('gcashAmountInput');
+  gcashInput.addEventListener('input', function() {
+    const gcashAmount = parseFloat(this.value) || 0;
+    const cashAmount = total - gcashAmount;
+    const cashDisplay = document.getElementById('cashAmountDisplay');
+    
+    // Validate input
+    if (gcashAmount < 0) {
+      this.value = 0;
+      cashDisplay.textContent = `₱${total.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    } else if (gcashAmount > total) {
+      this.value = total.toFixed(2);
+      cashDisplay.textContent = '₱0.00';
+    } else {
+      cashDisplay.textContent = `₱${cashAmount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+  });
+  
+  gcashInput.focus();
+}
+
+function closeSplitPaymentModal() {
+  const modal = document.getElementById('splitPaymentModal');
+  if (modal) {
+    modal.remove();
+  }
+}
+
+async function confirmSplitPayment(total, paidAmount) {
+  const gcashAmountInput = document.getElementById('gcashAmountInput');
+  const gcashAmount = parseFloat(gcashAmountInput.value) || 0;
+  const cashAmount = total - gcashAmount;
+  
+  // Validation
+  if (gcashAmount < 0 || cashAmount < 0) {
+    alert('Invalid split amounts');
+    return;
+  }
+  
+  if (Math.abs(gcashAmount + cashAmount - total) > 0.01) {
+    alert('Amounts do not add up to total');
+    return;
+  }
+  
+  closeSplitPaymentModal();
+  
+  // Proceed with payment using split amounts
+  const change = paidAmount - total;
+  changeAmount = change;
+
+  generateReceiptText();
+
+  const productNames = cart
+    .map((item) => {
+      let name = item.name;
+
+      if (item.selectedUpgrade) {
+        if (item.selectedUpgrade.description_type === "k-street product") {
+          name = `[COMPLETE] ${item.selectedUpgrade.name}`;
+        } else {
+          name = `[UPGRADED] ${item.selectedUpgrade.name}`;
+        }
+      }
+
+      if (item.selectedFlavors && item.selectedFlavors.length > 0) {
+        const flavorNames = item.selectedFlavors.map((f) => f.name).join(", ");
+        name += ` [FLAVORS: ${flavorNames}]`;
+      }
+
+      return name;
+    })
+    .join(", ");
+
+  const itemsData = cart.map((item) => {
+    let name = item.name;
+
+    if (item.selectedUpgrade) {
+      if (item.selectedUpgrade.description_type === "k-street product") {
+        name = `[COMPLETE] ${item.selectedUpgrade.name}`;
+      } else {
+        name = `[UPGRADED] ${item.selectedUpgrade.name}`;
+      }
+    }
+
+    if (item.selectedFlavors && item.selectedFlavors.length > 0) {
+      const flavorNames = item.selectedFlavors.map((f) => f.name).join(", ");
+      name += ` [FLAVORS: ${flavorNames}]`;
+    }
+
+    return {
+      id: item.id,
+      name: name,
+      quantity: item.quantity,
+      price: item.finalPrice || item.price,
+      subtotal: (item.finalPrice || item.price) * item.quantity,
+      selectedAddons: item.selectedAddons,
+      selectedUpgrade: item.selectedUpgrade,
+      selectedFlavors: item.selectedFlavors || [],
+      specialInstructions: item.specialInstructions,
+    };
+  });
+
+  const orderData = {
+    userId: currentUser.id,
+    paidAmount: paidAmount,
+    total: total,
+    discountApplied: discountApplied || employeeDiscountApplied,
+    changeAmount: change,
+    orderType: orderType,
+    productNames: productNames,
+    items: JSON.stringify(itemsData),
+    paymentMethod: paymentMethod,
+    gcashAmount: gcashAmount,
+    cashAmount: cashAmount,
+  };
+
+  try {
+    orderSaved = true;
+
+    const response = await fetch("backend/pos_api.php?action=create_order", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-User": JSON.stringify({
+          id: currentUser.id,
+          email: currentUser.email,
+          role: currentUser.role || "cashier",
+          branch: currentUser.branch || "main",
+        }),
+      },
+      body: JSON.stringify(orderData),
+    });
+
+    const data = await response.json();
+    console.log("Split Payment Response:", data);
+
+    if (data.success) {
+      showPaymentModal(
+        "success",
+        "Payment Successful!",
+        `Gcash: ₱${gcashAmount.toFixed(2)} + Cash: ₱${cashAmount.toFixed(2)}`,
+        change
+      );
+    } else {
+      orderSaved = false;
+      console.error("Order Save Error:", data.error);
+      showPaymentModal(
+        "error",
+        "Order Failed",
+        "Could not save order. Please try again.",
+        total
+      );
+    }
+  } catch (error) {
+    orderSaved = false;
+    console.error("Error saving order:", error);
+    showPaymentModal(
+      "error",
+      "Order Failed",
+      "Could not save order. Please try again.",
+      total
+    );
+  }
+}
+
 async function processPayment() {
   if (!storeOpen) {
     return;
@@ -2350,6 +2962,12 @@ async function processPayment() {
       `The amount entered is less than the total.`,
       total
     );
+    return;
+  }
+
+  // Check if payment method is "Gcash + Cash"
+  if (paymentMethod === "Gcash + Cash") {
+    showSplitPaymentModal(total, amount);
     return;
   }
 

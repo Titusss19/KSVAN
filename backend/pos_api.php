@@ -89,7 +89,9 @@ try {
         case 'log_store_action':
             logStoreAction($pdo);
             break;
-        
+        case 'get_shift_sales':
+    getShiftSales($pdo);
+    break;
         // ============================
         // ITEMS ENDPOINTS
         // ============================
@@ -182,16 +184,17 @@ function getStoreStatus($pdo) {
         $timestamp->setTimezone(new DateTimeZone('Asia/Manila'));
         $philippineTime = $timestamp->format('Y-m-d H:i:s');
         
-        echo json_encode([
-            'isOpen' => $result['action'] === 'open',
-            'lastAction' => [
-                'timestamp' => $philippineTime,
-                'action' => $result['action'],
-                'user_id' => $result['user_id'],
-                'branch' => $result['branch'],
-                'action_by_email' => $result['action_by_email']
-            ]
-        ]);
+      echo json_encode([
+    'isOpen' => $result['action'] === 'open',
+    'lastAction' => [
+        'timestamp' => $philippineTime,
+        'action' => $result['action'],
+        'user_id' => $result['user_id'],
+        'branch' => $result['branch'],
+        'action_by_email' => $result['action_by_email'],
+        'initial_cash_amount' => (float)($result['initial_cash_amount'] ?? 0) // ← ADD THIS LINE
+    ]
+]);
         
     } catch (PDOException $e) {
         error_log('Error in getStoreStatus: ' . $e->getMessage());
@@ -211,6 +214,7 @@ function logStoreAction($pdo) {
     $userId = $input['userId'] ?? null;
     $userEmail = $input['userEmail'] ?? null;
     $action = $input['action'] ?? null;
+    $initialCashAmount = (float)($input['initialCashAmount'] ?? 0);
     $userBranch = $user['branch'];
     
     if (!$userId || !$action) {
@@ -222,19 +226,34 @@ function logStoreAction($pdo) {
         sendError('Action must be "open" or "close"');
     }
     
+    // Validate initial cash for open action
+    if ($action === 'open' && $initialCashAmount < 0) {
+        sendError('Initial cash amount cannot be negative');
+    }
+    
+    // Close action doesn't need initial cash
+    if ($action === 'close') {
+        $initialCashAmount = 0;
+    }
+    
     try {
-        // Get current Philippine time
         $phTime = new DateTime('now', new DateTimeZone('Asia/Manila'));
         $timestamp = $phTime->format('Y-m-d H:i:s');
         
         $stmt = $pdo->prepare("
-            INSERT INTO store_status_log (user_id, user_email, action, branch, timestamp)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO store_status_log (user_id, user_email, action, branch, initial_cash_amount, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?)
         ");
         
-        $stmt->execute([$userId, $userEmail, $action, $userBranch, $timestamp]);
+        $stmt->execute([
+            $userId, 
+            $userEmail, 
+            $action, 
+            $userBranch, 
+            $initialCashAmount,
+            $timestamp
+        ]);
         
-        // Format for display
         $displayTime = $phTime->format('h:i:s A');
         
         echo json_encode([
@@ -243,12 +262,103 @@ function logStoreAction($pdo) {
             'logId' => $pdo->lastInsertId(),
             'timestamp' => $timestamp,
             'displayTime' => $displayTime,
-            'branch' => $userBranch
+            'branch' => $userBranch,
+            'initialCashAmount' => $initialCashAmount
         ]);
         
     } catch (PDOException $e) {
         error_log('Error in logStoreAction: ' . $e->getMessage());
         sendError('Failed to log store action: ' . $e->getMessage());
+    }
+}
+
+// ============================
+// NEW: SHIFT SALES FUNCTION
+// ============================
+function getShiftSales($pdo) {
+    $user = getUserFromHeaders();
+    
+    if (!$user || !isset($user['branch'])) {
+        sendError('User authentication required', 401);
+    }
+    
+    $userId = $_GET['userId'] ?? null;
+    $userBranch = $user['branch'];
+    
+    if (!$userId) {
+        sendError('User ID required');
+    }
+    
+    try {
+        $stmt = $pdo->prepare("
+            SELECT 
+                timestamp,
+                initial_cash_amount
+            FROM store_status_log
+            WHERE user_id = ?
+              AND branch = ?
+              AND action = 'open'
+            ORDER BY timestamp DESC
+            LIMIT 1
+        ");
+        
+        $stmt->execute([$userId, $userBranch]);
+        $openLog = $stmt->fetch();
+        
+        if (!$openLog) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'No open log found'
+            ]);
+            exit;
+        }
+        
+        $openTime = $openLog['timestamp'];
+        $initialCash = (float)$openLog['initial_cash_amount'];
+        
+        $stmt = $pdo->prepare("
+            SELECT 
+                SUM(total) as total_sales,
+                COUNT(*) as order_count,
+                SUM(CASE WHEN payment_method = 'Cash' THEN total ELSE 0 END) as cash_sales,
+                SUM(CASE WHEN payment_method = 'Gcash' THEN total ELSE 0 END) as gcash_sales,
+                SUM(CASE WHEN payment_method = 'Gcash + Cash' THEN total ELSE 0 END) as gcash_cash_sales,
+                SUM(CASE WHEN payment_method = 'Grab' THEN total ELSE 0 END) as grab_sales
+            FROM orders
+            WHERE userId = ?
+              AND branch = ?
+              AND created_at >= ?
+              AND is_void = 0
+        ");
+        
+        $stmt->execute([$userId, $userBranch, $openTime]);
+        $salesData = $stmt->fetch();
+        
+        $totalSales = (float)($salesData['total_sales'] ?? 0);
+        $orderCount = (int)($salesData['order_count'] ?? 0);
+        $cashSales = (float)($salesData['cash_sales'] ?? 0);
+        $gcashSales = (float)($salesData['gcash_sales'] ?? 0);
+        $gcashCashSales = (float)($salesData['gcash_cash_sales'] ?? 0);
+        $grabSales = (float)($salesData['grab_sales'] ?? 0);
+        
+        $totalCash = $initialCash + $cashSales;
+        
+        echo json_encode([
+            'success' => true,
+            'openTime' => $openTime,
+            'initialCash' => $initialCash,
+            'totalSales' => $totalSales,
+            'cashSales' => $cashSales,
+            'gcashSales' => $gcashSales,
+            'gcashCashSales' => $gcashCashSales,
+            'grabSales' => $grabSales,
+            'totalCash' => $totalCash,
+            'orderCount' => $orderCount
+        ]);
+        
+    } catch (PDOException $e) {
+        error_log('Error in getShiftSales: ' . $e->getMessage());
+        sendError('Error fetching shift sales');
     }
 }
 
@@ -334,6 +444,8 @@ function createOrder($pdo) {
     $productNames = $input['productNames'] ?? 'No items';
     $items = $input['items'] ?? '[]';
     $paymentMethod = $input['paymentMethod'] ?? 'Cash';
+    $gcashAmount = $input['gcashAmount'] ?? 0;
+    $cashAmount = $input['cashAmount'] ?? 0;
     $userBranch = $user['branch'];
     
     if (!$userId || $paidAmount === null) {
@@ -357,6 +469,11 @@ function createOrder($pdo) {
     $phTime = new DateTime('now', new DateTimeZone('Asia/Manila'));
     $createdAt = $phTime->format('Y-m-d H:i:s');
     
+    // For split payments, add breakdown to productNames
+    if ($paymentMethod === 'Gcash + Cash' && $gcashAmount > 0) {
+        $productNames .= " [Gcash: ₱" . number_format($gcashAmount, 2) . " + Cash: ₱" . number_format($cashAmount, 2) . "]";
+    }
+    
     try {
         $stmt = $pdo->prepare("
             INSERT INTO orders 
@@ -365,7 +482,7 @@ function createOrder($pdo) {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         
-        $stmt->execute([
+        $execute_result = $stmt->execute([
             (int)$userId,
             (float)$paidAmount,
             (float)$total,
@@ -378,6 +495,11 @@ function createOrder($pdo) {
             $userBranch,
             $createdAt
         ]);
+        
+        if (!$execute_result) {
+            error_log('Execute failed. Error: ' . print_r($stmt->errorInfo(), true));
+            sendError('Failed to insert order: ' . implode(' ', $stmt->errorInfo()));
+        }
         
         echo json_encode([
             'success' => true,

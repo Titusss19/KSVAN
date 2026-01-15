@@ -256,6 +256,8 @@ CREATE TABLE `orders` (
   `productNames` text DEFAULT NULL,
   `items` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`items`)),
   `payment_method` varchar(50) DEFAULT 'Cash',
+  `gcash_amount` decimal(10,2) DEFAULT 0.00,
+  `cash_amount` decimal(10,2) DEFAULT 0.00,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `is_void` tinyint(1) DEFAULT 0,
   `void_reason` text DEFAULT NULL,
@@ -320,6 +322,7 @@ CREATE TABLE `store_status_log` (
   `user_email` varchar(255) NOT NULL,
   `action` enum('open','close') NOT NULL,
   `branch` varchar(100) NOT NULL,
+  `initial_cash_amount` decimal(10,2) DEFAULT 0.00,
   `timestamp` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 

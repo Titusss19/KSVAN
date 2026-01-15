@@ -214,10 +214,7 @@ class ProductsInventorySystem {
       this.renderInventoryTable();
     });
 
-    // Add buttons
-    document
-      .getElementById("addProductBtn")
-      .addEventListener("click", () => this.showProductModal());
+    // Add inventory button (Product Manager dropdown handled in setupImportExportHandlers)
     document
       .getElementById("addInventoryBtn")
       .addEventListener("click", () => this.showInventoryModal());
@@ -1392,6 +1389,384 @@ class ProductsInventorySystem {
       ? "flex"
       : "none";
   }
+
+  // ==================== IMPORT/EXPORT/EDIT FUNCTIONALITY ====================
+
+  setupImportExportHandlers() {
+    // Dropdown menu items
+    document.querySelectorAll(".productDropdownItem").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const action = e.currentTarget.dataset.action;
+        switch (action) {
+          case "add":
+            this.showProductModal();
+            break;
+          case "import":
+            this.showImportModal();
+            break;
+          case "export":
+            this.showExportModal();
+            break;
+          case "edit":
+            this.showEditExcelModal();
+            break;
+        }
+      });
+    });
+
+    // Import Modal Events
+    document.getElementById("cancelImport").addEventListener("click", () => {
+      document.getElementById("importModal").classList.add("hidden");
+    });
+
+    document
+      .getElementById("importFile")
+      .addEventListener("change", (e) => this.previewImportFile(e));
+
+    document
+      .getElementById("confirmImport")
+      .addEventListener("click", () => this.processImport());
+
+    // Export Modal Events
+    document.getElementById("cancelExport").addEventListener("click", () => {
+      document.getElementById("exportModal").classList.add("hidden");
+    });
+
+    document
+      .getElementById("exportCurrentBranch")
+      .addEventListener("change", () => this.updateExportCount());
+
+    document
+      .getElementById("exportAllBranches")
+      .addEventListener("change", (e) => {
+        if (e.target.checked) {
+          document
+            .getElementById("exportCurrentBranch")
+            .removeAttribute("checked");
+          document.getElementById("exportCurrentBranch").checked = false;
+        }
+      });
+
+    document
+      .getElementById("exportCurrentBranch")
+      .addEventListener("change", (e) => {
+        if (e.target.checked) {
+          document.getElementById("exportAllBranches").removeAttribute("checked");
+          document.getElementById("exportAllBranches").checked = false;
+        }
+      });
+
+    document
+      .getElementById("confirmExport")
+      .addEventListener("click", () => this.processExport());
+
+    // Edit Excel Modal Events
+    document.getElementById("cancelEditExcel").addEventListener("click", () => {
+      document.getElementById("editExcelModal").classList.add("hidden");
+    });
+
+    document
+      .getElementById("editExcelFile")
+      .addEventListener("change", (e) => this.previewEditFile(e));
+
+    document
+      .getElementById("confirmEditExcel")
+      .addEventListener("click", () => this.processEditExcel());
+  }
+
+  showImportModal() {
+    document.getElementById("importModal").classList.remove("hidden");
+    document.getElementById("importPreview").innerHTML =
+      '<p class="text-sm text-gray-500 text-center py-8">Select a file to preview</p>';
+    document.getElementById("importFile").value = "";
+  }
+
+  showExportModal() {
+    document.getElementById("exportModal").classList.remove("hidden");
+    document.getElementById("exportCurrentBranch").checked = true;
+    document.getElementById("exportAllBranches").checked = false;
+    this.updateExportCount();
+  }
+
+  showEditExcelModal() {
+    document.getElementById("editExcelModal").classList.remove("hidden");
+    document.getElementById("editExcelPreview").innerHTML =
+      '<p class="text-sm text-gray-500 text-center py-8">Select a file to preview</p>';
+    document.getElementById("editExcelFile").value = "";
+  }
+
+  updateExportCount() {
+    const exportAll = document.getElementById("exportAllBranches").checked;
+    let count = 0;
+
+    if (exportAll && (this.user.role === "admin" || this.user.role === "owner")) {
+      count = this.products.length;
+    } else {
+      count = this.products.filter((p) => p.branch === this.user.branch).length;
+    }
+
+    document.getElementById("exportCount").textContent =
+      "Ready to export " + count + " products";
+  }
+
+  previewImportFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target.result;
+        const rows = content
+          .split("\n")
+          .slice(0, 6)
+          .filter((row) => row.trim());
+
+        const previewHTML = `
+          <table class="w-full text-sm border-collapse">
+            <thead>
+              <tr class="bg-gray-100">
+                ${rows[0]
+                  .split(",")
+                  .map(
+                    (cell) =>
+                      `<th class="border border-gray-300 px-3 py-2 text-left font-semibold">${this.escapeHtml(cell.trim().substring(0, 30))}</th>`
+                  )
+                  .join("")}
+              </tr>
+            </thead>
+            <tbody>
+              ${rows
+                .slice(1)
+                .map(
+                  (row) =>
+                    `<tr class="border-b border-gray-200">
+                      ${row
+                        .split(",")
+                        .map(
+                          (cell) =>
+                            `<td class="border border-gray-300 px-3 py-2">${this.escapeHtml(cell.trim().substring(0, 30))}</td>`
+                        )
+                        .join("")}
+                    </tr>`
+                )
+                .join("")}
+            </tbody>
+          </table>
+        `;
+        document.getElementById("importPreview").innerHTML = previewHTML;
+      } catch (err) {
+        document.getElementById("importPreview").innerHTML =
+          '<p class="text-sm text-red-600 text-center py-8">Error reading file</p>';
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  previewEditFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target.result;
+        const rows = content
+          .split("\n")
+          .slice(0, 8)
+          .filter((row) => row.trim());
+
+        const previewHTML = `
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm border-collapse">
+              <thead>
+                <tr class="bg-gray-100 sticky top-0">
+                  ${rows[0]
+                    .split(",")
+                    .map(
+                      (cell) =>
+                        `<th class="border border-gray-300 px-3 py-2 text-left font-semibold whitespace-nowrap">${this.escapeHtml(cell.trim().substring(0, 20))}</th>`
+                    )
+                    .join("")}
+                </tr>
+              </thead>
+              <tbody>
+                ${rows
+                  .slice(1)
+                  .map(
+                    (row) =>
+                      `<tr class="border-b border-gray-200 hover:bg-gray-50">
+                        ${row
+                          .split(",")
+                          .map(
+                            (cell) =>
+                              `<td class="border border-gray-300 px-3 py-2 whitespace-nowrap">${this.escapeHtml(cell.trim().substring(0, 20))}</td>`
+                          )
+                          .join("")}
+                      </tr>`
+                  )
+                  .join("")}
+              </tbody>
+            </table>
+          </div>
+        `;
+        document.getElementById("editExcelPreview").innerHTML = previewHTML;
+      } catch (err) {
+        document.getElementById("editExcelPreview").innerHTML =
+          '<p class="text-sm text-red-600 text-center py-8">Error reading file</p>';
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  async processImport() {
+    const fileInput = document.getElementById("importFile");
+    const file = fileInput.files[0];
+
+    if (!file) {
+      alert("Please select a file to import");
+      return;
+    }
+
+    this.showLoading(true);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch("backend/import_products.php", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+      this.showLoading(false);
+
+      if (data.success) {
+        // Show detailed success message
+        let message = data.message;
+        if (data.errors && data.errors.length > 0) {
+          message += "\n\nWarnings:\n" + data.errors.slice(0, 5).join("\n");
+          if (data.errors.length > 5) {
+            message += "\n... and " + (data.errors.length - 5) + " more";
+          }
+        }
+
+        this.showSuccess(data.message);
+        document.getElementById("importModal").classList.add("hidden");
+
+        // Reload data
+        await this.loadData();
+        this.renderProductsTable();
+      } else {
+        alert("Import failed: " + data.error);
+      }
+    } catch (error) {
+      this.showLoading(false);
+      alert("Error during import: " + error.message);
+    }
+  }
+
+  async processExport() {
+    const exportAll = document.getElementById("exportAllBranches").checked;
+
+    // Get current filters
+    const searchTerm = document.getElementById("productSearch").value;
+    const categoryFilter = document.getElementById("categoryFilter").value;
+    const descTypeFilter = document.getElementById("descTypeFilter").value;
+
+    const formData = new FormData();
+    formData.append("export_all", exportAll ? "true" : "false");
+    formData.append("search", searchTerm);
+    formData.append("category", categoryFilter);
+    formData.append("desc_type", descTypeFilter);
+
+    try {
+      const response = await fetch("backend/export_products.php", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.ok) {
+        // Create blob and download
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download =
+          "products_export_" + new Date().toISOString().split("T")[0] + ".csv";
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        this.showSuccess("Products exported successfully!");
+        document.getElementById("exportModal").classList.add("hidden");
+      } else {
+        alert("Export failed: " + response.statusText);
+      }
+    } catch (error) {
+      alert("Error during export: " + error.message);
+    }
+  }
+
+  async processEditExcel() {
+    const fileInput = document.getElementById("editExcelFile");
+    const file = fileInput.files[0];
+
+    if (!file) {
+      alert("Please select a file");
+      return;
+    }
+
+    this.showLoading(true);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch("backend/edit_products.php", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+      this.showLoading(false);
+
+      if (data.success) {
+        let message = data.message;
+        if (data.errors && data.errors.length > 0) {
+          message += "\n\nNotes:\n" + data.errors.slice(0, 3).join("\n");
+          if (data.errors.length > 3) {
+            message += "\n... and " + (data.errors.length - 3) + " more";
+          }
+        }
+
+        this.showSuccess(message);
+        document.getElementById("editExcelModal").classList.add("hidden");
+
+        // Reload data
+        await this.loadData();
+        this.renderProductsTable();
+      } else {
+        alert("Update failed: " + data.error);
+      }
+    } catch (error) {
+      this.showLoading(false);
+      alert("Error during update: " + error.message);
+    }
+  }
+
+  escapeHtml(text) {
+    const map = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;",
+    };
+    return text.replace(/[&<>"']/g, (m) => map[m]);
+  }
 }
 
 
@@ -1399,4 +1774,6 @@ class ProductsInventorySystem {
 // Initialize the system
 document.addEventListener("DOMContentLoaded", function () {
   window.productSystem = new ProductsInventorySystem();
+  // Setup import/export handlers
+  window.productSystem.setupImportExportHandlers();
 });

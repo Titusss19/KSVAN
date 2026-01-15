@@ -1,0 +1,51 @@
+Array
+(
+    [0] => Array
+        (
+            [code] => SOUP
+            [branch] => k-street
+            [name] => Hotpot Soup
+            [price] => 10
+        )
+
+    [1] => Array
+        (
+            [code] => RICE
+            [branch] => k-street
+            [name] => Bulgogi Rice
+            [price] => 10
+        )
+
+    [2] => Array
+        (
+            [code] => BULGOGI SAUCE
+            [branch] => k-street
+            [name] => Bulgogi Sauce
+            [price] => 20
+        )
+
+    [3] => Array
+        (
+            [code] => RICE
+            [branch] => k-street
+            [name] => Plain Rice
+            [price] => 15
+        )
+
+    [4] => Array
+        (
+            [code] => KIMCHI
+            [branch] => k-street
+            [name] => Kimchi
+            [price] => 59
+        )
+
+    [5] => Array
+        (
+            [code] => CHOGO
+            [branch] => k-street
+            [name] => Chogochujang Sauce
+            [price] => 20
+        )
+
+)

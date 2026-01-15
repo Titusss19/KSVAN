@@ -1,6 +1,6 @@
 <?php
 $host = 'localhost';
-$dbname = 'u426321422_KSTREET';
+$dbname = 'ktr';
 $username = 'root';
 $password = '';
 

@@ -391,3 +391,51 @@
 .table-container::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
 }
+
+/* Product Manager Dropdown Styling */
+.group {
+    position: relative;
+}
+
+.group:hover > div {
+    opacity: 1;
+    visibility: visible;
+}
+
+.productDropdownItem {
+    transition: all 0.2s ease;
+    color: #374151;
+    font-weight: 500;
+}
+
+.productDropdownItem:hover {
+    background-color: #f3f4f6 !important;
+    transform: translateX(2px);
+}
+
+.productDropdownItem i {
+    min-width: 20px;
+}
+
+/* Import/Export Modal Improvements */
+#importPreview table,
+#editExcelPreview table {
+    background: white;
+}
+
+#importPreview th,
+#editExcelPreview th {
+    background: #f3f4f6;
+    font-weight: 600;
+    color: #111827;
+}
+
+#importPreview td,
+#editExcelPreview td {
+    color: #4b5563;
+}
+
+#importPreview tr:nth-child(even),
+#editExcelPreview tr:nth-child(even) {
+    background: #f9fafb;
+}

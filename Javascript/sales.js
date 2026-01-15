@@ -1256,7 +1256,37 @@ class SalesReport {
             <div class="space-y-1 text-xs">
               ${Object.entries(session.payment_methods)
                 .map(
-                  ([method, data]) => `
+                  ([method, data]) => {
+                    // Handle Gcash + Cash split
+                    if (method === 'Gcash + Cash') {
+                      const gcashTotal = data.gcash_total || 0;
+                      const cashTotal = data.cash_total || 0;
+                      return `
+                <div class="flex justify-between">
+                  <span>├─ Gcash:</span>
+                  <div class="text-right">
+                    <span class="font-medium">${data.count} transaction${
+                    data.count !== 1 ? "s" : ""
+                  }</span>
+                    <span class="ml-2 font-bold">₱${parseFloat(
+                      gcashTotal
+                    ).toFixed(2)}</span>
+                  </div>
+                </div>
+                <div class="flex justify-between">
+                  <span>└─ Cash:</span>
+                  <div class="text-right">
+                    <span class="font-medium">${data.count} transaction${
+                    data.count !== 1 ? "s" : ""
+                  }</span>
+                    <span class="ml-2 font-bold">₱${parseFloat(
+                      cashTotal
+                    ).toFixed(2)}</span>
+                  </div>
+                </div>
+              `;
+                    } else {
+                      return `
                 <div class="flex justify-between">
                   <span>${method}:</span>
                   <div class="text-right">
@@ -1268,7 +1298,9 @@ class SalesReport {
                     ).toFixed(2)}</span>
                   </div>
                 </div>
-              `
+              `;
+                    }
+                  }
                 )
                 .join("")}
             </div>
@@ -1279,6 +1311,9 @@ class SalesReport {
       salesSummarySection.innerHTML = `
         <h3 class="font-bold text-green-800 mb-3">SALES SUMMARY</h3>
         <div class="space-y-2 text-sm">
+          <div><strong>Initial Cash Amount:</strong> ₱${parseFloat(
+            session.initial_cash_amount || 0
+          ).toFixed(2)}</div>
           <div><strong>Starting Gross Sales:</strong> ₱${parseFloat(
             session.start_gross_sales
           ).toFixed(2)}</div>
@@ -1287,6 +1322,9 @@ class SalesReport {
           ).toFixed(2)}</div>
           <div><strong>Sales During Session:</strong> ₱${parseFloat(
             session.session_sales
+          ).toFixed(2)}</div>
+          <div><strong>Total Cash Drawer:</strong> ₱${parseFloat(
+            (parseFloat(session.initial_cash_amount || 0) + parseFloat(session.session_sales || 0))
           ).toFixed(2)}</div>
           <div><strong>Total Transactions:</strong> ${
             session.transaction_count || 0
@@ -2302,13 +2340,33 @@ class SalesReport {
 
     let html = "";
     Object.entries(paymentMethods).forEach(([method, data]) => {
-      html += `
+      // Handle "Gcash + Cash" specially
+      if (method === "Gcash + Cash") {
+        // For split payments, show both Gcash and Cash separately
+        const gcashTotal = data.gcash_total || 0;
+        const cashTotal = data.cash_total || 0;
+        
+        html += `
+      <tr>
+        <td class="payment-method">├─ Gcash</td>
+        <td class="payment-count">${data.count}x</td>
+        <td class="payment-amount">₱${parseFloat(gcashTotal).toFixed(2)}</td>
+      </tr>
+      <tr>
+        <td class="payment-method">└─ Cash</td>
+        <td class="payment-count">${data.count}x</td>
+        <td class="payment-amount">₱${parseFloat(cashTotal).toFixed(2)}</td>
+      </tr>
+    `;
+      } else {
+        html += `
       <tr>
         <td class="payment-method">${method}</td>
         <td class="payment-count">${data.count}x</td>
         <td class="payment-amount">₱${parseFloat(data.total).toFixed(2)}</td>
       </tr>
     `;
+      }
     });
 
     return html;

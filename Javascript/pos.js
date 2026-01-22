@@ -2577,6 +2577,7 @@ function updateTotals() {
 // ============================
 function togglePWDDiscount() {
   if (!storeOpen) {
+    alert("Please open the store before applying discounts.");
     return;
   }
 
@@ -2621,6 +2622,7 @@ function togglePWDDiscount() {
 
 function toggleEmployeeDiscount() {
   if (!storeOpen) {
+    alert("Please open the store before applying discounts.");
     return;
   }
 
@@ -2867,6 +2869,7 @@ async function confirmSplitPayment(total, paidAmount) {
     paidAmount: paidAmount,
     total: total,
     discountApplied: discountApplied || employeeDiscountApplied,
+    discountAmount: getDiscountAmount(),
     changeAmount: change,
     orderType: orderType,
     productNames: productNames,
@@ -3031,6 +3034,7 @@ async function processPayment() {
     paidAmount: amount,
     total: total,
     discountApplied: discountApplied || employeeDiscountApplied,
+    discountAmount: getDiscountAmount(),
     changeAmount: change,
     orderType: orderType,
     productNames: productNames,

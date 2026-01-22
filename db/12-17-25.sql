@@ -251,6 +251,7 @@ CREATE TABLE `orders` (
   `paidAmount` decimal(10,2) NOT NULL DEFAULT 0.00,
   `total` decimal(10,2) NOT NULL DEFAULT 0.00,
   `discountApplied` tinyint(1) DEFAULT 0,
+  `discountAmount` decimal(10,2) DEFAULT 0,
   `changeAmount` decimal(10,2) DEFAULT 0.00,
   `orderType` varchar(50) DEFAULT 'Dine In',
   `productNames` text DEFAULT NULL,

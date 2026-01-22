@@ -439,6 +439,7 @@ function createOrder($pdo) {
     $paidAmount = $input['paidAmount'] ?? 0;
     $total = $input['total'] ?? 0;
     $discountApplied = $input['discountApplied'] ?? false;
+    $discountAmount = $input['discountAmount'] ?? 0;
     $changeAmount = $input['changeAmount'] ?? 0;
     $orderType = $input['orderType'] ?? 'Dine In';
     $productNames = $input['productNames'] ?? 'No items';
@@ -477,16 +478,17 @@ function createOrder($pdo) {
     try {
         $stmt = $pdo->prepare("
             INSERT INTO orders 
-            (userId, paidAmount, total, discountApplied, changeAmount, orderType, 
+            (userId, paidAmount, total, discountApplied, discountAmount, changeAmount, orderType, 
              productNames, items, payment_method, branch, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
-        
+    
         $execute_result = $stmt->execute([
             (int)$userId,
             (float)$paidAmount,
             (float)$total,
             $discountAppliedInt,
+            (float)$discountAmount,
             (float)$changeAmount,
             $orderType,
             $productNames,

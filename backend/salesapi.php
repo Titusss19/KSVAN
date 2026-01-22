@@ -308,25 +308,22 @@ function computeSessionData($pdo, $session) {
     foreach ($sessionOrders as $order) {
         $amount = floatval($order['total']);
         $sessionSalesTotal += $amount;
-        
-        if ($order['discountApplied']) {
-            $totalDiscount += ($amount / 0.8) * 0.2;
+        // Use actual discountAmount from DB if present
+        if (isset($order['discountAmount'])) {
+            $totalDiscount += floatval($order['discountAmount']);
         }
-        
         $method = $order['payment_method'] ?: 'Cash';
         if (!isset($paymentMethods[$method])) {
             $paymentMethods[$method] = ['count' => 0, 'total' => 0];
         }
         $paymentMethods[$method]['count']++;
         $paymentMethods[$method]['total'] += $amount;
-        
         // Handle Gcash + Cash split tracking
         if ($method === 'Gcash + Cash' && isset($order['productNames'])) {
             // Try to extract Gcash and Cash amounts from productNames
             if (preg_match('/\[Gcash: ₱([\d.]+) \+ Cash: ₱([\d.]+)\]/', $order['productNames'], $matches)) {
                 $gcashAmount = floatval($matches[1]);
                 $cashAmount = floatval($matches[2]);
-                
                 if (!isset($paymentMethods[$method]['gcash_total'])) {
                     $paymentMethods[$method]['gcash_total'] = 0;
                     $paymentMethods[$method]['cash_total'] = 0;

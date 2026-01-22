@@ -121,10 +121,10 @@
 
                         <!-- Discount Buttons -->
                         <div class="mb-3 md:mb-4 grid grid-cols-2 gap-2 md:gap-3">
-                            <button id="pwdDiscountBtn" onclick="togglePWDDiscount()" class="w-full py-2.5 md:py-3.5 rounded-xl font-semibold text-white transition-all shadow-lg bg-gradient-to-r from-black to-black hover:from-red-600 hover:to-red-600 text-xs md:text-sm">
+                            <button id="pwdDiscountBtn" class="w-full py-2.5 md:py-3.5 rounded-xl font-semibold text-white transition-all shadow-lg bg-gradient-to-r from-black to-black hover:from-red-600 hover:to-red-600 text-xs md:text-sm">
                                 PWD/Senior 20%
                             </button>
-                            <button id="employeeDiscountBtn" onclick="toggleEmployeeDiscount()" class="w-full py-2.5 md:py-3.5 rounded-xl font-semibold text-white transition-all shadow-lg bg-gradient-to-r from-red-600 to-red-600 hover:from-black hover:to-black text-xs md:text-sm">
+                            <button id="employeeDiscountBtn" class="w-full py-2.5 md:py-3.5 rounded-xl font-semibold text-white transition-all shadow-lg bg-gradient-to-r from-red-600 to-red-600 hover:from-black hover:to-black text-xs md:text-sm">
                                 Employee 5%
                             </button>
                         </div>
